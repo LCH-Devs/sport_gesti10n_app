@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { PlatformLoginDto } from './dto/platform-login.dto';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +17,7 @@ export class AuthService {
     const club = await this.prisma.club.findUnique({
       where: { slug: dto.club_slug },
     });
-    if (!club) {
+    if (!club || !club.activo) {
       throw new UnauthorizedException('Club o credenciales inválidas');
     }
 
@@ -54,8 +55,38 @@ export class AuthService {
         slug: club.slug,
         nombre: club.nombre,
         color_primario: club.color_primario,
+        color_secundario: club.color_secundario,
+        color_terciario: club.color_terciario,
         logo_url: club.logo_url,
         cuota_monto: club.cuota_monto,
+      },
+    };
+  }
+
+  /** Login superadmin ClubApp (crea clubes). */
+  async loginPlatform(dto: PlatformLoginDto) {
+    const user = await this.prisma.platformAdmin.findUnique({
+      where: { email: dto.email.toLowerCase().trim() },
+    });
+    if (!user || !user.activo) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+    const ok = await bcrypt.compare(dto.password, user.password_hash);
+    if (!ok) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    const payload = {
+      sub: user.id,
+      role: 'platform',
+    };
+
+    return {
+      access_token: await this.jwt.signAsync(payload),
+      platform_admin: {
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
       },
     };
   }

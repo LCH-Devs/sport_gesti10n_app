@@ -21,6 +21,14 @@ export class UpdateClubConfigDto {
   color_primario?: string;
 
   @IsOptional()
+  @IsString()
+  color_secundario?: string;
+
+  @IsOptional()
+  @IsString()
+  color_terciario?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsNumber()
   @Min(0)

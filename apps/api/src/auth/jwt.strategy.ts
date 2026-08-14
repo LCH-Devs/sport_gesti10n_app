@@ -6,8 +6,8 @@ import { ConfigService } from '@nestjs/config';
 export type JwtPayload = {
   sub: number;
   role: string;
-  club_id: number;
-  club_slug: string;
+  club_id?: number;
+  club_slug?: string;
 };
 
 @Injectable()

@@ -8,6 +8,8 @@ const CLUB_PUBLIC_SELECT = {
   nombre: true,
   logo_url: true,
   color_primario: true,
+  color_secundario: true,
+  color_terciario: true,
   cuota_monto: true,
   plan: true,
   regla_moroso_cuotas: true,
@@ -38,6 +40,8 @@ export class ClubsService {
         nombre: true,
         logo_url: true,
         color_primario: true,
+        color_secundario: true,
+        color_terciario: true,
       },
       take: 20,
       orderBy: { nombre: 'asc' },
@@ -71,6 +75,12 @@ export class ClubsService {
         ...(dto.logo_url !== undefined && { logo_url: dto.logo_url }),
         ...(dto.color_primario !== undefined && {
           color_primario: dto.color_primario,
+        }),
+        ...(dto.color_secundario !== undefined && {
+          color_secundario: dto.color_secundario || null,
+        }),
+        ...(dto.color_terciario !== undefined && {
+          color_terciario: dto.color_terciario || null,
         }),
         ...(dto.cuota_monto !== undefined && { cuota_monto: dto.cuota_monto }),
         ...(dto.regla_moroso_cuotas !== undefined && {
