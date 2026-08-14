@@ -1,0 +1,288 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Club = tenant multi-tenant
+model Club {
+  id                    Int      @id @default(autoincrement())
+  slug                  String   @unique
+  nombre                String
+  logo_url              String?
+  color_primario        String   @default("#2563eb")
+  plan                  String   @default("basico")
+  cuota_monto           Float    @default(5000)
+  regla_moroso_cuotas   Int      @default(2)
+  bloquear_reservas     Boolean  @default(true)
+  bloquear_entrada      Boolean  @default(false)
+  cumples_auto          Boolean  @default(true)
+  max_reservas_activas  Int      @default(2)
+  cancelar_reserva_horas Int     @default(2)
+
+  admins            Admin[]
+  socios            Socio[]
+  pagos             Pago[]
+  espacios          Espacio[]
+  reservas          Reserva[]
+  horarios          Horario[]
+  noticias          Noticia[]
+  grupos_familiares GrupoFamiliar[]
+  actividades       Actividad[]
+  cobros_profe      CobroProfe[]
+  liquidaciones     LiquidacionProfe[]
+  torneos           Torneo[]
+  partidos          Partido[]
+  asistencias       Asistencia[]
+}
+
+model Admin {
+  id            Int    @id @default(autoincrement())
+  club_id       Int
+  club          Club   @relation(fields: [club_id], references: [id])
+  email         String
+  password_hash String
+  nombre        String
+  rol           String @default("admin") // admin | entrada
+
+  @@unique([club_id, email])
+  @@index([club_id])
+}
+
+model GrupoFamiliar {
+  id         Int     @id @default(autoincrement())
+  club_id    Int
+  club       Club    @relation(fields: [club_id], references: [id])
+  nombre     String
+  titular_id Int
+  titular    Socio   @relation("TitularGrupo", fields: [titular_id], references: [id])
+  socios     Socio[] @relation("MiembrosGrupo")
+
+  @@index([club_id])
+}
+
+model Socio {
+  id               Int       @id @default(autoincrement())
+  club_id          Int
+  club             Club      @relation(fields: [club_id], references: [id])
+  dni              String
+  nombre           String
+  apellido         String
+  email            String
+  telefono         String    @default("")
+  password_hash    String
+  estado           String    @default("activo") // activo | moroso | suspendido
+  rol              String    @default("socio") // socio | profe
+  fecha_nacimiento DateTime?
+  grupo_familiar_id Int?
+  grupo_familiar   GrupoFamiliar? @relation("MiembrosGrupo", fields: [grupo_familiar_id], references: [id])
+  grupos_titular   GrupoFamiliar[] @relation("TitularGrupo")
+
+  pagos            Pago[]
+  reservas         Reserva[]
+  asistencias      Asistencia[]
+  actividades      SocioActividad[]
+  cobros_profe     CobroProfe[]     @relation("AlumnoCobro")
+  cobros_como_profe CobroProfe[]    @relation("ProfeCobro")
+  liquidaciones    LiquidacionProfe[]
+  actividades_profe Actividad[]
+
+  @@unique([club_id, dni])
+  @@index([club_id])
+  @@index([grupo_familiar_id])
+}
+
+model Actividad {
+  id              Int     @id @default(autoincrement())
+  club_id         Int
+  club            Club    @relation(fields: [club_id], references: [id])
+  nombre          String
+  modo_cobro      String  @default("club") // club | profe
+  monto_adicional Float   @default(0)
+  profe_id        Int?
+  profe           Socio?  @relation(fields: [profe_id], references: [id])
+  comision_tipo   String? // porcentaje | fijo
+  comision_valor  Float?
+  activo          Boolean @default(true)
+  socios          SocioActividad[]
+  cobros_profe    CobroProfe[]
+
+  @@index([club_id])
+}
+
+model SocioActividad {
+  socio_id     Int
+  actividad_id Int
+  socio        Socio     @relation(fields: [socio_id], references: [id], onDelete: Cascade)
+  actividad    Actividad @relation(fields: [actividad_id], references: [id], onDelete: Cascade)
+
+  @@id([socio_id, actividad_id])
+}
+
+model CobroProfe {
+  id            Int     @id @default(autoincrement())
+  club_id       Int
+  club          Club    @relation(fields: [club_id], references: [id])
+  actividad_id  Int
+  actividad     Actividad @relation(fields: [actividad_id], references: [id])
+  socio_id      Int
+  socio         Socio   @relation("AlumnoCobro", fields: [socio_id], references: [id])
+  profe_id      Int
+  profe         Socio   @relation("ProfeCobro", fields: [profe_id], references: [id])
+  mes           String
+  monto_alumno  Float
+  comision_club Float
+  cobrado       Boolean @default(true)
+  medio         String  @default("efectivo")
+  nota          String?
+
+  @@unique([actividad_id, socio_id, mes])
+  @@index([club_id, mes])
+}
+
+model LiquidacionProfe {
+  id            Int       @id @default(autoincrement())
+  club_id       Int
+  club          Club      @relation(fields: [club_id], references: [id])
+  profe_id      Int
+  profe         Socio     @relation(fields: [profe_id], references: [id])
+  mes           String
+  total_club    Float
+  estado        String    @default("pendiente") // pendiente | pagada
+  mp_init_point String?
+  fecha_pago    DateTime?
+
+  @@unique([profe_id, mes])
+  @@index([club_id, mes])
+}
+
+model Pago {
+  id               Int       @id @default(autoincrement())
+  club_id          Int
+  club             Club      @relation(fields: [club_id], references: [id])
+  socio_id         Int
+  socio            Socio     @relation(fields: [socio_id], references: [id])
+  mes              String
+  monto            Float
+  estado           String    @default("pendiente") // pendiente | pagado
+  mp_preference_id String?
+  mp_init_point    String?
+  fecha_pago       DateTime?
+
+  @@unique([socio_id, mes])
+  @@index([club_id, mes])
+  @@index([club_id, estado])
+}
+
+model Espacio {
+  id                Int      @id @default(autoincrement())
+  club_id           Int
+  club              Club     @relation(fields: [club_id], references: [id])
+  nombre            String
+  tipo              String
+  descripcion       String?
+  activo            Boolean  @default(true)
+  duracion_slot_min Int      @default(60)
+  precio_opcional   Float?
+  hora_apertura     String   @default("08:00")
+  hora_cierre       String   @default("23:00")
+  reservas          Reserva[]
+
+  @@index([club_id])
+}
+
+model Reserva {
+  id         Int      @id @default(autoincrement())
+  club_id    Int
+  club       Club     @relation(fields: [club_id], references: [id])
+  espacio_id Int
+  espacio    Espacio  @relation(fields: [espacio_id], references: [id])
+  socio_id   Int
+  socio      Socio    @relation(fields: [socio_id], references: [id])
+  inicio     DateTime
+  fin        DateTime
+  estado     String   @default("confirmada") // confirmada | cancelada | no_show
+  nota       String?
+  created_at DateTime @default(now())
+
+  @@index([club_id, espacio_id, inicio])
+  @@index([club_id, inicio])
+}
+
+model Horario {
+  id          Int     @id @default(autoincrement())
+  club_id     Int
+  club        Club    @relation(fields: [club_id], references: [id])
+  titulo      String
+  dias        String
+  hora_inicio String
+  hora_fin    String
+  profe_id    Int?
+  activo      Boolean @default(true)
+  asistencias Asistencia[]
+
+  @@index([club_id])
+}
+
+model Noticia {
+  id         Int      @id @default(autoincrement())
+  club_id    Int
+  club       Club     @relation(fields: [club_id], references: [id])
+  titulo     String
+  cuerpo     String
+  imagen_url String?
+  es_evento  Boolean  @default(false)
+  fecha      DateTime @default(now())
+  published  Boolean  @default(true)
+
+  @@index([club_id, fecha])
+}
+
+model Asistencia {
+  id          Int      @id @default(autoincrement())
+  club_id     Int
+  club        Club     @relation(fields: [club_id], references: [id])
+  horario_id  Int
+  horario     Horario  @relation(fields: [horario_id], references: [id])
+  socio_id    Int
+  socio       Socio    @relation(fields: [socio_id], references: [id])
+  fecha       DateTime @db.Date
+  estado      String // presente | ausente | justificado
+  marcada_por Int
+
+  @@unique([horario_id, socio_id, fecha])
+  @@index([club_id, fecha])
+  @@index([socio_id, fecha])
+}
+
+model Torneo {
+  id       Int       @id @default(autoincrement())
+  club_id  Int
+  club     Club      @relation(fields: [club_id], references: [id])
+  nombre   String
+  deporte  String
+  estado   String    @default("activo")
+  partidos Partido[]
+
+  @@index([club_id])
+}
+
+model Partido {
+  id        Int       @id @default(autoincrement())
+  torneo_id Int
+  torneo    Torneo    @relation(fields: [torneo_id], references: [id], onDelete: Cascade)
+  club_id   Int
+  club      Club      @relation(fields: [club_id], references: [id])
+  rival_a   String
+  rival_b   String
+  fecha     DateTime?
+  goles_a   Int?
+  goles_b   Int?
+  jugado    Boolean   @default(false)
+
+  @@index([club_id])
+  @@index([torneo_id])
+}
