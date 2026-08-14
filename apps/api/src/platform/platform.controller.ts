@@ -6,15 +6,19 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { PlatformService } from './platform.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PlatformRoleGuard } from '../common/platform-role.guard';
+import { JwtPayload } from '../auth/jwt.strategy';
 import {
   CreateClubAdminDto,
   CreateClubPlatformDto,
+  CreatePlatformAdminDto,
   UpdateClubPlatformDto,
+  UpdatePlatformAdminDto,
 } from './dto/platform.dto';
 
 @Controller('platform')
@@ -25,6 +29,25 @@ export class PlatformController {
   @Get('clubs')
   listClubs() {
     return this.platform.listClubs();
+  }
+
+  @Get('admins')
+  listPlatformAdmins() {
+    return this.platform.listPlatformAdmins();
+  }
+
+  @Post('admins')
+  createPlatformAdmin(@Body() dto: CreatePlatformAdminDto) {
+    return this.platform.createPlatformAdmin(dto);
+  }
+
+  @Patch('admins/:id')
+  updatePlatformAdmin(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdatePlatformAdminDto,
+    @Req() req: { user: JwtPayload },
+  ) {
+    return this.platform.updatePlatformAdmin(id, dto, req.user.sub);
   }
 
   @Get('clubs/:id')

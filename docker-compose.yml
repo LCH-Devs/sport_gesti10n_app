@@ -1,0 +1,52 @@
+services:
+  db:
+    image: postgres:16
+    container_name: clubapp_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: clubapp
+      POSTGRES_PASSWORD: clubapp
+      POSTGRES_DB: clubapp
+    ports:
+      - "5432:5432"
+    volumes:
+      - clubapp_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U clubapp -d clubapp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Opcional: docker compose --profile full up --build
+  api:
+    profiles: ["full"]
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: clubapp_api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://clubapp:clubapp@db:5432/clubapp?schema=public
+      JWT_SECRET: cambialo-en-produccion-clubapp-jwt
+      PORT: 3001
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "3001:3001"
+
+  web:
+    profiles: ["full"]
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: clubapp_web
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3000:3000"
+
+volumes:
+  clubapp_pgdata:

@@ -22,6 +22,7 @@ async function main() {
   const club = await prisma.club.upsert({
     where: { slug: 'club-prueba' },
     update: {
+      precio_usd_mes: 49,
       cuota_monto: 5000,
       regla_moroso_cuotas: 2,
       bloquear_reservas: true,
@@ -30,6 +31,7 @@ async function main() {
       max_reservas_activas: 2,
       cancelar_reserva_horas: 2,
       activo: true,
+      onboarding_completo: true,
       color_primario: '#2563eb',
       color_secundario: '#0f172a',
       color_terciario: '#f59e0b',
@@ -41,6 +43,7 @@ async function main() {
       color_secundario: '#0f172a',
       color_terciario: '#f59e0b',
       plan: 'basico',
+      precio_usd_mes: 49,
       cuota_monto: 5000,
       logo_url: null,
       regla_moroso_cuotas: 2,
@@ -48,6 +51,7 @@ async function main() {
       bloquear_entrada: false,
       cumples_auto: true,
       max_reservas_activas: 2,
+      onboarding_completo: true,
       cancelar_reserva_horas: 2,
       activo: true,
     },
@@ -57,13 +61,14 @@ async function main() {
     where: {
       club_id_email: { club_id: club.id, email: 'admin@clubprueba.com' },
     },
-    update: {},
+    update: { must_change_password: false },
     create: {
       club_id: club.id,
       email: 'admin@clubprueba.com',
       password_hash: passwordHash,
       nombre: 'Admin Prueba',
       rol: 'admin',
+      must_change_password: false,
     },
   });
 
@@ -411,7 +416,7 @@ async function main() {
 
   console.log('Seed OK: Club Prueba (slug: club-prueba)');
   console.log('Platform: platform@clubapp.com / platform123 → /platform/login');
-  console.log('Admin: admin@clubprueba.com / admin123 → /login');
+  console.log('Admin: admin@clubprueba.com / admin123 → /login/club-prueba');
   console.log('Socios pass: socio123 (DNI 30111222, 30222333, 30333444)');
 }
 
