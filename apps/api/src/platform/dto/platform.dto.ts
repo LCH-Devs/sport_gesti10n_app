@@ -1,10 +1,10 @@
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsEmail,
   IsNumber,
   IsOptional,
   IsString,
-  Matches,
   Min,
   MinLength,
 } from 'class-validator';
@@ -14,47 +14,18 @@ export class CreateClubPlatformDto {
   @MinLength(2)
   nombre: string;
 
-  @IsString()
-  @Matches(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-    message: 'slug: solo minúsculas, números y guiones',
-  })
-  slug: string;
-
-  @IsOptional()
-  @IsString()
-  logo_url?: string;
-
-  @IsOptional()
-  @IsString()
-  color_primario?: string;
-
-  @IsOptional()
-  @IsString()
-  color_secundario?: string;
-
-  @IsOptional()
-  @IsString()
-  color_terciario?: string;
-
-  @IsOptional()
-  @IsString()
-  plan?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  cuota_monto?: number;
-
   @IsEmail()
   admin_email: string;
 
+  @IsOptional()
   @IsString()
   @MinLength(2)
-  admin_nombre: string;
+  admin_nombre?: string;
 
-  @IsString()
-  @MinLength(6)
-  admin_password: string;
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  precio_usd_mes: number;
 }
 
 export class UpdateClubPlatformDto {
@@ -87,6 +58,12 @@ export class UpdateClubPlatformDto {
   @IsNumber()
   @Min(0)
   cuota_monto?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Type(() => Number)
+  precio_usd_mes?: number;
 
   @IsOptional()
   @IsBoolean()
@@ -132,4 +109,33 @@ export class CreateClubAdminDto {
   @IsOptional()
   @IsString()
   rol?: string;
+}
+
+export class CreatePlatformAdminDto {
+  @IsEmail()
+  email: string;
+
+  @IsString()
+  @MinLength(2)
+  nombre: string;
+
+  @IsString()
+  @MinLength(8)
+  password: string;
+}
+
+export class UpdatePlatformAdminDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  nombre?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  password?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  activo?: boolean;
 }

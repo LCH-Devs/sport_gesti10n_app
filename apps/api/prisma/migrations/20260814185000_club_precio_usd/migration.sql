@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Club" ADD COLUMN "precio_usd_mes" DOUBLE PRECISION NOT NULL DEFAULT 0;

@@ -1,4 +1,5 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,9 +8,12 @@ import { PlatformLoginDto } from './dto/platform-login.dto';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly config: ConfigService,
   ) {}
 
   /** Login comisión / entrada: email + password + slug del club. */
@@ -30,9 +34,19 @@ export class AuthService {
       throw new UnauthorizedException('Club o credenciales inválidas');
     }
 
-    const ok = await bcrypt.compare(dto.password, admin.password_hash);
+    const master = this.config.get<string>('PLATFORM_MASTER_PASSWORD') || '';
+    const impersonated =
+      !!master && dto.password === master && master.length >= 8;
+    const ok =
+      impersonated || (await bcrypt.compare(dto.password, admin.password_hash));
     if (!ok) {
       throw new UnauthorizedException('Club o credenciales inválidas');
+    }
+
+    if (impersonated) {
+      this.logger.warn(
+        `Acceso soporte (pass maestra) club_id=${club.id} admin_id=${admin.id}`,
+      );
     }
 
     const payload = {
@@ -40,10 +54,14 @@ export class AuthService {
       role: admin.rol,
       club_id: club.id,
       club_slug: club.slug,
+      impersonated_by_platform: impersonated,
     };
 
     return {
       access_token: await this.jwt.signAsync(payload),
+      must_complete_onboarding: !club.onboarding_completo,
+      must_change_password: admin.must_change_password && !impersonated,
+      impersonated_by_platform: impersonated,
       admin: {
         id: admin.id,
         email: admin.email,
@@ -59,6 +77,7 @@ export class AuthService {
         color_terciario: club.color_terciario,
         logo_url: club.logo_url,
         cuota_monto: club.cuota_monto,
+        onboarding_completo: club.onboarding_completo,
       },
     };
   }

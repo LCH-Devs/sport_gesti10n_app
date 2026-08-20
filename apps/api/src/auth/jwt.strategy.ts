@@ -8,6 +8,7 @@ export type JwtPayload = {
   role: string;
   club_id?: number;
   club_slug?: string;
+  impersonated_by_platform?: boolean;
 };
 
 @Injectable()
