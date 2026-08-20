@@ -1,20 +1,39 @@
-import type { Metadata } from 'next';
-import './globals.css';
+'use client';
 
-export const metadata: Metadata = {
-  title: 'ClubApp Arg — Panel',
-  description: 'Panel web para la comisión del club',
-};
+import '@/app/globals.css';
+import { Navbar, Sidebar } from '@/components/common';
+import React from 'react';
+import { usePathname } from 'next/navigation';
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
+  const pathname = usePathname();
+
+  const isLandingPage = pathname === '/landing' || pathname === '/';
+  const showNavbarSidebar = !isLandingPage;
+
   return (
-    <html lang="es">
-      <body className="min-h-screen bg-slate-50 text-slate-900 antialiased">
-        {children}
+    <html lang="en">
+      <head>
+        <title>AthlletiCorp - Sports Management System</title>
+        <meta name="description" content="Multi-institutional sports club management platform" />
+      </head>
+      <body className="bg-slate-50">
+        {showNavbarSidebar && (
+          <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} userName="Admin User" userInitial="A" />
+        )}
+
+        <div className={showNavbarSidebar ? 'flex h-screen pt-16' : ''}>
+          {showNavbarSidebar && (
+            <Sidebar isOpen={sidebarOpen} />
+          )}
+
+          <main className={showNavbarSidebar ? 'flex-1 overflow-auto' : ''}>{children}</main>
+        </div>
       </body>
     </html>
   );
