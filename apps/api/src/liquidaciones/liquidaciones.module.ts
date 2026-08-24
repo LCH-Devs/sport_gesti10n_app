@@ -7,3 +7,4 @@ import { LiquidacionesService } from './liquidaciones.service';
   providers: [LiquidacionesService],
 })
 export class LiquidacionesModule {}
+

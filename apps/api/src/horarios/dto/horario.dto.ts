@@ -55,3 +55,4 @@ export class UpdateHorarioDto {
   @IsBoolean()
   activo?: boolean;
 }
+

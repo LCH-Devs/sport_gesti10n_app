@@ -47,3 +47,4 @@ export class FamiliasController {
     return this.familias.remove(clubId, id);
   }
 }
+

@@ -67,3 +67,4 @@ export class CompleteOnboardingDto {
   @MinLength(8)
   nueva_password: string;
 }
+

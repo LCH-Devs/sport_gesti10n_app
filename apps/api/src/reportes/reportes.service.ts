@@ -74,13 +74,13 @@ export class ReportesService {
     if (!club) throw new NotFoundException('Club no encontrado');
 
     const total = pagosMes.length;
-    const pagados = pagosMes.filter((p) => p.estado === 'pagado').length;
-    const pendientes = pagosMes.filter((p) => p.estado === 'pendiente').length;
+    const pagados = pagosMes.filter((p: any) => p.estado === 'pagado').length;
+    const pendientes = pagosMes.filter((p: any) => p.estado === 'pendiente').length;
     const pct_cobrado = total === 0 ? 0 : Math.round((pagados / total) * 10000) / 100;
 
     const deudores = pagosMes
-      .filter((p) => p.estado === 'pendiente')
-      .map((p) => ({
+      .filter((p: any) => p.estado === 'pendiente')
+      .map((p: any) => ({
         id: p.socio.id,
         dni: p.socio.dni,
         nombre: p.socio.nombre,
@@ -88,7 +88,7 @@ export class ReportesService {
         monto: p.monto,
       }));
 
-    const horarios_hoy = horarios.filter((h) => {
+    const horarios_hoy = horarios.filter((h: any) => {
       const dias = h.dias.toLowerCase();
       return dias.includes(diaKey);
     });
@@ -154,7 +154,7 @@ export class ReportesService {
       let asistencia_pct: number | null = null;
       if (totalAsist > 0) {
         const presentes = s.asistencias.filter(
-          (a) => a.estado === 'presente',
+          (a: any) => a.estado === 'presente',
         ).length;
         asistencia_pct =
           Math.round((presentes / totalAsist) * 10000) / 100;
@@ -209,7 +209,7 @@ export class ReportesService {
       orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
     });
 
-    const filtrados = socios.filter((s) => {
+    const filtrados = socios.filter((s: any) => {
       if (!s.fecha_nacimiento) return false;
       return s.fecha_nacimiento.getMonth() + 1 === monthNum;
     });
@@ -238,7 +238,7 @@ export class ReportesService {
       },
     });
 
-    const cumpleHoy = socios.filter((s) => {
+    const cumpleHoy = socios.filter((s: any) => {
       if (!s.fecha_nacimiento) return false;
       return (
         s.fecha_nacimiento.getDate() === now.getDate() &&
@@ -276,3 +276,4 @@ export class ReportesService {
     return { created };
   }
 }
+

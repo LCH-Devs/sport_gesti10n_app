@@ -50,3 +50,4 @@ export class AdminsController {
     return this.admins.remove(clubId, id, req.user.sub);
   }
 }
+

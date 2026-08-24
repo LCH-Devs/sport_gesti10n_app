@@ -14,3 +14,4 @@ export class GenerarCobrosDto {
   @Min(1)
   monto?: number;
 }
+

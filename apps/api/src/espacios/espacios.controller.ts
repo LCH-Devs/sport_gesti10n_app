@@ -57,3 +57,4 @@ export class EspaciosController {
     return this.espacios.remove(clubId, id);
   }
 }
+

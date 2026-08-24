@@ -76,3 +76,4 @@ export class PlatformController {
     return this.platform.addAdmin(id, dto);
   }
 }
+

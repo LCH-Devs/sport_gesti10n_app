@@ -64,3 +64,4 @@ export class UpdateClubConfigDto {
   @Min(0)
   cancelar_reserva_horas?: number;
 }
+

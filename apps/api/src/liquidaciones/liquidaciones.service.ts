@@ -104,7 +104,7 @@ export class LiquidacionesService {
       },
     });
 
-    const total_club = cobros.reduce((acc, c) => acc + c.comision_club, 0);
+    const total_club = cobros.reduce((acc: number, c: any) => acc + c.comision_club, 0);
 
     return this.prisma.liquidacionProfe.upsert({
       where: {
@@ -178,3 +178,4 @@ export class LiquidacionesService {
     return 0;
   }
 }
+

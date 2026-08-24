@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type Reserva = {
   id: number;
@@ -17,6 +18,7 @@ type Espacio = { id: number; nombre: string };
 type Socio = { id: number; nombre: string; apellido: string; dni: string };
 
 export default function ReservasPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Reserva[]>([]);
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [socios, setSocios] = useState<Socio[]>([]);
@@ -103,9 +105,9 @@ export default function ReservasPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Reservas</h2>
+      <h2 className="text-2xl font-bold">{t('admin.reservas.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Listado y alta de reservas de espacios.
+        {t('admin.reservas.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
@@ -113,9 +115,9 @@ export default function ReservasPage() {
         onSubmit={onCreate}
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
-        <h3 className="sm:col-span-2 font-semibold">Nueva reserva</h3>
+        <h3 className="sm:col-span-2 font-semibold">{t('admin.reservas.nueva')}</h3>
         <label className="text-sm">
-          Espacio
+          {t('admin.reservas.espacio')}
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.espacio_id}
@@ -133,7 +135,7 @@ export default function ReservasPage() {
           </select>
         </label>
         <label className="text-sm">
-          Socio
+          {t('admin.reservas.socio')}
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.socio_id}
@@ -151,7 +153,7 @@ export default function ReservasPage() {
           </select>
         </label>
         <label className="text-sm">
-          Inicio
+          {t('admin.reservas.inicio')}
           <input
             type="datetime-local"
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -161,7 +163,7 @@ export default function ReservasPage() {
           />
         </label>
         <label className="text-sm">
-          Fin
+          {t('admin.reservas.fin')}
           <input
             type="datetime-local"
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -174,22 +176,22 @@ export default function ReservasPage() {
           type="submit"
           className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
         >
-          Crear reserva
+          {t('admin.reservas.createReserva')}
         </button>
       </form>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">Cargando…</p>
+          <p className="p-4 text-slate-500">{t('common.loading')}</p>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-4 py-3">Espacio</th>
-                <th className="px-4 py-3">Socio</th>
-                <th className="px-4 py-3">Inicio</th>
-                <th className="px-4 py-3">Fin</th>
-                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">{t('admin.reservas.espacio')}</th>
+                <th className="px-4 py-3">{t('admin.reservas.socio')}</th>
+                <th className="px-4 py-3">{t('admin.reservas.inicio')}</th>
+                <th className="px-4 py-3">{t('admin.reservas.fin')}</th>
+                <th className="px-4 py-3">{t('admin.reservas.estado')}</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -214,7 +216,7 @@ export default function ReservasPage() {
                         className="text-red-600 hover:underline"
                         onClick={() => void onCancelar(r.id)}
                       >
-                        Cancelar
+                        {t('admin.reservas.cancelar')}
                       </button>
                     )}
                   </td>
@@ -223,7 +225,7 @@ export default function ReservasPage() {
               {items.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-4 text-slate-500">
-                    Sin reservas.
+                    {t('messages.noData')}
                   </td>
                 </tr>
               )}

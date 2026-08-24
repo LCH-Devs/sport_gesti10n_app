@@ -6,6 +6,8 @@ interface ButtonProps {
   size?: 'sm' | 'md' | 'lg';
   className?: string;
   onClick?: () => void;
+  type?: 'button' | 'submit' | 'reset';
+  disabled?: boolean;
 }
 
 const variantStyles = {
@@ -26,11 +28,15 @@ export function Button({
   size = 'md',
   className = '',
   onClick,
+  type = 'button',
+  disabled = false,
 }: ButtonProps) {
   return (
     <button
+      type={type}
+      disabled={disabled}
       onClick={onClick}
-      className={`rounded-md font-medium transition-colors ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`rounded-md font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
     >
       {children}
     </button>

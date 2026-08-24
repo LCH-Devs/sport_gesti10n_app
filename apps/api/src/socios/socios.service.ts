@@ -224,3 +224,4 @@ export class SociosService {
     return socio;
   }
 }
+

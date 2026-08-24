@@ -70,3 +70,4 @@ export class ClubsController {
     return this.clubs.completeOnboarding(clubId, req.user.sub, dto);
   }
 }
+

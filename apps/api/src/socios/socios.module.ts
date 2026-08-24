@@ -7,3 +7,4 @@ import { SociosController } from './socios.controller';
   providers: [SociosService],
 })
 export class SociosModule {}
+

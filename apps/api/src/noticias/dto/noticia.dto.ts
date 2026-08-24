@@ -54,3 +54,4 @@ export class UpdateNoticiaDto {
   @IsBoolean()
   published?: boolean;
 }
+

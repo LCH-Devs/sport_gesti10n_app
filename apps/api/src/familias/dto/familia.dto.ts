@@ -40,3 +40,4 @@ export class UpdateFamiliaDto {
   @IsInt({ each: true })
   socio_ids?: number[];
 }
+

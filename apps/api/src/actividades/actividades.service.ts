@@ -84,7 +84,7 @@ export class ActividadesService {
       }
     }
 
-    await this.prisma.$transaction(async (tx) => {
+    await this.prisma.$transaction(async (tx: any) => {
       await tx.socioActividad.deleteMany({ where: { actividad_id: id } });
       if (dto.socio_ids.length) {
         await tx.socioActividad.createMany({
@@ -117,7 +117,7 @@ export class ActividadesService {
         },
       },
     });
-    return rows.map((r) => r.socio);
+    return rows.map((r: any) => r.socio);
   }
 
   private async ensureInClub(clubId: number, id: number) {
@@ -128,3 +128,4 @@ export class ActividadesService {
     return a;
   }
 }
+

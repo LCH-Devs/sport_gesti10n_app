@@ -7,6 +7,10 @@ import {
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import React from "react";
+import { useRouter } from "next/navigation";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { clearPlatformSession, clearSession } from "@/lib/api";
+import { useTranslation } from "@/lib/useTranslation";
 
 interface NavbarProps {
   onMenuClick?: () => void;
@@ -20,6 +24,15 @@ export function Navbar({
   userInitial = "U",
 }: NavbarProps) {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
+  const router = useRouter();
+  const { t } = useTranslation();
+
+  function handleLogout() {
+    clearSession();
+    clearPlatformSession();
+    setShowUserMenu(false);
+    router.push("/landing");
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40">
@@ -45,14 +58,17 @@ export function Navbar({
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder={t("common.searchPlaceholder")}
               className="w-full pl-10 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-md text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
             />
           </div>
         </div>
 
-        {/* Right Section: Notifications, User */}
+        {/* Right Section: Language, Notifications, User */}
         <div className="flex items-center gap-4">
+          {/* Language Switcher */}
+          <LanguageSwitcher />
+
           {/* Search Icon (Mobile) */}
           <button className="md:hidden p-2 hover:bg-slate-100 rounded-md transition-colors">
             <MagnifyingGlassIcon className="w-5 h-5 text-slate-700" />
@@ -83,14 +99,17 @@ export function Navbar({
             {showUserMenu && (
               <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg py-2 z-50">
                 <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                  Profile Settings
+                  {t("common.profileSettings")}
                 </button>
                 <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors">
-                  Preferences
+                  {t("common.preferences")}
                 </button>
                 <hr className="my-2" />
-                <button className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors">
-                  Logout
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  {t("common.logout")}
                 </button>
               </div>
             )}

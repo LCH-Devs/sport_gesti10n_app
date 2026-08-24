@@ -61,3 +61,4 @@ export class UpdateResultadoDto {
   @IsBoolean()
   jugado?: boolean;
 }
+

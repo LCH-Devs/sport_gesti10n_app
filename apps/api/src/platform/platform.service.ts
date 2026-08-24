@@ -79,7 +79,7 @@ export class PlatformService {
     ).replace(/\/$/, '');
     const login_url = `${webUrl}/login/${slug}`;
 
-    const created = await this.prisma.$transaction(async (tx) => {
+    const created = await this.prisma.$transaction(async (tx: any) => {
       const club = await tx.club.create({
         data: {
           slug,
@@ -287,3 +287,4 @@ export class PlatformService {
     return club;
   }
 }
+

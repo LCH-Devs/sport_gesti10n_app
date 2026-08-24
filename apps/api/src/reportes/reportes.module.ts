@@ -7,3 +7,4 @@ import { ReportesService } from './reportes.service';
   providers: [ReportesService],
 })
 export class ReportesModule {}
+

@@ -38,16 +38,16 @@ export class PagosService {
       orderBy: { id: 'asc' },
     });
 
-    const pagados = pagos.filter((p) => p.estado === 'pagado');
-    const pendientes = pagos.filter((p) => p.estado === 'pendiente');
+    const pagados = pagos.filter((p: any) => p.estado === 'pagado');
+    const pendientes = pagos.filter((p: any) => p.estado === 'pendiente');
 
     return {
       mes: m,
       total: pagos.length,
       cantidad_pagados: pagados.length,
       cantidad_pendientes: pendientes.length,
-      monto_pagado: pagados.reduce((s, p) => s + p.monto, 0),
-      monto_pendiente: pendientes.reduce((s, p) => s + p.monto, 0),
+      monto_pagado: pagados.reduce((s: number, p: any) => s + p.monto, 0),
+      monto_pendiente: pendientes.reduce((s: number, p: any) => s + p.monto, 0),
       pagos,
     };
   }
@@ -205,3 +205,4 @@ export class PagosService {
     return { ok: true, pago_id: pagoId, status };
   }
 }
+

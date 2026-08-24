@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type SocioMini = {
   id: number;
@@ -19,6 +20,7 @@ type Familia = {
 };
 
 export default function FamiliasPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Familia[]>([]);
   const [socios, setSocios] = useState<SocioMini[]>([]);
   const [error, setError] = useState('');
@@ -77,9 +79,9 @@ export default function FamiliasPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Familias</h2>
+      <h2 className="text-2xl font-bold">{t('admin.familias.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Grupos familiares (un titular, varios socios).
+        {t('admin.familias.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
@@ -87,9 +89,9 @@ export default function FamiliasPage() {
         onSubmit={onCreate}
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
-        <h3 className="sm:col-span-2 font-semibold">Alta rápida</h3>
+        <h3 className="sm:col-span-2 font-semibold">{t('admin.socios.quickCreate')}</h3>
         <label className="text-sm">
-          Nombre
+          {t('admin.familias.nombre')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.nombre}
@@ -98,7 +100,7 @@ export default function FamiliasPage() {
           />
         </label>
         <label className="text-sm">
-          Titular
+          {t('admin.familias.titular')}
           <select
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.titular_id}
@@ -119,20 +121,20 @@ export default function FamiliasPage() {
           type="submit"
           className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
         >
-          Crear familia
+          {t('admin.familias.createFamilia')}
         </button>
       </form>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">Cargando…</p>
+          <p className="p-4 text-slate-500">{t('common.loading')}</p>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Titular</th>
-                <th className="px-4 py-3">Miembros</th>
+                <th className="px-4 py-3">{t('admin.familias.nombre')}</th>
+                <th className="px-4 py-3">{t('admin.familias.titular')}</th>
+                <th className="px-4 py-3">{t('admin.familias.miembros')}</th>
               </tr>
             </thead>
             <tbody>
@@ -148,7 +150,7 @@ export default function FamiliasPage() {
               {items.length === 0 && (
                 <tr>
                   <td colSpan={3} className="px-4 py-4 text-slate-500">
-                    Sin familias.
+                    {t('messages.noData')}
                   </td>
                 </tr>
               )}

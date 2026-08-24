@@ -69,3 +69,4 @@ export class ActividadesController {
     return this.actividades.setSocios(clubId, id, dto);
   }
 }
+

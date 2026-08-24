@@ -96,3 +96,4 @@ export class MediaService {
     return `/uploads/logos/${filename}`;
   }
 }
+

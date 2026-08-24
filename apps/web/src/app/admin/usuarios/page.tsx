@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type AdminUser = {
   id: number;
@@ -11,6 +12,7 @@ type AdminUser = {
 };
 
 export default function UsuariosPage() {
+  const { t } = useTranslation();
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [error, setError] = useState('');
   const [form, setForm] = useState({
@@ -74,9 +76,9 @@ export default function UsuariosPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Usuarios del club</h2>
+      <h2 className="text-2xl font-bold">{t('admin.usuarios.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Admins de la comisión y usuarios de entrada (portería).
+        {t('admin.usuarios.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
@@ -84,9 +86,9 @@ export default function UsuariosPage() {
         onSubmit={onCreate}
         className="mt-6 grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2"
       >
-        <h3 className="sm:col-span-2 font-semibold">Alta de usuario</h3>
+        <h3 className="sm:col-span-2 font-semibold">{t('admin.usuarios.alta')}</h3>
         <label className="text-sm">
-          Nombre
+          {t('admin.usuarios.nombre')}
           <input
             className="mt-1 w-full rounded-lg border px-3 py-2"
             value={form.nombre}
@@ -95,7 +97,7 @@ export default function UsuariosPage() {
           />
         </label>
         <label className="text-sm">
-          Email
+          {t('admin.usuarios.email')}
           <input
             type="email"
             className="mt-1 w-full rounded-lg border px-3 py-2"
@@ -105,7 +107,7 @@ export default function UsuariosPage() {
           />
         </label>
         <label className="text-sm">
-          Contraseña
+          {t('admin.usuarios.password')}
           <input
             type="password"
             className="mt-1 w-full rounded-lg border px-3 py-2"
@@ -118,21 +120,21 @@ export default function UsuariosPage() {
           />
         </label>
         <label className="text-sm">
-          Rol
+          {t('admin.usuarios.rol')}
           <select
             className="mt-1 w-full rounded-lg border px-3 py-2"
             value={form.rol}
             onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}
           >
-            <option value="admin">admin</option>
-            <option value="entrada">entrada</option>
+            <option value="admin">{t('dashboard.admin')}</option>
+            <option value="entrada">{t('dashboard.entrada')}</option>
           </select>
         </label>
         <button
           type="submit"
           className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
         >
-          Crear usuario
+          {t('admin.usuarios.createUsuario')}
         </button>
       </form>
 
@@ -140,9 +142,9 @@ export default function UsuariosPage() {
         <table className="min-w-full text-left text-sm">
           <thead className="border-b bg-slate-50">
             <tr>
-              <th className="px-4 py-3">Nombre</th>
-              <th className="px-4 py-3">Email</th>
-              <th className="px-4 py-3">Rol</th>
+              <th className="px-4 py-3">{t('dashboard.name')}</th>
+              <th className="px-4 py-3">{t('dashboard.email')}</th>
+              <th className="px-4 py-3">{t('dashboard.role')}</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -158,7 +160,7 @@ export default function UsuariosPage() {
                     className="text-red-600 hover:underline"
                     onClick={() => void onDelete(a.id)}
                   >
-                    Eliminar
+                    {t('admin.socios.eliminar')}
                   </button>
                 </td>
               </tr>

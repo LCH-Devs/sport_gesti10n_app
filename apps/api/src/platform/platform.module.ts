@@ -9,3 +9,4 @@ import { MailModule } from '../mail/mail.module';
   providers: [PlatformService],
 })
 export class PlatformModule {}
+

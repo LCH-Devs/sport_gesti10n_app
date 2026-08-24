@@ -25,3 +25,4 @@ export class CreateReservaDto {
   @IsString()
   nota?: string;
 }
+

@@ -66,3 +66,4 @@ export class UpdateSocioDto {
   @IsDateString()
   fecha_nacimiento?: string;
 }
+

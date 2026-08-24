@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type Torneo = {
   id: number;
@@ -33,6 +34,7 @@ type TablaRow = {
 };
 
 export default function TorneosPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Torneo[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [partidos, setPartidos] = useState<Partido[]>([]);
@@ -138,9 +140,9 @@ export default function TorneosPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Torneos</h2>
+      <h2 className="text-2xl font-bold">{t('admin.torneos.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Torneos, partidos y tabla de posiciones.
+        {t('admin.torneos.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
@@ -148,9 +150,9 @@ export default function TorneosPage() {
         onSubmit={onCreate}
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
-        <h3 className="sm:col-span-2 font-semibold">Nuevo torneo</h3>
+        <h3 className="sm:col-span-2 font-semibold">{t('admin.torneos.nuevo')}</h3>
         <label className="text-sm">
-          Nombre
+          {t('admin.torneos.nombre')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.nombre}
@@ -159,7 +161,7 @@ export default function TorneosPage() {
           />
         </label>
         <label className="text-sm">
-          Deporte
+          {t('admin.torneos.deporte')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.deporte}
@@ -173,21 +175,21 @@ export default function TorneosPage() {
           type="submit"
           className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
         >
-          Crear torneo
+          {t('admin.torneos.crear')}
         </button>
       </form>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">Cargando…</p>
+          <p className="p-4 text-slate-500">{t('common.loading')}</p>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Deporte</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Partidos</th>
+                <th className="px-4 py-3">{t('admin.torneos.nombre')}</th>
+                <th className="px-4 py-3">{t('admin.torneos.deporte')}</th>
+                <th className="px-4 py-3">{t('dashboard.status')}</th>
+                <th className="px-4 py-3">{t('admin.torneos.partidos')}</th>
               </tr>
             </thead>
             <tbody>
@@ -208,7 +210,7 @@ export default function TorneosPage() {
               {items.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-4 py-4 text-slate-500">
-                    Sin torneos.
+                    {t('messages.noData')}
                   </td>
                 </tr>
               )}
@@ -223,9 +225,9 @@ export default function TorneosPage() {
             onSubmit={onCreatePartido}
             className="grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-3"
           >
-            <h3 className="sm:col-span-3 font-semibold">Agregar partido</h3>
+            <h3 className="sm:col-span-3 font-semibold">{t('admin.torneos.agregarPartido')}</h3>
             <label className="text-sm">
-              Rival A
+              {t('admin.torneos.equipoA')}
               <input
                 className="mt-1 w-full rounded-lg border px-3 py-2"
                 value={partidoForm.rival_a}
@@ -236,7 +238,7 @@ export default function TorneosPage() {
               />
             </label>
             <label className="text-sm">
-              Rival B
+              {t('admin.torneos.equipoB')}
               <input
                 className="mt-1 w-full rounded-lg border px-3 py-2"
                 value={partidoForm.rival_b}
@@ -247,7 +249,7 @@ export default function TorneosPage() {
               />
             </label>
             <label className="text-sm">
-              Fecha
+              {t('admin.torneos.fecha')}
               <input
                 type="datetime-local"
                 className="mt-1 w-full rounded-lg border px-3 py-2"
@@ -261,21 +263,21 @@ export default function TorneosPage() {
               type="submit"
               className="sm:col-span-3 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
             >
-              Crear partido
+              {t('admin.torneos.crearPartido')}
             </button>
           </form>
 
           <div className="overflow-x-auto rounded-xl border bg-white">
             <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-              Partidos
+              {t('admin.torneos.partidos')}
             </h3>
             <table className="min-w-full text-left text-sm">
               <thead className="border-b text-slate-600">
                 <tr>
-                  <th className="px-4 py-2">A</th>
-                  <th className="px-4 py-2">B</th>
-                  <th className="px-4 py-2">Resultado</th>
-                  <th className="px-4 py-2">Fecha</th>
+                  <th className="px-4 py-2">{t('admin.torneos.equipoA')}</th>
+                  <th className="px-4 py-2">{t('admin.torneos.equipoB')}</th>
+                  <th className="px-4 py-2">{t('admin.torneos.resultado')}</th>
+                  <th className="px-4 py-2">{t('admin.torneos.fecha')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -286,7 +288,7 @@ export default function TorneosPage() {
                     <td className="px-4 py-2">
                       {p.jugado
                         ? `${p.goles_a ?? 0} – ${p.goles_b ?? 0}`
-                        : 'Pendiente'}
+                        : t('admin.torneos.pendiente')}
                     </td>
                     <td className="px-4 py-2">
                       {p.fecha
@@ -298,7 +300,7 @@ export default function TorneosPage() {
                 {partidos.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-4 py-3 text-slate-500">
-                      Sin partidos.
+                      {t('messages.noData')}
                     </td>
                   </tr>
                 )}
@@ -308,17 +310,17 @@ export default function TorneosPage() {
 
           <div className="overflow-x-auto rounded-xl border bg-white">
             <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-              Tabla
+              {t('admin.torneos.tabla')}
             </h3>
             <table className="min-w-full text-left text-sm">
               <thead className="border-b text-slate-600">
                 <tr>
-                  <th className="px-4 py-2">Equipo</th>
-                  <th className="px-4 py-2">Pts</th>
-                  <th className="px-4 py-2">PJ</th>
-                  <th className="px-4 py-2">PG</th>
-                  <th className="px-4 py-2">PE</th>
-                  <th className="px-4 py-2">PP</th>
+                  <th className="px-4 py-2">{t('admin.torneos.equipo')}</th>
+                  <th className="px-4 py-2">{t('admin.torneos.pts')}</th>
+                  <th className="px-4 py-2">{t('admin.torneos.pj')}</th>
+                  <th className="px-4 py-2">{t('admin.torneos.pg')}</th>
+                  <th className="px-4 py-2">{t('admin.torneos.pe')}</th>
+                  <th className="px-4 py-2">{t('admin.torneos.pp')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -335,7 +337,7 @@ export default function TorneosPage() {
                 {tabla.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-3 text-slate-500">
-                      Sin partidos jugados.
+                      {t('admin.torneos.sinPartidosJugados')}
                     </td>
                   </tr>
                 )}

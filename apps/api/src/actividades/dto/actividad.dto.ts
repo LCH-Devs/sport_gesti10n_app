@@ -86,3 +86,4 @@ export class SetSociosActividadDto {
   @IsInt({ each: true })
   socio_ids: number[];
 }
+

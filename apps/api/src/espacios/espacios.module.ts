@@ -8,3 +8,4 @@ import { EspaciosService } from './espacios.service';
   exports: [EspaciosService],
 })
 export class EspaciosModule {}
+

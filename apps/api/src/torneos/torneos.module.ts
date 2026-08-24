@@ -7,3 +7,4 @@ import { TorneosService } from './torneos.service';
   providers: [TorneosService],
 })
 export class TorneosModule {}
+

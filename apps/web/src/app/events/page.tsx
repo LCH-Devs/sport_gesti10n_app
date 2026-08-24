@@ -2,17 +2,19 @@
 
 import React from 'react';
 import { Header, Card, Badge, Button } from '@/components/common';
+import { useTranslation } from '@/lib/useTranslation';
 
 export default function EventsPage() {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-slate-50">
       <Header
-        title="Eventos y Calendario Deportivo"
-        subtitle="Schedule and manage sports events and competitions."
+        title={t('events.title')}
+        subtitle={t('events.subtitle')}
       >
         <input
           type="text"
-          placeholder="Search events..."
+          placeholder={t('events.searchPlaceholder')}
           className="px-4 py-2 rounded-md border border-slate-300 w-80"
         />
       </Header>
@@ -21,22 +23,27 @@ export default function EventsPage() {
         <div className="grid grid-cols-3 gap-6 mb-6">
           {/* Calendar Sidebar */}
           <Card>
-            <h3 className="font-semibold text-slate-900 mb-4">Disciplines</h3>
+            <h3 className="font-semibold text-slate-900 mb-4">{t('events.disciplines')}</h3>
             <div className="space-y-2">
-              {['Football', 'Basketball', 'Tennis', 'Swimming'].map((d) => (
-                <label key={d} className="flex items-center gap-2">
+              {[
+                { id: 'football', label: t('events.football') },
+                { id: 'basketball', label: t('events.basketball') },
+                { id: 'tennis', label: t('events.tennis') },
+                { id: 'swimming', label: t('events.swimming') },
+              ].map((d) => (
+                <label key={d.id} className="flex items-center gap-2">
                   <input type="checkbox" defaultChecked className="rounded" />
-                  <span className="text-sm">{d}</span>
+                  <span className="text-sm">{d.label}</span>
                 </label>
               ))}
             </div>
 
-            <h3 className="font-semibold text-slate-900 mt-6 mb-4">Institutions</h3>
+            <h3 className="font-semibold text-slate-900 mt-6 mb-4">{t('events.institutions')}</h3>
             <select className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm">
-              <option>All Institutions</option>
+              <option>{t('events.allInstitutions')}</option>
             </select>
 
-            <Button className="w-full mt-6">Schedule Event</Button>
+            <Button className="w-full mt-6">{t('events.scheduleEvent')}</Button>
           </Card>
 
           {/* Calendar */}
@@ -44,14 +51,22 @@ export default function EventsPage() {
             <div className="mb-4">
               <h2 className="text-2xl font-bold text-slate-900 mb-2">October 2024</h2>
               <div className="flex gap-4 mb-4">
-                <button className="font-medium text-blue-600">Month</button>
-                <button className="font-medium text-slate-600">Week</button>
+                <button className="font-medium text-blue-600">{t('events.month')}</button>
+                <button className="font-medium text-slate-600">{t('events.week')}</button>
               </div>
             </div>
 
             <div className="grid grid-cols-7 gap-2 mb-4">
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                <div key={day} className="text-center font-medium text-sm text-slate-600 py-2">
+              {[
+                t('calendar.mon'),
+                t('calendar.tue'),
+                t('calendar.wed'),
+                t('calendar.thu'),
+                t('calendar.fri'),
+                t('calendar.sat'),
+                t('calendar.sun'),
+              ].map((day, idx) => (
+                <div key={idx} className="text-center font-medium text-sm text-slate-600 py-2">
                   {day}
                 </div>
               ))}
@@ -74,11 +89,11 @@ export default function EventsPage() {
 
         {/* Upcoming Events */}
         <Card>
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Upcoming</h2>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('events.upcoming')}</h2>
           <div className="space-y-4">
             {[
-              { date: 'OCT 12', title: 'National Derby Final', time: '18:00 - 20:30', icon: '⚽' },
-              { date: 'OCT 15', title: 'U19 Regional Qualifiers', time: '09:00 - 14:00', icon: '🏀' },
+              { date: 'OCT 12', title: t('events.event1Title'), time: '18:00 - 20:30', icon: '⚽' },
+              { date: 'OCT 15', title: t('events.event2Title'), time: '09:00 - 14:00', icon: '🏀' },
             ].map((event, i) => (
               <div key={i} className="flex items-start gap-4 p-4 bg-slate-50 rounded-md">
                 <div className="text-3xl">{event.icon}</div>

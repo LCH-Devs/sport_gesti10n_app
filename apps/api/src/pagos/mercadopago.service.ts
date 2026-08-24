@@ -71,3 +71,4 @@ export class MercadoPagoService {
     return payment.get({ id: paymentId });
   }
 }
+

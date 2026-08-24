@@ -2,44 +2,46 @@
 
 import React from 'react';
 import { Header, Card, Badge, Button } from '@/components/common';
+import { useTranslation } from '@/lib/useTranslation';
 
 export default function NewsPage() {
+  const { t } = useTranslation();
   const articles = [
     {
-      title: 'City United Secures Historic Victory In Final Minutes',
-      date: '2 hours ago',
-      category: 'MATCH RESULTS',
+      title: t('news.article1Title'),
+      date: t('news.article1Date'),
+      category: 'matchResults',
+      categoryLabel: t('news.matchResults'),
       image: '⚽',
-      excerpt:
-        'In a stunning display of resilience, City United overturned a two-goal deficit to clinch the regional title, marking their first championship win in over a...',
+      excerpt: t('news.article1Excerpt'),
     },
     {
-      title: 'Q3 Financial Reports Indicate Steady Growth Across Tier',
+      title: t('news.article2Title'),
       date: 'Oct 23, 2024',
-      category: 'GENERAL NEWS',
+      category: 'generalNews',
+      categoryLabel: t('news.generalNews'),
       image: '📊',
-      excerpt:
-        'Recent financial disclosures from the top 20 institutions reveal an average revenue increase of 4.2%, largely driven by broadcasting partnerships and...',
+      excerpt: t('news.article2Excerpt'),
     },
     {
-      title: 'New Analytics Platform Integration Rollout Scheduled',
+      title: t('news.article3Title'),
       date: 'Oct 22, 2024',
-      category: 'OFFICIAL ANNOUNCEMENTS',
+      category: 'official',
+      categoryLabel: t('news.officialAnnouncements'),
       image: '📈',
-      excerpt:
-        'The highly anticipated transition to the new real-time player tracking and analytics platform will commence next week. All institutions are advised to review the...',
+      excerpt: t('news.article3Excerpt'),
     },
   ];
 
   return (
     <div className="min-h-screen bg-slate-50">
       <Header
-        title="Noticias y Novedades"
-        subtitle="Sports news, announcements, and updates."
+        title={t('news.title')}
+        subtitle={t('news.subtitle')}
       >
         <input
           type="text"
-          placeholder="Search news..."
+          placeholder={t('news.searchPlaceholder')}
           className="px-4 py-2 rounded-md border border-slate-300 w-80"
         />
       </Header>
@@ -50,30 +52,35 @@ export default function NewsPage() {
           <div className="grid grid-cols-3 gap-6">
             <div className="col-span-2">
               <div className="text-6xl mb-4">🏟️</div>
-              <Badge label="OFFICIAL ANNOUNCEMENTS" variant="info" />
+              <Badge label={t('news.officialAnnouncements')} variant="info" />
               <h2 className="text-3xl font-bold text-slate-900 mt-4 mb-2">
-                AthlletiCorp Announces Major Restructuring of European Leagues
+                {t('news.featuredTitle')}
               </h2>
               <p className="text-slate-600 mb-4">
-                In a sweeping move aimed at increasing competitive parity, the governing body has unveiled a comprehensive new framework that will affect all tier-one institutions starting next season.
+                {t('news.featuredDescription')}
               </p>
-              <Button>Read Full Story</Button>
+              <Button>{t('news.readFullStory')}</Button>
             </div>
             <div className="bg-slate-200 rounded-md flex items-center justify-center">
-              [Featured Image]
+              [{t('news.featuredImage')}]
             </div>
           </div>
         </Card>
 
         {/* Category Tabs */}
         <div className="flex gap-2 mb-6">
-          {['All News', 'Official Announcements', 'Match Results', 'General News'].map((cat) => (
+          {[
+            { key: 'allNews', label: t('news.allNews') },
+            { key: 'official', label: t('news.officialAnnouncements') },
+            { key: 'matches', label: t('news.matchResults') },
+            { key: 'general', label: t('news.generalNews') },
+          ].map((cat) => (
             <Button
-              key={cat}
-              variant={cat === 'All News' ? 'primary' : 'secondary'}
+              key={cat.key}
+              variant={cat.key === 'allNews' ? 'primary' : 'secondary'}
               size="sm"
             >
-              {cat}
+              {cat.label}
             </Button>
           ))}
         </div>
@@ -85,7 +92,7 @@ export default function NewsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div className="text-4xl">{article.image}</div>
               </div>
-              <Badge label={article.category} variant="info" />
+              <Badge label={article.categoryLabel} variant="info" />
               <h3 className="text-lg font-semibold text-slate-900 mt-4 mb-2">
                 {article.title}
               </h3>
@@ -93,7 +100,7 @@ export default function NewsPage() {
               <div>
                 <p className="text-xs text-slate-500 mb-4">🕐 {article.date}</p>
                 <Button variant="ghost" className="w-full">
-                  Read Full Story
+                  {t('news.readFullStory')}
                 </Button>
               </div>
             </Card>
@@ -102,7 +109,7 @@ export default function NewsPage() {
 
         {/* Load More */}
         <div className="text-center mt-8">
-          <Button variant="secondary">Load More News</Button>
+          <Button variant="secondary">{t('news.loadMore')}</Button>
         </div>
       </div>
     </div>

@@ -85,3 +85,4 @@ export class TorneosController {
     return this.torneos.updateResultado(clubId, id, dto);
   }
 }
+

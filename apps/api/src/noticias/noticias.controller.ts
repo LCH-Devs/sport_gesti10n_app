@@ -52,3 +52,4 @@ export class NoticiasController {
     return this.noticias.remove(clubId, id);
   }
 }
+

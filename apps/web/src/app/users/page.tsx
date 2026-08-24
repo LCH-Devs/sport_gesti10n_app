@@ -2,8 +2,10 @@
 
 import React from 'react';
 import { Header, Card, Badge, Button } from '@/components/common';
+import { useTranslation } from '@/lib/useTranslation';
 
 export default function UsersPage() {
+  const { t } = useTranslation();
   const users = [
     {
       name: 'Alex Johnson',
@@ -45,17 +47,17 @@ export default function UsersPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header
-        title="Administración de Usuarios y Cuotas"
-        subtitle="Manage members, staff, and user permissions across all institutions."
+        title={t('users.title')}
+        subtitle={t('users.subtitle')}
       >
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder="Search users..."
+            placeholder={t('users.searchPlaceholder')}
             className="px-4 py-2 rounded-md border border-slate-300 w-80"
           />
-          <Button size="md">Filters</Button>
-          <Button variant="primary" size="md">+ Add User</Button>
+          <Button size="md">{t('users.filters')}</Button>
+          <Button variant="primary" size="md">+ {t('users.addUser')}</Button>
         </div>
       </Header>
 
@@ -63,26 +65,26 @@ export default function UsersPage() {
         {/* Statistics Cards */}
         <div className="grid grid-cols-3 gap-6 mb-6">
           <Card>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Total Users</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase">{t('users.totalUsers')}</p>
             <p className="text-3xl font-bold text-slate-900 mt-2">8,547</p>
-            <p className="text-sm text-green-600 mt-2">↑ 12% this month</p>
+            <p className="text-sm text-green-600 mt-2">↑ {t('users.thisMonth')}</p>
           </Card>
           <Card>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Active Memberships</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase">{t('users.activeMemberships')}</p>
             <p className="text-3xl font-bold text-slate-900 mt-2">6,234</p>
-            <p className="text-sm text-slate-600 mt-2">73% of total</p>
+            <p className="text-sm text-slate-600 mt-2">{t('users.ofTotal')}</p>
           </Card>
           <Card>
-            <p className="text-xs font-semibold text-slate-500 uppercase">Pending Approvals</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase">{t('users.pendingApprovals')}</p>
             <p className="text-3xl font-bold text-slate-900 mt-2">89</p>
-            <p className="text-sm text-amber-600 mt-2">⚠️ Requires attention</p>
+            <p className="text-sm text-amber-600 mt-2">⚠️ {t('users.requiresAttention')}</p>
           </Card>
         </div>
 
         {/* User Management Table */}
         <Card>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-semibold text-slate-900">User Management</h2>
+            <h2 className="text-lg font-semibold text-slate-900">{t('users.userManagement')}</h2>
             <button className="text-slate-600 hover:text-slate-900">⚙️</button>
           </div>
 
@@ -90,12 +92,12 @@ export default function UsersPage() {
             <table className="w-full text-sm">
               <thead className="border-b border-slate-200 bg-slate-50">
                 <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">Name</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">Role</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">Institution</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">Status</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">Join Date</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-900">Actions</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.name')}</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.role')}</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('users.institution')}</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.status')}</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('users.joinDate')}</th>
+                  <th className="text-right px-4 py-3 font-semibold text-slate-900">{t('dashboard.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -132,7 +134,7 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-slate-600">{user.joinDate}</td>
                     <td className="px-4 py-3 text-right">
                       <button className="text-slate-600 hover:text-slate-900 font-medium">
-                        Edit
+                        {t('common.edit')}
                       </button>
                     </td>
                   </tr>
@@ -143,14 +145,14 @@ export default function UsersPage() {
 
           <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-200">
             <p className="text-sm text-slate-600">
-              Showing 1 to {users.length} of {users.length} results
+              {t('users.showing')} 1 {t('users.to')} {users.length} {t('users.of')} {users.length} {t('users.results')}
             </p>
             <div className="flex gap-2">
               <Button variant="secondary" size="sm">
-                Previous
+                {t('users.previous')}
               </Button>
               <Button variant="primary" size="sm">
-                Next
+                {t('users.next')}
               </Button>
             </div>
           </div>

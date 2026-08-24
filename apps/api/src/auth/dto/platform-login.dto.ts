@@ -8,3 +8,4 @@ export class PlatformLoginDto {
   @MinLength(4)
   password: string;
 }
+

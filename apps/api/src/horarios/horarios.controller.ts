@@ -47,3 +47,4 @@ export class HorariosController {
     return this.horarios.remove(clubId, id);
   }
 }
+

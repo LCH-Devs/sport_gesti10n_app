@@ -10,3 +10,4 @@ import { MediaModule } from '../media/media.module';
   exports: [ClubsService],
 })
 export class ClubsModule {}
+

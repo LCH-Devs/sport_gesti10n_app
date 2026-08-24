@@ -30,3 +30,4 @@ export class ReportesController {
     return this.reportes.generarNoticiasCumple(clubId);
   }
 }
+

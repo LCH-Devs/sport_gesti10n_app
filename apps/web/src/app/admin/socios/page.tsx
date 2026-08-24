@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type Socio = {
   id: number;
@@ -15,6 +16,7 @@ type Socio = {
 };
 
 export default function SociosPage() {
+  const { t } = useTranslation();
   const [socios, setSocios] = useState<Socio[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -84,9 +86,9 @@ export default function SociosPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Socios</h2>
+      <h2 className="text-2xl font-bold">{t('admin.socios.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Listado multi-tenant: solo socios de tu club.
+        {t('admin.socios.subtitle')}
       </p>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
@@ -95,14 +97,14 @@ export default function SociosPage() {
         onSubmit={onCreate}
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
-        <h3 className="sm:col-span-2 font-semibold">Alta rápida</h3>
+        <h3 className="sm:col-span-2 font-semibold">{t('admin.socios.quickCreate')}</h3>
         {(
           [
-            ['dni', 'DNI'],
-            ['nombre', 'Nombre'],
-            ['apellido', 'Apellido'],
-            ['email', 'Email'],
-            ['telefono', 'Teléfono'],
+            ['dni', t('admin.socios.dni')],
+            ['nombre', t('admin.socios.nombre')],
+            ['apellido', t('admin.socios.apellido')],
+            ['email', t('admin.socios.email')],
+            ['telefono', t('admin.socios.telefono')],
           ] as const
         ).map(([key, label]) => (
           <label key={key} className="text-sm">
@@ -120,14 +122,14 @@ export default function SociosPage() {
           type="submit"
           className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
         >
-          Crear socio
+          {t('admin.socios.createSocio')}
         </button>
       </form>
 
       <div className="mt-4 rounded-xl border bg-white p-4">
-        <h3 className="font-semibold">Importar CSV</h3>
+        <h3 className="font-semibold">{t('admin.socios.importCsv')}</h3>
         <p className="mt-1 text-xs text-slate-500">
-          Cabecera: dni,nombre,apellido,email,telefono
+          {t('admin.socios.csvHeader')}
         </p>
         <input
           type="file"
@@ -171,16 +173,16 @@ export default function SociosPage() {
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">Cargando…</p>
+          <p className="p-4 text-slate-500">{t('common.loading')}</p>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-4 py-3">DNI</th>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Rol</th>
+                <th className="px-4 py-3">{t('admin.socios.dni')}</th>
+                <th className="px-4 py-3">{t('admin.socios.nombre')}</th>
+                <th className="px-4 py-3">{t('admin.socios.email')}</th>
+                <th className="px-4 py-3">{t('admin.socios.estado')}</th>
+                <th className="px-4 py-3">{t('admin.socios.rol')}</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -200,7 +202,7 @@ export default function SociosPage() {
                       className="text-red-600 hover:underline"
                       onClick={() => void onDelete(s.id)}
                     >
-                      Eliminar
+                      {t('admin.socios.eliminar')}
                     </button>
                   </td>
                 </tr>

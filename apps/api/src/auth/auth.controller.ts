@@ -17,3 +17,4 @@ export class AuthController {
     return this.auth.loginPlatform(dto);
   }
 }
+

@@ -36,3 +36,4 @@ export class UpdateAdminDto {
   @MinLength(4)
   password?: string;
 }
+

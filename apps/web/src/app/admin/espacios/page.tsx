@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type Espacio = {
   id: number;
@@ -16,6 +17,7 @@ type Espacio = {
 };
 
 export default function EspaciosPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Espacio[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -89,9 +91,9 @@ export default function EspaciosPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Espacios</h2>
+      <h2 className="text-2xl font-bold">{t('admin.espacios.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Canchas, quinchos y otros espacios reservables.
+        {t('admin.espacios.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
@@ -99,9 +101,9 @@ export default function EspaciosPage() {
         onSubmit={onCreate}
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
-        <h3 className="sm:col-span-2 font-semibold">Alta rápida</h3>
+        <h3 className="sm:col-span-2 font-semibold">{t('admin.socios.quickCreate')}</h3>
         <label className="text-sm">
-          Nombre
+          {t('admin.espacios.nombre')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.nombre}
@@ -110,7 +112,7 @@ export default function EspaciosPage() {
           />
         </label>
         <label className="text-sm">
-          Tipo
+          {t('admin.espacios.tipo')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.tipo}
@@ -120,7 +122,7 @@ export default function EspaciosPage() {
           />
         </label>
         <label className="text-sm sm:col-span-2">
-          Descripción
+          {t('admin.espacios.descripcion')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.descripcion}
@@ -130,7 +132,7 @@ export default function EspaciosPage() {
           />
         </label>
         <label className="text-sm">
-          Duración slot (min)
+          {t('admin.espacios.duracion')}
           <input
             type="number"
             min={15}
@@ -142,7 +144,7 @@ export default function EspaciosPage() {
           />
         </label>
         <label className="text-sm">
-          Precio opcional
+          {t('admin.espacios.precio')}
           <input
             type="number"
             min={0}
@@ -154,7 +156,7 @@ export default function EspaciosPage() {
           />
         </label>
         <label className="text-sm">
-          Apertura
+          {t('admin.espacios.apertura')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.hora_apertura}
@@ -165,7 +167,7 @@ export default function EspaciosPage() {
           />
         </label>
         <label className="text-sm">
-          Cierre
+          {t('admin.espacios.cierre')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.hora_cierre}
@@ -179,22 +181,22 @@ export default function EspaciosPage() {
           type="submit"
           className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
         >
-          Crear espacio
+          {t('admin.espacios.createEspacio')}
         </button>
       </form>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">Cargando…</p>
+          <p className="p-4 text-slate-500">{t('common.loading')}</p>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Tipo</th>
-                <th className="px-4 py-3">Slot</th>
-                <th className="px-4 py-3">Horario</th>
-                <th className="px-4 py-3">Activo</th>
+                <th className="px-4 py-3">{t('admin.espacios.nombre')}</th>
+                <th className="px-4 py-3">{t('admin.espacios.tipo')}</th>
+                <th className="px-4 py-3">{t('admin.espacios.slot')}</th>
+                <th className="px-4 py-3">{t('admin.espacios.horario')}</th>
+                <th className="px-4 py-3">{t('admin.espacios.activo')}</th>
               </tr>
             </thead>
             <tbody>
@@ -212,7 +214,7 @@ export default function EspaciosPage() {
               {items.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-4 text-slate-500">
-                    Sin espacios.
+                    {t('messages.noData')}
                   </td>
                 </tr>
               )}

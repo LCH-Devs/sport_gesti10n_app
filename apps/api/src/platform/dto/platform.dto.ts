@@ -139,3 +139,4 @@ export class UpdatePlatformAdminDto {
   @IsBoolean()
   activo?: boolean;
 }
+

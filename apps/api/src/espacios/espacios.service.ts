@@ -108,7 +108,7 @@ export class EspaciosService {
       slotFin.setMinutes(slotFin.getMinutes() + slot);
 
       const overlap = reservas.some(
-        (r) => r.inicio < slotFin && r.fin > slotInicio,
+        (r: any) => r.inicio < slotFin && r.fin > slotInicio,
       );
       slots.push({
         inicio: `${fecha}T${toHm(t)}:00`,
@@ -121,7 +121,7 @@ export class EspaciosService {
       espacio_id: id,
       fecha,
       duracion_slot_min: slot,
-      slots: slots.filter((s) => s.libre),
+      slots: slots.filter((s: any) => s.libre),
       todos: slots,
     };
   }
@@ -134,3 +134,4 @@ export class EspaciosService {
     return espacio;
   }
 }
+

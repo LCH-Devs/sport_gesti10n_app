@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type Noticia = {
   id: number;
@@ -13,6 +14,7 @@ type Noticia = {
 };
 
 export default function NoticiasPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Noticia[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -64,9 +66,9 @@ export default function NoticiasPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Noticias</h2>
+      <h2 className="text-2xl font-bold">{t('admin.noticias.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Noticias y eventos del club.
+        {t('admin.noticias.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
@@ -74,9 +76,9 @@ export default function NoticiasPage() {
         onSubmit={onCreate}
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4"
       >
-        <h3 className="font-semibold">Nueva publicación</h3>
+        <h3 className="font-semibold">{t('admin.noticias.nueva')}</h3>
         <label className="text-sm">
-          Título
+          {t('admin.noticias.titulo')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.titulo}
@@ -85,7 +87,7 @@ export default function NoticiasPage() {
           />
         </label>
         <label className="text-sm">
-          Cuerpo
+          {t('admin.noticias.cuerpo')}
           <textarea
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             rows={4}
@@ -102,21 +104,21 @@ export default function NoticiasPage() {
               setForm((f) => ({ ...f, es_evento: e.target.checked }))
             }
           />
-          Es evento
+          {t('admin.noticias.esEvento')}
         </label>
         <button
           type="submit"
           className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
         >
-          Publicar
+          {t('admin.noticias.publicar')}
         </button>
       </form>
 
       <div className="mt-8 space-y-3">
         {loading ? (
-          <p className="text-slate-500">Cargando…</p>
+          <p className="text-slate-500">{t('common.loading')}</p>
         ) : items.length === 0 ? (
-          <p className="text-slate-500">Sin noticias.</p>
+          <p className="text-slate-500">{t('messages.noData')}</p>
         ) : (
           items.map((n) => (
             <article
@@ -127,7 +129,7 @@ export default function NoticiasPage() {
                 <h3 className="font-semibold">{n.titulo}</h3>
                 {n.es_evento && (
                   <span className="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-800">
-                    Evento
+                    {t('admin.noticias.esEvento')}
                   </span>
                 )}
               </div>

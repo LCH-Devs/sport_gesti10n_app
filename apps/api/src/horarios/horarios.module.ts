@@ -7,3 +7,4 @@ import { HorariosService } from './horarios.service';
   providers: [HorariosService],
 })
 export class HorariosModule {}
+

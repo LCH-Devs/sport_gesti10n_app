@@ -10,11 +10,13 @@ import {
   mediaUrl,
   saveSession,
 } from '@/lib/api';
+import { useTranslation } from '@/lib/useTranslation';
 
 export default function ClubLoginPage() {
   const params = useParams<{ slug: string }>();
   const slug = params.slug;
   const router = useRouter();
+  const { t } = useTranslation();
   const [club, setClub] = useState<ClubLoginBranding | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,13 +32,13 @@ export default function ClubLoginPage() {
         const data = await apiFetch<ClubLoginBranding>(`/clubs/slug/${slug}`);
         if (cancelled) return;
         if (!data.activo) {
-          setError('Este club está suspendido');
+          setError(t('login.clubSuspended'));
           return;
         }
         setClub(data);
         applyClubTheme(data);
       } catch {
-        if (!cancelled) setError('Club no encontrado');
+        if (!cancelled) setError(t('login.clubNotFound'));
       } finally {
         if (!cancelled) setLoadingClub(false);
       }
@@ -66,7 +68,7 @@ export default function ClubLoginPage() {
         data.must_complete_onboarding ? '/admin/onboarding' : '/admin',
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error de login');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,7 @@ export default function ClubLoginPage() {
   if (loadingClub) {
     return (
       <main className="flex min-h-screen items-center justify-center text-slate-500">
-        Cargando club…
+        {t('common.loading')}
       </main>
     );
   }
@@ -83,7 +85,7 @@ export default function ClubLoginPage() {
   if (!club) {
     return (
       <main className="flex min-h-screen items-center justify-center px-4">
-        <p className="text-red-600">{error || 'Club no encontrado'}</p>
+        <p className="text-red-600">{error || t('login.clubNotFound')}</p>
       </main>
     );
   }
@@ -115,11 +117,11 @@ export default function ClubLoginPage() {
           {club.nombre}
         </h1>
         <p className="mt-2 text-center text-sm text-slate-600">
-          Ingresá con el email y la contraseña de tu club.
+          {t('login.subtitle')}
         </p>
 
         <label className="mt-6 block text-sm font-medium text-slate-700">
-          Email
+          {t('login.email')}
           <input
             type="email"
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -130,7 +132,7 @@ export default function ClubLoginPage() {
         </label>
 
         <label className="mt-4 block text-sm font-medium text-slate-700">
-          Contraseña
+          {t('login.password')}
           <div className="relative mt-1">
             <input
               type={showPassword ? 'text' : 'password'}
@@ -145,7 +147,7 @@ export default function ClubLoginPage() {
               className="absolute inset-y-0 right-0 px-3 text-sm text-slate-500"
               onClick={() => setShowPassword((v) => !v)}
             >
-              {showPassword ? 'Ocultar' : 'Ver'}
+              {showPassword ? t('login.hide') : t('login.show')}
             </button>
           </div>
         </label>
@@ -162,7 +164,7 @@ export default function ClubLoginPage() {
           className="mt-6 w-full rounded-lg px-4 py-2.5 font-semibold text-white disabled:opacity-60"
           style={{ background: club.color_primario }}
         >
-          {loading ? 'Ingresando…' : 'Ingresar'}
+          {loading ? t('login.signing') : t('login.signin')}
         </button>
       </form>
     </main>

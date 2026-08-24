@@ -7,3 +7,4 @@ import { ActividadesService } from './actividades.service';
   providers: [ActividadesService],
 })
 export class ActividadesModule {}
+

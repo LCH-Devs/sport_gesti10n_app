@@ -1,20 +1,29 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  DeleteObjectsCommand,
-  ListObjectsV2Command,
-  PutObjectCommand,
-  S3Client,
-} from '@aws-sdk/client-s3';
 import { mkdirSync, readdirSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
+
+let S3Client: any = null;
+let DeleteObjectsCommand: any = null;
+let ListObjectsV2Command: any = null;
+let PutObjectCommand: any = null;
+
+try {
+  const aws = require('@aws-sdk/client-s3');
+  S3Client = aws.S3Client;
+  DeleteObjectsCommand = aws.DeleteObjectsCommand;
+  ListObjectsV2Command = aws.ListObjectsV2Command;
+  PutObjectCommand = aws.PutObjectCommand;
+} catch {
+  // AWS SDK optional - only needed if S3 is configured
+}
 
 const LOCAL_PREFIX = '/uploads/logos/';
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
-  private readonly s3: S3Client | null;
+  private readonly s3: any;
   private readonly bucket: string;
   private readonly publicBase: string;
   private readonly localDir = join(process.cwd(), 'uploads', 'logos');
@@ -94,13 +103,13 @@ export class StorageService {
         }),
       );
       const keys = (listed.Contents || [])
-        .map((obj) => obj.Key)
-        .filter((key): key is string => !!key);
+        .map((obj: any) => obj.Key)
+        .filter((key: any): key is string => !!key);
       if (keys.length) {
         await this.s3.send(
           new DeleteObjectsCommand({
             Bucket: this.bucket,
-            Delete: { Objects: keys.map((Key) => ({ Key })) },
+            Delete: { Objects: keys.map((Key: string) => ({ Key })) },
           }),
         );
       }
@@ -118,3 +127,4 @@ export class StorageService {
     }
   }
 }
+

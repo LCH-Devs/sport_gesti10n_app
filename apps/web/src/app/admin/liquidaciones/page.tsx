@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type Liquidacion = {
   id: number;
@@ -19,6 +20,7 @@ function mesDefault() {
 }
 
 export default function LiquidacionesPage() {
+  const { t } = useTranslation();
   const [items, setItems] = useState<Liquidacion[]>([]);
   const [socios, setSocios] = useState<Socio[]>([]);
   const [error, setError] = useState('');
@@ -99,9 +101,9 @@ export default function LiquidacionesPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Liquidaciones</h2>
+      <h2 className="text-2xl font-bold">{t('admin.liquidaciones.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Liquidaciones a profesores (modo cobro profe).
+        {t('admin.liquidaciones.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {msg && <p className="mt-4 text-sm text-green-700">{msg}</p>}
@@ -110,9 +112,9 @@ export default function LiquidacionesPage() {
         onSubmit={onCerrarMes}
         className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4"
       >
-        <h3 className="w-full font-semibold">Cerrar mes</h3>
+        <h3 className="w-full font-semibold">{t('admin.liquidaciones.cerrarMes')}</h3>
         <label className="text-sm">
-          Mes (YYYY-MM)
+          {t('admin.liquidaciones.mes')}
           <input
             className="mt-1 block rounded-lg border px-3 py-2"
             value={form.mes}
@@ -122,7 +124,7 @@ export default function LiquidacionesPage() {
           />
         </label>
         <label className="text-sm">
-          Profesor
+          {t('admin.liquidaciones.profesor')}
           <select
             className="mt-1 block min-w-[200px] rounded-lg border px-3 py-2"
             value={form.profe_id}
@@ -143,21 +145,21 @@ export default function LiquidacionesPage() {
           type="submit"
           className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
         >
-          Cerrar mes
+          {t('admin.liquidaciones.cerrarMes')}
         </button>
       </form>
 
       <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">Cargando…</p>
+          <p className="p-4 text-slate-500">{t('common.loading')}</p>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-4 py-3">Mes</th>
-                <th className="px-4 py-3">Profesor</th>
-                <th className="px-4 py-3">Total club</th>
-                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">{t('admin.liquidaciones.mes')}</th>
+                <th className="px-4 py-3">{t('admin.liquidaciones.profesor')}</th>
+                <th className="px-4 py-3">{t('admin.liquidaciones.totalClub')}</th>
+                <th className="px-4 py-3">{t('dashboard.status')}</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -177,7 +179,7 @@ export default function LiquidacionesPage() {
                         className="text-green-700 hover:underline"
                         onClick={() => void marcarPagada(l.id)}
                       >
-                        Marcar pagada
+                        {t('admin.liquidaciones.marcarPagada')}
                       </button>
                     )}
                   </td>
@@ -186,7 +188,7 @@ export default function LiquidacionesPage() {
               {items.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-4 text-slate-500">
-                    Sin liquidaciones.
+                    {t('messages.noData')}
                   </td>
                 </tr>
               )}

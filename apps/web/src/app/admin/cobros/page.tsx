@@ -2,6 +2,7 @@
 
 import { apiFetch, getSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type PagoRow = {
   id: number;
@@ -34,6 +35,7 @@ function mesDefault() {
 }
 
 export default function CobrosPage() {
+  const { t } = useTranslation();
   const [mes, setMes] = useState(mesDefault());
   const [monto, setMonto] = useState('');
   const [resumen, setResumen] = useState<Resumen | null>(null);
@@ -106,10 +108,9 @@ export default function CobrosPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Cobros</h2>
+      <h2 className="text-2xl font-bold">{t('admin.cobros.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Generá links de MercadoPago del club (sin custodiar fondos). Push FCM
-        viene en el próximo sprint.
+        {t('admin.cobros.subtitle')}
       </p>
 
       <form
@@ -117,7 +118,7 @@ export default function CobrosPage() {
         className="mt-6 flex flex-wrap items-end gap-3 rounded-xl border bg-white p-4"
       >
         <label className="text-sm">
-          Mes (YYYY-MM)
+          {t('admin.cobros.mes')}
           <input
             className="mt-1 block rounded-lg border px-3 py-2"
             value={mes}
@@ -127,14 +128,14 @@ export default function CobrosPage() {
           />
         </label>
         <label className="text-sm">
-          Monto (opcional)
+          {t('admin.cobros.monto')}
           <input
             type="number"
             min={1}
             className="mt-1 block rounded-lg border px-3 py-2"
             value={monto}
             onChange={(e) => setMonto(e.target.value)}
-            placeholder="Cuota del club"
+            placeholder={t('admin.cobros.cuotaPlaceholder')}
           />
         </label>
         <button
@@ -142,14 +143,14 @@ export default function CobrosPage() {
           disabled={loading}
           className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
         >
-          {loading ? 'Generando…' : 'Generar y Enviar Cobros'}
+          {loading ? t('admin.cobros.generando') : t('admin.cobros.generarYEnviar')}
         </button>
         <button
           type="button"
           className="rounded-lg border px-4 py-2"
           onClick={() => void load()}
         >
-          Actualizar
+          {t('common.refresh')}
         </button>
       </form>
 
@@ -159,23 +160,23 @@ export default function CobrosPage() {
       {resumen && (
         <div className="mt-6 grid gap-3 sm:grid-cols-4">
           <div className="rounded-xl border bg-white p-4">
-            <p className="text-xs text-slate-500">Mes</p>
+            <p className="text-xs text-slate-500">{t('admin.cobros.mes')}</p>
             <p className="text-lg font-bold">{resumen.mes}</p>
           </div>
           <div className="rounded-xl border bg-white p-4">
-            <p className="text-xs text-slate-500">Pagados</p>
+            <p className="text-xs text-slate-500">{t('admin.cobros.pagados')}</p>
             <p className="text-lg font-bold text-green-700">
               {resumen.cantidad_pagados}
             </p>
           </div>
           <div className="rounded-xl border bg-white p-4">
-            <p className="text-xs text-slate-500">Pendientes</p>
+            <p className="text-xs text-slate-500">{t('admin.cobros.pendientes')}</p>
             <p className="text-lg font-bold text-amber-700">
               {resumen.cantidad_pendientes}
             </p>
           </div>
           <div className="rounded-xl border bg-white p-4">
-            <p className="text-xs text-slate-500">Deuda $</p>
+            <p className="text-xs text-slate-500">{t('admin.cobros.deuda')}</p>
             <p className="text-lg font-bold">{resumen.monto_pendiente}</p>
           </div>
         </div>
@@ -185,11 +186,11 @@ export default function CobrosPage() {
         <table className="min-w-full text-left text-sm">
           <thead className="border-b bg-slate-50">
             <tr>
-              <th className="px-4 py-3">Socio</th>
-              <th className="px-4 py-3">DNI</th>
-              <th className="px-4 py-3">Monto</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3">Link</th>
+              <th className="px-4 py-3">{t('dashboard.member')}</th>
+              <th className="px-4 py-3">{t('dashboard.dni')}</th>
+              <th className="px-4 py-3">{t('admin.cobros.monto')}</th>
+              <th className="px-4 py-3">{t('dashboard.status')}</th>
+              <th className="px-4 py-3">{t('admin.cobros.link')}</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -210,7 +211,7 @@ export default function CobrosPage() {
                       rel="noreferrer"
                       className="text-blue-600 hover:underline"
                     >
-                      Abrir
+                      {t('admin.cobros.abrir')}
                     </a>
                   ) : (
                     '—'
@@ -223,7 +224,7 @@ export default function CobrosPage() {
                       className="text-green-700 hover:underline"
                       onClick={() => void marcarPagado(p.id)}
                     >
-                      Marcar pagado
+                      {t('admin.cobros.marcarPagado')}
                     </button>
                   )}
                 </td>
@@ -233,7 +234,7 @@ export default function CobrosPage() {
         </table>
         {resumen && resumen.pagos.length === 0 && (
           <p className="p-4 text-slate-500">
-            Sin pagos este mes. Usá Generar y Enviar Cobros.
+            {t('admin.cobros.sinPagos')}
           </p>
         )}
       </div>
