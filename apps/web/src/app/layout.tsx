@@ -1,7 +1,7 @@
 'use client';
 
 import '@/app/globals.css';
-import { Navbar } from '@/components/common';
+import { Navbar, Sidebar } from '@/components/common';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import React from 'react';
 import { usePathname } from 'next/navigation';
@@ -11,20 +11,28 @@ function RootLayoutContent({
 }: {
   children: React.ReactNode;
 }) {
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const pathname = usePathname();
 
   const isPublicPage =
     pathname === '/landing' ||
     pathname === '/' ||
     pathname.startsWith('/login');
-  const showNavbar = !isPublicPage;
+  const showNavbarSidebar = !isPublicPage;
 
   return (
     <>
-      {showNavbar && <Navbar />}
-      <main className={showNavbar ? 'overflow-auto max-h-[calc(100vh-4rem)] mt-16' : ''}>
-        {children}
-      </main>
+      {showNavbarSidebar && (
+        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} userName="Admin User" userInitial="A" />
+      )}
+
+      <div className={showNavbarSidebar ? 'flex' : ''}>
+        {showNavbarSidebar && (
+          <Sidebar isOpen={sidebarOpen} />
+        )}
+
+        <main className={showNavbarSidebar ? 'flex-1 overflow-auto max-h-[calc(100vh-4rem)] mt-16' : ''}>{children}</main>
+      </div>
     </>
   );
 }

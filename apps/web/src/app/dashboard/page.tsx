@@ -1,214 +1,195 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
-import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { UserGroupIcon, DocumentTextIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { Header, Card, Badge, Button } from '@/components/common';
+import { apiFetch, getPlatformSession } from '@/lib/api';
+import { useTranslation } from '@/lib/useTranslation';
 
-type HoyData = {
-  mes: string;
-  cobranza: {
-    total: number;
-    pagados: number;
-    pendientes: number;
-    pct_cobrado: number;
-  };
-  deudores: Array<{
-    id: number;
-    dni: string;
-    nombre: string;
-    apellido: string;
-    monto: number;
-  }>;
-  reservas_hoy: Array<{
-    id: number;
-    inicio: string;
-    fin: string;
-    socio: { id: number; nombre: string; apellido: string; dni: string };
-    espacio: { id: number; nombre: string };
-  }>;
-  horarios_hoy: Array<{
-    id: number;
-    titulo: string;
-    dias: string;
-    hora_inicio: string;
-    hora_fin: string;
-  }>;
-  alertas_fuga_count: number;
+type AdminUser = {
+  id: number;
+  email: string;
+  nombre: string;
+  activo: boolean;
 };
 
-export default function AdminHomePage() {
-  const [data, setData] = useState<HoyData | null>(null);
-  const [error, setError] = useState('');
+export default function DashboardPage() {
+  const router = useRouter();
+  const { t } = useTranslation();
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const load = useCallback(async () => {
-    const session = getSession();
-    if (!session) return;
+  const loadUsers = useCallback(async () => {
+    const session = getPlatformSession();
+    if (!session) {
+      router.push('/login');
+      return;
+    }
     setLoading(true);
     setError('');
     try {
-      const res = await apiFetch<HoyData>('/reportes/hoy', {
+      const data = await apiFetch<AdminUser[]>('/platform/admins', {
         token: session.access_token,
-        clubSlug: session.club.slug,
       });
-      setData(res);
+      setUsers(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [router, t]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void loadUsers();
+  }, [loadUsers]);
+
+  const metrics = [
+    { label: t('dashboard.totalAdmins'), value: users.length.toString(), change: t('dashboard.realtime'), icon: UserGroupIcon },
+    { label: t('dashboard.activeUsers'), value: users.filter(u => u.activo).length.toString(), change: t('dashboard.realtime'), icon: DocumentTextIcon },
+    { label: t('dashboard.systemHealth'), value: '99.9%', change: t('dashboard.allServices'), icon: SparklesIcon },
+  ];
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold text-slate-900">Hoy en el club</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Resumen del día: cobranza, reservas, horarios y alertas.
-      </p>
+    <div className="min-h-screen bg-slate-50">
+      <Header
+        title={t('dashboard.overview')}
+        subtitle={t('dashboard.realtime')}
+      >
+        <div className="flex gap-2">
+          <Button size="md">{t('dashboard.exportReport')}</Button>
+          <Button
+            variant="secondary"
+            size="md"
+            onClick={() => router.push('/dashboard/clubs/new')}
+          >
+            {t('dashboard.addInstitution')}
+          </Button>
+        </div>
+      </Header>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-      {loading && <p className="mt-4 text-slate-500">Cargando…</p>}
+      <div className="p-6">
+        {/* Metrics Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {metrics.map((metric, index) => {
+            const Icon = metric.icon;
+            return (
+              <Card key={index}>
+                <div className="flex items-start justify-between mb-4">
+                  <div>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                      {metric.label}
+                    </p>
+                    <p className="text-3xl font-bold text-slate-900 mt-2">{metric.value}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Icon className="w-6 h-6 text-blue-600" />
+                  </div>
+                </div>
+                <p className="text-sm text-slate-600">{metric.change}</p>
+              </Card>
+            );
+          })}
+        </div>
 
-      {data && (
-        <>
-          <div className="mt-6 grid gap-3 sm:grid-cols-4">
-            <div className="rounded-xl border bg-white p-4">
-              <p className="text-xs text-slate-500">Cobranza {data.mes}</p>
-              <p className="text-2xl font-bold">
-                {data.cobranza.pct_cobrado}%
-              </p>
+        {/* User Management Table */}
+        <Card>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">{t('dashboard.userManagement')}</h2>
             </div>
-            <div className="rounded-xl border bg-white p-4">
-              <p className="text-xs text-slate-500">Pagados</p>
-              <p className="text-2xl font-bold text-green-700">
-                {data.cobranza.pagados}
-              </p>
-            </div>
-            <div className="rounded-xl border bg-white p-4">
-              <p className="text-xs text-slate-500">Pendientes</p>
-              <p className="text-2xl font-bold text-amber-700">
-                {data.cobranza.pendientes}
-              </p>
-            </div>
-            <Link
-              href="/dashboard/fuga"
-              className="rounded-xl border bg-white p-4 hover:bg-slate-50"
-            >
-              <p className="text-xs text-slate-500">Alertas fuga</p>
-              <p className="text-2xl font-bold text-red-700">
-                {data.alertas_fuga_count}
-              </p>
-              <p className="mt-1 text-xs text-blue-600">Ver alerta de fuga →</p>
-            </Link>
+            <button className="text-slate-600 hover:text-slate-900">⚙️</button>
           </div>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <div className="overflow-x-auto rounded-xl border bg-white">
-              <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-                Deudores
-              </h3>
-              {data.deudores.length === 0 ? (
-                <p className="p-4 text-sm text-slate-500">Sin deudores.</p>
-              ) : (
-                <table className="min-w-full text-left text-sm">
-                  <thead className="border-b text-slate-600">
-                    <tr>
-                      <th className="px-4 py-2">Socio</th>
-                      <th className="px-4 py-2">DNI</th>
-                      <th className="px-4 py-2">Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.deudores.map((d) => (
-                      <tr key={d.id} className="border-b last:border-0">
-                        <td className="px-4 py-2">
-                          {d.apellido}, {d.nombre}
-                        </td>
-                        <td className="px-4 py-2 font-mono">{d.dni}</td>
-                        <td className="px-4 py-2">${d.monto}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+          {error && <p className="text-sm text-red-600 mb-4">{error}</p>}
 
-            <div className="overflow-x-auto rounded-xl border bg-white">
-              <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-                Reservas hoy
-              </h3>
-              {data.reservas_hoy.length === 0 ? (
-                <p className="p-4 text-sm text-slate-500">Sin reservas hoy.</p>
-              ) : (
-                <table className="min-w-full text-left text-sm">
-                  <thead className="border-b text-slate-600">
-                    <tr>
-                      <th className="px-4 py-2">Espacio</th>
-                      <th className="px-4 py-2">Socio</th>
-                      <th className="px-4 py-2">Horario</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.reservas_hoy.map((r) => (
-                      <tr key={r.id} className="border-b last:border-0">
-                        <td className="px-4 py-2">{r.espacio.nombre}</td>
-                        <td className="px-4 py-2">
-                          {r.socio.apellido}, {r.socio.nombre}
-                        </td>
-                        <td className="px-4 py-2">
-                          {new Date(r.inicio).toLocaleTimeString('es-AR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}{' '}
-                          –{' '}
-                          {new Date(r.fin).toLocaleTimeString('es-AR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-6 overflow-x-auto rounded-xl border bg-white">
-            <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-              Horarios hoy
-            </h3>
-            {data.horarios_hoy.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500">Sin horarios hoy.</p>
-            ) : (
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b text-slate-600">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50">
+                <tr>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.name')}</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.email')}</th>
+                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.status')}</th>
+                  <th className="text-right px-4 py-3 font-semibold text-slate-900">{t('dashboard.actions')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
                   <tr>
-                    <th className="px-4 py-2">Título</th>
-                    <th className="px-4 py-2">Días</th>
-                    <th className="px-4 py-2">Horario</th>
+                    <td colSpan={4} className="px-4 py-3 text-center text-slate-500">
+                      {t('common.loading')}
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {data.horarios_hoy.map((h) => (
-                    <tr key={h.id} className="border-b last:border-0">
-                      <td className="px-4 py-2">{h.titulo}</td>
-                      <td className="px-4 py-2">{h.dias}</td>
-                      <td className="px-4 py-2">
-                        {h.hora_inicio} – {h.hora_fin}
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-3 text-center text-slate-500">
+                      {t('dashboard.noUsers')}
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user, index) => (
+                    <tr
+                      key={user.id}
+                      className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-sm font-semibold">
+                            {user.nombre
+                              .split(' ')
+                              .slice(0, 2)
+                              .map((n) => n[0])
+                              .join('')}
+                          </div>
+                          {user.nombre}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-slate-600">{user.email}</td>
+                      <td className="px-4 py-3">
+                        <Badge
+                          label={user.activo ? t('clubs.active') : t('clubs.inactive')}
+                          variant={user.activo ? 'success' : 'pending'}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button className="text-slate-600 hover:text-slate-900">···</button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        </>
-      )}
+        </Card>
+
+        {/* Bottom Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+          <Card>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">{t('dashboard.monthlyQuotas')}</h3>
+            <p className="text-4xl font-bold text-blue-600 mb-2">$1.2M</p>
+            <p className="text-sm text-slate-600">{t('dashboard.goalPercentage')}</p>
+          </Card>
+
+          <Card>
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">{t('dashboard.pendingPayments')}</h3>
+            <p className="text-4xl font-bold text-slate-900 mb-4">$345K</p>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>{t('dashboard.exampleClub1')}</span>
+                <span className="text-red-600">$12,000</span>
+              </div>
+              <div className="flex justify-between">
+                <span>{t('dashboard.exampleClub2')}</span>
+                <span className="text-red-600">$8,500</span>
+              </div>
+            </div>
+            <button className="text-blue-600 text-sm font-medium mt-4">
+              {t('dashboard.viewAll')}
+            </button>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }
