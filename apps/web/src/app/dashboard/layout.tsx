@@ -23,8 +23,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return;
     }
     applyClubTheme(s.club);
-    if (s.must_complete_onboarding && pathname !== '/admin/onboarding') {
-      router.replace('/admin/onboarding');
+    if (s.must_complete_onboarding && pathname !== '/dashboard/onboarding') {
+      router.replace('/dashboard/onboarding');
       return;
     }
     setSession(s);
@@ -51,20 +51,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const loginHref = `/login/${session.club.slug}`;
 
   const nav = [
-    { href: '/admin', label: 'Inicio' },
-    { href: '/admin/socios', label: 'Socios' },
-    { href: '/admin/cobros', label: 'Cobros' },
-    { href: '/admin/usuarios', label: 'Usuarios' },
-    { href: '/admin/espacios', label: 'Espacios' },
-    { href: '/admin/reservas', label: 'Reservas' },
-    { href: '/admin/horarios', label: 'Horarios' },
-    { href: '/admin/noticias', label: 'Noticias' },
-    { href: '/admin/config', label: 'Config' },
-    { href: '/admin/fuga', label: 'Fuga' },
-    { href: '/admin/familias', label: 'Familias' },
-    { href: '/admin/actividades', label: 'Actividades' },
-    { href: '/admin/torneos', label: 'Torneos' },
-    { href: '/admin/liquidaciones', label: 'Liquidaciones' },
+    { href: '/dashboard', label: 'Inicio' },
+    { href: '/dashboard/socios', label: 'Socios' },
+    { href: '/dashboard/cobros', label: 'Cobros' },
+    { href: '/dashboard/usuarios', label: 'Usuarios' },
+    { href: '/dashboard/espacios', label: 'Espacios' },
+    { href: '/dashboard/reservas', label: 'Reservas' },
+    { href: '/dashboard/horarios', label: 'Horarios' },
+    { href: '/dashboard/noticias', label: 'Noticias' },
+    { href: '/dashboard/config', label: 'Config' },
+    { href: '/dashboard/fuga', label: 'Fuga' },
+    { href: '/dashboard/familias', label: 'Familias' },
+    { href: '/dashboard/actividades', label: 'Actividades' },
+    { href: '/dashboard/torneos', label: 'Torneos' },
+    { href: '/dashboard/liquidaciones', label: 'Liquidaciones' },
   ];
 
   return (
@@ -116,8 +116,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <nav className="mx-auto flex max-w-5xl flex-wrap gap-1 px-4 pb-3">
             {nav.map((item) => {
               const active =
-                item.href === '/admin'
-                  ? pathname === '/admin'
+                item.href === '/dashboard'
+                  ? pathname === '/dashboard'
                   : pathname.startsWith(item.href);
               return (
                 <Link

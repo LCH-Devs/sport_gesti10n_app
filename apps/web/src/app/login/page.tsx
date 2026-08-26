@@ -26,7 +26,7 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
       savePlatformSession(data);
-      router.push("/dashboard");
+      router.push("/platform");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("messages.errorCreating"),

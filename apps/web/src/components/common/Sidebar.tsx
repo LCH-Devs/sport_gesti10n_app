@@ -15,7 +15,7 @@ import {
 } from "@heroicons/react/24/outline";
 
 const menuItems = [
-  { icon: ChartBarIcon, label: "Overview", href: "/dashboard" },
+  { icon: ChartBarIcon, label: "Overview", href: "/platform" },
   { icon: BuildingLibraryIcon, label: "Clubs", href: "/clubs" },
   { icon: UserGroupIcon, label: "Members", href: "/users" },
   { icon: CalendarIcon, label: "Events", href: "/events" },

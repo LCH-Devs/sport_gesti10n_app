@@ -38,7 +38,7 @@ export default function NewClubPage() {
           precio_usd_mes: Number(form.precio_usd_mes),
         }),
       });
-      router.push('/dashboard');
+      router.push('/platform');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
@@ -107,7 +107,7 @@ export default function NewClubPage() {
               <Button
                 variant="secondary"
                 size="md"
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/platform')}
               >
                 {t('newClub.cancel')}
               </Button>

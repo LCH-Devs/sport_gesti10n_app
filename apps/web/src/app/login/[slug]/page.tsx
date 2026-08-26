@@ -65,7 +65,7 @@ export default function ClubLoginPage() {
       saveSession(data);
       applyClubTheme(data.club);
       router.push(
-        data.must_complete_onboarding ? '/admin/onboarding' : '/admin',
+        data.must_complete_onboarding ? '/dashboard/onboarding' : '/dashboard',
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorCreating'));
