@@ -41,8 +41,8 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium mb-2 transition-colors justify-start ${
-                isOpen ? "justify-start" : ""
+              className={`flex items-center gap-3 py-2 rounded-md text-sm font-medium mb-2 transition-colors ${
+                isOpen ? "justify-start px-3" : "justify-center px-0"
               } ${
                 isActive
                   ? "bg-blue-600 text-white"

@@ -1,13 +1,21 @@
 'use client';
 
-import React from 'react';
-import { Header, Card, Badge, Button } from '@/components/common';
+import React, { useState } from 'react';
+import { Header, Card, Badge, Button, DataTable, type Column } from '@/components/common';
 import { useTranslation } from '@/lib/useTranslation';
 
-export default function UsersPage() {
-  const { t } = useTranslation();
-  const users = [
+type User = {
+  id: number;
+  name: string;
+  role: string;
+  institution: string;
+  status: 'ACTIVE' | 'SUSPENDED' | 'PENDING';
+  joinDate: string;
+};
+
+const INITIAL_USERS: User[] = [
     {
+      id: 1,
       name: 'Alex Johnson',
       role: 'Club Director',
       institution: 'Metro City FC',
@@ -15,6 +23,7 @@ export default function UsersPage() {
       joinDate: 'Jan 2024',
     },
     {
+      id: 2,
       name: 'Sarah Lee',
       role: 'Coach',
       institution: 'Northside Athletics',
@@ -22,6 +31,7 @@ export default function UsersPage() {
       joinDate: 'Mar 2024',
     },
     {
+      id: 3,
       name: 'Mike Ross',
       role: 'Player',
       institution: 'East Valley Titans',
@@ -29,6 +39,7 @@ export default function UsersPage() {
       joinDate: 'Feb 2024',
     },
     {
+      id: 4,
       name: 'Emma Watson',
       role: 'Admin',
       institution: 'Global Sports HQ',
@@ -36,12 +47,60 @@ export default function UsersPage() {
       joinDate: 'Aug 2024',
     },
     {
+      id: 5,
       name: 'John Smith',
       role: 'Manager',
       institution: 'Coastal Aquatics',
       status: 'ACTIVE',
       joinDate: 'Apr 2024',
     },
+  ];
+
+export default function UsersPage() {
+  const { t } = useTranslation();
+  const [users, setUsers] = useState<User[]>(INITIAL_USERS);
+
+  function onDelete(user: User) {
+    setUsers((prev) => prev.filter((u) => u.id !== user.id));
+  }
+
+  const columns: Column<User>[] = [
+    {
+      key: 'name',
+      header: t('dashboard.name'),
+      sortable: true,
+      render: (user) => (
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-sm font-medium">
+            {user.name
+              .split(' ')
+              .map((n) => n[0])
+              .join('')}
+          </div>
+          <span className="font-medium text-slate-900">{user.name}</span>
+        </div>
+      ),
+    },
+    { key: 'role', header: t('dashboard.role'), sortable: true },
+    { key: 'institution', header: t('users.institution'), sortable: true },
+    {
+      key: 'status',
+      header: t('dashboard.status'),
+      sortable: true,
+      render: (user) => (
+        <Badge
+          label={user.status}
+          variant={
+            user.status === 'ACTIVE'
+              ? 'success'
+              : user.status === 'SUSPENDED'
+              ? 'error'
+              : 'pending'
+          }
+        />
+      ),
+    },
+    { key: 'joinDate', header: t('users.joinDate'), sortable: true },
   ];
 
   return (
@@ -88,74 +147,14 @@ export default function UsersPage() {
             <button className="text-slate-600 hover:text-slate-900">⚙️</button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50">
-                <tr>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.name')}</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.role')}</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('users.institution')}</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('dashboard.status')}</th>
-                  <th className="text-left px-4 py-3 font-semibold text-slate-900">{t('users.joinDate')}</th>
-                  <th className="text-right px-4 py-3 font-semibold text-slate-900">{t('dashboard.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user, index) => (
-                  <tr
-                    key={index}
-                    className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-200 flex items-center justify-center text-sm font-medium">
-                          {user.name
-                            .split(' ')
-                            .map((n) => n[0])
-                            .join('')}
-                        </div>
-                        <span className="font-medium text-slate-900">{user.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{user.role}</td>
-                    <td className="px-4 py-3 text-slate-600">{user.institution}</td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        label={user.status}
-                        variant={
-                          user.status === 'ACTIVE'
-                            ? 'success'
-                            : user.status === 'SUSPENDED'
-                            ? 'error'
-                            : 'pending'
-                        }
-                      />
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{user.joinDate}</td>
-                    <td className="px-4 py-3 text-right">
-                      <button className="text-slate-600 hover:text-slate-900 font-medium">
-                        {t('common.edit')}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex items-center justify-between mt-6 pt-6 border-t border-slate-200">
-            <p className="text-sm text-slate-600">
-              {t('users.showing')} 1 {t('users.to')} {users.length} {t('users.of')} {users.length} {t('users.results')}
-            </p>
-            <div className="flex gap-2">
-              <Button variant="secondary" size="sm">
-                {t('users.previous')}
-              </Button>
-              <Button variant="primary" size="sm">
-                {t('users.next')}
-              </Button>
-            </div>
-          </div>
+          <DataTable
+            columns={columns}
+            data={users}
+            getRowId={(user) => user.id}
+            onEdit={() => {}}
+            onDelete={onDelete}
+            deleteConfirmMessage={(user) => `${t('dataTable.confirmDelete', '¿Eliminar')} ${user.name}?`}
+          />
         </Card>
       </div>
     </div>

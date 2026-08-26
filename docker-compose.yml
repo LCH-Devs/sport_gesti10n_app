@@ -31,7 +31,7 @@ services:
       DATABASE_URL: postgresql://clubapp:clubapp@db:5432/clubapp?schema=public
       JWT_SECRET: cambialo-en-produccion-clubapp-jwt
       PORT: 3001
-      CORS_ORIGIN: http://localhost:3000
+      CORS_ORIGIN: http://localhost:3000,http://localhost:3002
     ports:
       - "3001:3001"
 
@@ -47,6 +47,19 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
       - "3000:3000"
+
+  web-v2:
+    profiles: ["full"]
+    build:
+      context: ./apps/web-v2
+      dockerfile: Dockerfile
+    container_name: clubapp_web_v2
+    depends_on:
+      - api
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    ports:
+      - "3002:3002"
 
 volumes:
   clubapp_pgdata:

@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Kinetic Institutional & Athletic Utility System Colors */
+  --primary: #003ec7;
+  --primary-dark: #00288e;
+  --primary-light: #1e40af;
+
+  --secondary: #fd761a;
+  --secondary-dark: #9d4300;
+
+  --surface: #f7f9fb;
+  --surface-container: #ffffff;
+  --surface-dim: #e0e3e5;
+
+  --on-surface: #191c1e;
+  --on-surface-variant: #434656;
+
+  --outline: #737688;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: auto;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: var(--surface);
+  color: var(--on-surface);
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-[#003ec7] text-white font-semibold rounded-md hover:bg-[#00288e] transition-colors;
+  }
+
+  .btn-ghost {
+    @apply px-6 py-3 border-2 border-[#003ec7] text-[#003ec7] font-semibold rounded-md hover:bg-blue-50 transition-colors;
+  }
+
+  .card {
+    @apply bg-white rounded-lg border border-[#e0e3e5] p-6 shadow-sm;
+  }
+}

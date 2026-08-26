@@ -18,7 +18,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { Header, Card, Badge, Button } from "@/components/common";
 import { useTranslation } from "@/lib/useTranslation";
-import { apiFetch, getSession, mediaUrl, type ClubSession } from "@/lib/api";
+import { apiFetch, getPlatformSession, mediaUrl } from "@/lib/api";
+
+type ClubReadSession = { access_token: string; clubSlug: string };
 
 type ClubData = {
   id: number;
@@ -58,17 +60,17 @@ type ColumnDef = { label: string; render: (row: any) => React.ReactNode };
 type SectionDef = {
   label: string;
   columns: ColumnDef[];
-  fetch: (session: ClubSession) => Promise<any[]>;
+  fetch: (session: ClubReadSession) => Promise<any[]>;
 };
 
 function buildSectionConfig(
   t: (key: string, defaultValue?: string) => string,
 ): Record<SectionKey, SectionDef> {
   const yesNo = (v: boolean) => (v ? t("common.yes") : t("common.no"));
-  const fetchList = (session: ClubSession, path: string) =>
+  const fetchList = (session: ClubReadSession, path: string) =>
     apiFetch<any[]>(path, {
       token: session.access_token,
-      clubSlug: session.club.slug,
+      clubSlug: session.clubSlug,
     });
 
   return {
@@ -229,7 +231,7 @@ function buildSectionConfig(
         const mes = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         const data = await apiFetch<{ pagos: any[] }>(
           `/pagos/resumen?mes=${mes}`,
-          { token: session.access_token, clubSlug: session.club.slug },
+          { token: session.access_token, clubSlug: session.clubSlug },
         );
         return data.pagos || [];
       },
@@ -334,48 +336,46 @@ export default function ClubManagementPage() {
   const [sectionLoading, setSectionLoading] = useState(false);
   const [sectionError, setSectionError] = useState("");
   const [sectionRows, setSectionRows] = useState<any[]>([]);
+  const [readSession, setReadSession] = useState<ClubReadSession | null>(null);
 
   const sectionConfig = buildSectionConfig(t);
 
   const load = useCallback(async () => {
-    const session = getSession();
-    if (!session) {
-      router.push("/login/club-prueba");
-      return;
-    }
-    const requestedId = Number(params.id);
-    if (requestedId !== session.club.id) {
-      setNotFound(true);
-      setLoading(false);
+    const platformSession = getPlatformSession();
+    if (!platformSession) {
+      router.push("/login");
       return;
     }
     setLoading(true);
     setError("");
+    setNotFound(false);
     try {
-      const [clubData, actividadesData, sociosData, espaciosData] =
-        await Promise.all([
-          apiFetch<ClubData>("/clubs/me", {
-            token: session.access_token,
-            clubSlug: session.club.slug,
-          }),
-          apiFetch<Actividad[]>("/actividades", {
-            token: session.access_token,
-            clubSlug: session.club.slug,
-          }),
-          apiFetch<Socio[]>("/socios", {
-            token: session.access_token,
-            clubSlug: session.club.slug,
-          }),
-          apiFetch<Espacio[]>("/espacios", {
-            token: session.access_token,
-            clubSlug: session.club.slug,
-          }),
-        ]);
+      const clubData = await apiFetch<ClubData>(
+        `/platform/clubs/${params.id}`,
+        { token: platformSession.access_token },
+      );
+      const clubSlug = clubData.slug;
+      const [actividadesData, sociosData, espaciosData] = await Promise.all([
+        apiFetch<Actividad[]>("/actividades", {
+          token: platformSession.access_token,
+          clubSlug,
+        }),
+        apiFetch<Socio[]>("/socios", {
+          token: platformSession.access_token,
+          clubSlug,
+        }),
+        apiFetch<Espacio[]>("/espacios", {
+          token: platformSession.access_token,
+          clubSlug,
+        }),
+      ]);
       setClub(clubData);
       setActividades(actividadesData);
       setSocios(sociosData);
       setEspacios(espaciosData);
+      setReadSession({ access_token: platformSession.access_token, clubSlug });
     } catch (err) {
+      setNotFound(true);
       setError(err instanceof Error ? err.message : t("messages.errorLoading"));
     } finally {
       setLoading(false);
@@ -387,15 +387,13 @@ export default function ClubManagementPage() {
   }, [load]);
 
   async function onSelectSection(key: SectionKey) {
-    if (activeSection === key) return;
-    const session = getSession();
-    if (!session) return;
+    if (activeSection === key || !readSession) return;
     setActiveSection(key);
     setSectionLoading(true);
     setSectionError("");
     setSectionRows([]);
     try {
-      const rows = await sectionConfig[key].fetch(session);
+      const rows = await sectionConfig[key].fetch(readSession);
       setSectionRows(rows);
     } catch (err) {
       setSectionError(

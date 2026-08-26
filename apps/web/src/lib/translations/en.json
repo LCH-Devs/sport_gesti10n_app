@@ -1,4 +1,16 @@
 {
+  "dataTable": {
+    "search": "Search...",
+    "showing": "Showing",
+    "of": "of",
+    "perPage": "per page",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page",
+    "edit": "Edit",
+    "delete": "Delete",
+    "confirmDelete": "Delete this record?"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -354,7 +366,11 @@
     "tennis": "Tennis",
     "swimming": "Swimming",
     "event1Title": "National Derby Final",
-    "event2Title": "U19 Regional Qualifiers"
+    "event2Title": "U19 Regional Qualifiers",
+    "activeEvents": "Active Events",
+    "requiresAttention": "3 require immediate attention",
+    "eventsToday": "Events Today",
+    "addEvent": "Add Event"
   },
   "calendar": {
     "mon": "Mon",

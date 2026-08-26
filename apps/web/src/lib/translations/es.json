@@ -1,4 +1,16 @@
 {
+  "dataTable": {
+    "search": "Buscar...",
+    "showing": "Mostrando",
+    "of": "de",
+    "perPage": "por página",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "page": "Página",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "confirmDelete": "¿Eliminar este registro?"
+  },
   "common": {
     "loading": "Cargando...",
     "error": "Error",
@@ -354,7 +366,11 @@
     "tennis": "Tenis",
     "swimming": "Natación",
     "event1Title": "Final del Derby Nacional",
-    "event2Title": "Clasificatorios Regionales U19"
+    "event2Title": "Clasificatorios Regionales U19",
+    "activeEvents": "Eventos Activos",
+    "requiresAttention": "3 requieren atención inmediata",
+    "eventsToday": "Próximos Hoy",
+    "addEvent": "Agregar Evento"
   },
   "calendar": {
     "mon": "Lun",

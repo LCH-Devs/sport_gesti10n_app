@@ -36,16 +36,18 @@ export function Navbar({
 
   return (
     <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40">
-      <div className="flex items-center justify-between h-full px-6">
+      <div className="flex items-center justify-between h-full pr-3">
         {/* Left Section: Menu Button + App Name */}
         <div className="flex items-center gap-4">
-          <button
-            onClick={onMenuClick}
-            className="p-2 hover:bg-slate-100 rounded-md transition-colors"
-            aria-label="Toggle sidebar"
-          >
-            <Bars3Icon className="w-6 h-6 text-slate-700" />
-          </button>
+          <div className="w-16 flex-shrink-0 flex justify-center">
+            <button
+              onClick={onMenuClick}
+              className="p-2 hover:bg-slate-100 rounded-md transition-colors"
+              aria-label="Toggle sidebar"
+            >
+              <Bars3Icon className="w-5 h-5 text-slate-700" />
+            </button>
+          </div>
           <div className="hidden sm:flex items-center gap-2">
             <span className="text-xl font-bold text-blue-600">⚡</span>
             <h1 className="text-lg font-bold text-slate-900">AthlletiCorp</h1>

@@ -102,6 +102,10 @@ export default function ClubsPage() {
     }
   }
 
+  function onManageClub(clubId: number) {
+    router.push(`/clubs/${clubId}`);
+  }
+
   const filteredClubs = clubs.filter((c) =>
     c.nombre.toLowerCase().includes(search.toLowerCase()),
   );
@@ -275,9 +279,7 @@ export default function ClubsPage() {
                 <Button
                   variant="ghost"
                   className="w-full"
-                  onClick={() =>
-                    window.open(`/login/${club.slug}`, '_blank', 'noopener,noreferrer')
-                  }
+                  onClick={() => onManageClub(club.id)}
                 >
                   {t('clubs.manageClub')}
                 </Button>

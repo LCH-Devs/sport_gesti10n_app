@@ -9,6 +9,7 @@
     "build": "pnpm run -r build",
     "api:dev": "pnpm --filter api start:dev",
     "web:dev": "pnpm --filter web dev",
+    "web-v2:dev": "pnpm --filter web-v2 dev",
     "mobile:dev": "pnpm --filter mobile start",
     "test": "pnpm run -r test",
     "lint": "pnpm run -r lint"
