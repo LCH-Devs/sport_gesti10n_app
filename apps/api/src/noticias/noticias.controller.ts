@@ -11,13 +11,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { NoticiasService } from './noticias.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import { CreateNoticiaDto, UpdateNoticiaDto } from './dto/noticia.dto';
 
 @Controller('noticias')
-@UseGuards(JwtAuthGuard)
+@UseClubAuth(ClubStaffGuard)
 export class NoticiasController {
   constructor(private readonly noticias: NoticiasService) {}
 

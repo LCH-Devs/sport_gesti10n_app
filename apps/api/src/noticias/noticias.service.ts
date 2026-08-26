@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NOT_DELETED } from '../common/club-users';
 import { CreateNoticiaDto, UpdateNoticiaDto } from './dto/noticia.dto';
 
 @Injectable()
@@ -10,6 +11,7 @@ export class NoticiasService {
     return this.prisma.noticia.findMany({
       where: {
         club_id: clubId,
+        ...NOT_DELETED,
         ...(esEvento !== undefined && { es_evento: esEvento }),
       },
       orderBy: { fecha: 'desc' },
@@ -47,13 +49,16 @@ export class NoticiasService {
 
   async remove(clubId: number, id: number) {
     await this.ensureInClub(clubId, id);
-    await this.prisma.noticia.delete({ where: { id } });
+    await this.prisma.noticia.update({
+      where: { id },
+      data: { eliminado: true },
+    });
     return { ok: true };
   }
 
   private async ensureInClub(clubId: number, id: number) {
     const n = await this.prisma.noticia.findFirst({
-      where: { id, club_id: clubId },
+      where: { id, club_id: clubId, ...NOT_DELETED },
     });
     if (!n) throw new NotFoundException('Noticia no encontrada');
     return n;

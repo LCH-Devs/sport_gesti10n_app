@@ -1,23 +1,26 @@
 import {
   createParamDecorator,
   ExecutionContext,
-  BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
+import { JwtPayload } from '../auth/jwt.strategy';
 import { TenantRequest } from './tenant.middleware';
 
-/** Obtiene club_id del request (middleware) o del JWT. */
+/** club_id de la sesión (JWT). Nunca del header. */
 export const ClubId = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): number => {
     const req = ctx.switchToHttp().getRequest<
-      TenantRequest & { user?: { club_id: number } }
+      TenantRequest & { user?: JwtPayload }
     >();
-    const id = req.user?.club_id ?? req.clubId;
-    if (!id) {
-      throw new BadRequestException(
-        'Falta club (header X-Club-Slug o token con club_id)',
+    if (req.user?.role === 'platform') {
+      throw new ForbiddenException(
+        'Este endpoint es del club, no de la plataforma',
       );
+    }
+    const id = req.user?.club_id;
+    if (!id) {
+      throw new ForbiddenException('Falta club_id en la sesión');
     }
     return id;
   },
 );
-

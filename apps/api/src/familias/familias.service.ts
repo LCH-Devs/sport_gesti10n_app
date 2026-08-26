@@ -5,30 +5,22 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFamiliaDto, UpdateFamiliaDto } from './dto/familia.dto';
-
-const socioSelect = {
-  id: true,
-  dni: true,
-  nombre: true,
-  apellido: true,
-  email: true,
-  telefono: true,
-  estado: true,
-} as const;
+import { flattenPerson, NOT_DELETED, personInclude } from '../common/club-users';
 
 @Injectable()
 export class FamiliasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(clubId: number) {
-    return this.prisma.grupoFamiliar.findMany({
-      where: { club_id: clubId },
+  async list(clubId: number) {
+    const rows = await this.prisma.grupoFamiliar.findMany({
+      where: { club_id: clubId, ...NOT_DELETED },
       include: {
-        titular: { select: socioSelect },
-        socios: { select: socioSelect },
+        titular: { include: personInclude },
+        socios: { where: NOT_DELETED, include: personInclude },
       },
       orderBy: { nombre: 'asc' },
     });
+    return rows.map((g) => this.shape(g));
   }
 
   async create(clubId: number, dto: CreateFamiliaDto) {
@@ -45,7 +37,7 @@ export class FamiliasService {
       },
     });
 
-    await this.prisma.socio.updateMany({
+    await this.prisma.membresia.updateMany({
       where: { club_id: clubId, id: { in: [...memberIds] } },
       data: { grupo_familiar_id: grupo.id },
     });
@@ -77,11 +69,11 @@ export class FamiliasService {
       memberIds.add(titularId);
       await this.ensureSocios(clubId, [...memberIds]);
 
-      await this.prisma.socio.updateMany({
+      await this.prisma.membresia.updateMany({
         where: { club_id: clubId, grupo_familiar_id: id },
         data: { grupo_familiar_id: null },
       });
-      await this.prisma.socio.updateMany({
+      await this.prisma.membresia.updateMany({
         where: { club_id: clubId, id: { in: [...memberIds] } },
         data: { grupo_familiar_id: id },
       });
@@ -92,37 +84,52 @@ export class FamiliasService {
 
   async remove(clubId: number, id: number) {
     await this.ensureInClub(clubId, id);
-    await this.prisma.socio.updateMany({
+    await this.prisma.membresia.updateMany({
       where: { club_id: clubId, grupo_familiar_id: id },
       data: { grupo_familiar_id: null },
     });
-    await this.prisma.grupoFamiliar.delete({ where: { id } });
+    await this.prisma.grupoFamiliar.update({
+      where: { id },
+      data: { eliminado: true },
+    });
     return { ok: true };
   }
 
   private async findOne(clubId: number, id: number) {
     const g = await this.prisma.grupoFamiliar.findFirst({
-      where: { id, club_id: clubId },
+      where: { id, club_id: clubId, ...NOT_DELETED },
       include: {
-        titular: { select: socioSelect },
-        socios: { select: socioSelect },
+        titular: { include: personInclude },
+        socios: { where: NOT_DELETED, include: personInclude },
       },
     });
     if (!g) throw new NotFoundException('Familia no encontrada');
-    return g;
+    return this.shape(g);
+  }
+
+  private shape(g: {
+    titular: Parameters<typeof flattenPerson>[0];
+    socios: Array<Parameters<typeof flattenPerson>[0]>;
+    [key: string]: unknown;
+  }) {
+    return {
+      ...g,
+      titular: flattenPerson(g.titular),
+      socios: g.socios.map(flattenPerson),
+    };
   }
 
   private async ensureInClub(clubId: number, id: number) {
     const g = await this.prisma.grupoFamiliar.findFirst({
-      where: { id, club_id: clubId },
+      where: { id, club_id: clubId, ...NOT_DELETED },
     });
     if (!g) throw new NotFoundException('Familia no encontrada');
     return g;
   }
 
   private async ensureSocio(clubId: number, socioId: number) {
-    const s = await this.prisma.socio.findFirst({
-      where: { id: socioId, club_id: clubId },
+    const s = await this.prisma.membresia.findFirst({
+      where: { id: socioId, club_id: clubId, ...NOT_DELETED },
     });
     if (!s) throw new BadRequestException(`Socio ${socioId} no encontrado`);
     return s;
@@ -132,4 +139,3 @@ export class FamiliasService {
     for (const id of ids) await this.ensureSocio(clubId, id);
   }
 }
-

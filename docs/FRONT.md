@@ -145,9 +145,9 @@ Detalle de bodies y auth: [`API.md`](./API.md).
 
 ### Tablas Prisma (schema)
 
-`Club`, `PlatformAdmin`, `Admin`, `Socio`, `Pago`, `GrupoFamiliar`, `Actividad`, `SocioActividad`, `CobroProfe`, `LiquidacionProfe`, `Espacio`, `Reserva`, `Horario`, `Noticia`, `Asistencia`, `Torneo`, `Partido`.
+`Club`, `PlatformAdmin`, `Usuario`, `Membresia`, `Pago`, `GrupoFamiliar`, `Actividad`, `SocioActividad`, `CobroProfe`, `LiquidacionProfe`, `Espacio`, `Reserva`, `Horario`, `Noticia`, `Asistencia`, `Torneo`, `Partido`.
 
-Se crean con `npx prisma migrate dev` (no con Docker solo).
+Se crean/actualizan con `pnpm db:sync` (Docker solo levanta Postgres vacío).
 
 ---
 
@@ -289,30 +289,40 @@ Las tablas viven en el repo como migraciones Prisma (`apps/api/prisma/migrations
 
 ```
 Docker (db)     →  motor Postgres vacío
-Prisma migrate  →  crea todas las tablas (Club, Socio, Pago, Espacio, …)
-Prisma seed     →  carga Club Prueba + datos demo
+pnpm db:sync    →  crea/actualiza tablas (Club, Usuario, Membresia, Pago, …)
+Prisma seed     →  carga Club Prueba + datos demo (solo en db:reset o prisma:seed)
 ```
 
 ### 3. API (también en tu máquina) — acá aparecen las tablas
 
 El front **consume** la API por HTTP. En el día a día cada uno corre su propia API apuntando a su propia DB (mismo código, mismos seeds).
 
+Desde `sport_gesti10n_app` (después de `git pull`):
+
+```bash
+pnpm db:sync
+```
+
+Eso levanta Docker si hace falta, aplica migraciones pendientes (columnas nuevas, dropea `Admin`/`Socio`, etc.) y regenera Prisma.
+
+Primera vez (o si querés datos demo de cero; **borra** lo que haya en tu DB local):
+
+```bash
+pnpm db:reset
+pnpm api:dev
+```
+
+Si preferís a mano:
+
 ```bash
 cd apps/api
 cp ../../.env.example .env
 # En Windows PowerShell: Copy-Item ..\..\.env.example .env
 
-npm install
-npx prisma migrate dev    # ← aplica migraciones = crea/actualiza TODAS las tablas
-npm run prisma:seed       # ← datos demo (login, socios, espacios, etc.)
-npm run start:dev
-```
-
-Si el back ya migró antes y solo querés aplicar lo existente (sin crear migración nueva):
-
-```bash
+pnpm install
 npx prisma migrate deploy
-npm run prisma:seed
+pnpm prisma:seed
+pnpm start:dev
 ```
 
 Chequeo rápido: abrí `http://localhost:3001/health` → debería responder OK.
@@ -433,11 +443,11 @@ No. El del repo (`docker compose up db -d`) ya es el correcto. Nombre: `clubapp_
 
 ### ¿Cómo aparecen las tablas si Docker está vacío?
 
-Con Prisma, desde `apps/api`:
+Desde la raíz del monorepo:
 
 ```bash
-npx prisma migrate dev   # o migrate deploy
-npm run prisma:seed
+pnpm db:sync      # actualiza schema (conserva datos)
+pnpm db:reset     # borra datos, re-migra y seed
 ```
 
 ### ¿Qué hago si el puerto 5432 está ocupado?
@@ -467,10 +477,9 @@ docker compose logs db -f
 docker compose down          # apaga contenedores (el volume de datos se conserva)
 docker compose down -v       # borra también los datos (reset total)
 
-# API — reset de datos demo
-cd apps/api
-npx prisma migrate reset     # cuidado: borra DB y vuelve a migrar + seed si está configurado
-npm run prisma:seed
+# Schema al día (desde sport_gesti10n_app)
+pnpm db:sync                 # migraciones pendientes
+pnpm db:reset                # borra DB local, re-migra + seed
 
 # Health
 curl http://localhost:3001/health

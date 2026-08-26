@@ -4,13 +4,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { flattenPerson, NOT_DELETED, personInclude } from '../common/club-users';
 import { CreateReservaDto } from './dto/reserva.dto';
 
 @Injectable()
 export class ReservasService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(
+  async list(
     clubId: number,
     filtros: { desde?: string; hasta?: string; espacio_id?: number },
   ) {
@@ -27,16 +28,15 @@ export class ReservasService {
       if (filtros.hasta) where.inicio.lte = new Date(filtros.hasta);
     }
 
-    return this.prisma.reserva.findMany({
+    const rows = await this.prisma.reserva.findMany({
       where,
       include: {
-        socio: {
-          select: { id: true, nombre: true, apellido: true, dni: true },
-        },
+        socio: { include: personInclude },
         espacio: { select: { id: true, nombre: true, tipo: true } },
       },
       orderBy: { inicio: 'asc' },
     });
+    return rows.map((r) => ({ ...r, socio: flattenPerson(r.socio) }));
   }
 
   async create(clubId: number, dto: CreateReservaDto) {
@@ -47,14 +47,14 @@ export class ReservasService {
     }
 
     const espacio = await this.prisma.espacio.findFirst({
-      where: { id: dto.espacio_id, club_id: clubId, activo: true },
+      where: { id: dto.espacio_id, club_id: clubId, activo: true, ...NOT_DELETED },
     });
     if (!espacio) {
       throw new BadRequestException('Espacio no encontrado o inactivo');
     }
 
-    const socio = await this.prisma.socio.findFirst({
-      where: { id: dto.socio_id, club_id: clubId },
+    const socio = await this.prisma.membresia.findFirst({
+      where: { id: dto.socio_id, club_id: clubId, ...NOT_DELETED },
     });
     if (!socio) throw new BadRequestException('Socio no encontrado');
     if (socio.estado === 'suspendido') {
@@ -109,7 +109,7 @@ export class ReservasService {
       );
     }
 
-    return this.prisma.reserva.create({
+    const created = await this.prisma.reserva.create({
       data: {
         club_id: clubId,
         espacio_id: espacio.id,
@@ -120,12 +120,11 @@ export class ReservasService {
         estado: 'confirmada',
       },
       include: {
-        socio: {
-          select: { id: true, nombre: true, apellido: true, dni: true },
-        },
+        socio: { include: personInclude },
         espacio: { select: { id: true, nombre: true } },
       },
     });
+    return { ...created, socio: flattenPerson(created.socio) };
   }
 
   async cancelar(clubId: number, id: number) {

@@ -17,7 +17,10 @@ function RootLayoutContent({
   const isPublicPage =
     pathname === '/landing' ||
     pathname === '/' ||
-    pathname.startsWith('/login');
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/entrar') ||
+    pathname.startsWith('/socio') ||
+    pathname.startsWith('/sesion');
   const showNavbarSidebar = !isPublicPage;
 
   return (
