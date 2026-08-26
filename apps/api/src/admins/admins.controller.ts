@@ -8,17 +8,16 @@ import {
   Patch,
   Post,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { AdminsService } from './admins.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import { CreateAdminDto, UpdateAdminDto } from './dto/admin.dto';
 import { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('admins')
-@UseGuards(JwtAuthGuard, AdminRoleGuard)
+@UseClubAuth(AdminRoleGuard)
 export class AdminsController {
   constructor(private readonly admins: AdminsService) {}
 

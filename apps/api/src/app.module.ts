@@ -18,6 +18,7 @@ import { TorneosModule } from './torneos/torneos.module';
 import { PlatformModule } from './platform/platform.module';
 import { HealthController } from './health.controller';
 import { TenantMiddleware } from './common/tenant.middleware';
+import { RequestLoggerMiddleware } from './common/request-logger.middleware';
 
 @Module({
   imports: [
@@ -40,10 +41,11 @@ import { TenantMiddleware } from './common/tenant.middleware';
     PlatformModule,
   ],
   controllers: [HealthController],
+  providers: [TenantMiddleware, RequestLoggerMiddleware],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(TenantMiddleware).forRoutes('*');
+    consumer.apply(RequestLoggerMiddleware, TenantMiddleware).forRoutes('*');
   }
 }
 

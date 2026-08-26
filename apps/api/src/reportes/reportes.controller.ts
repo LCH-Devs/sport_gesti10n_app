@@ -1,11 +1,12 @@
 import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import { ReportesService } from './reportes.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 
 @Controller('reportes')
-@UseGuards(JwtAuthGuard)
+@UseClubAuth(ClubStaffGuard)
 export class ReportesController {
   constructor(private readonly reportes: ReportesService) {}
 

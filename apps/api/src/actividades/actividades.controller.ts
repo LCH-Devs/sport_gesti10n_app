@@ -10,9 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ActividadesService } from './actividades.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import {
   CreateActividadDto,
   SetSociosActividadDto,
@@ -20,7 +21,7 @@ import {
 } from './dto/actividad.dto';
 
 @Controller('actividades')
-@UseGuards(JwtAuthGuard)
+@UseClubAuth(ClubStaffGuard)
 export class ActividadesController {
   constructor(private readonly actividades: ActividadesService) {}
 

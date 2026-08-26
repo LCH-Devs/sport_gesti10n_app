@@ -10,9 +10,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { TorneosService } from './torneos.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import {
   CreatePartidoDto,
   CreateTorneoDto,
@@ -21,7 +22,7 @@ import {
 } from './dto/torneo.dto';
 
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseClubAuth(ClubStaffGuard)
 export class TorneosController {
   constructor(private readonly torneos: TorneosService) {}
 

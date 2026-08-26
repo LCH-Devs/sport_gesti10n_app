@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { flattenPerson, MEMBER_ROLES, NOT_DELETED, personInclude } from '../common/club-users';
 
 const DIA_KEYS = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'] as const;
 
@@ -41,14 +42,7 @@ export class ReportesService {
       this.prisma.pago.findMany({
         where: { club_id: clubId, mes },
         include: {
-          socio: {
-            select: {
-              id: true,
-              dni: true,
-              nombre: true,
-              apellido: true,
-            },
-          },
+          socio: { include: personInclude },
         },
       }),
       this.prisma.reserva.findMany({
@@ -58,15 +52,13 @@ export class ReportesService {
           inicio: { gte: desde, lte: hasta },
         },
         include: {
-          socio: {
-            select: { id: true, nombre: true, apellido: true, dni: true },
-          },
+          socio: { include: personInclude },
           espacio: { select: { id: true, nombre: true } },
         },
         orderBy: { inicio: 'asc' },
       }),
       this.prisma.horario.findMany({
-        where: { club_id: clubId, activo: true },
+        where: { club_id: clubId, activo: true, ...NOT_DELETED },
       }),
       this.prisma.club.findUnique({ where: { id: clubId } }),
     ]);
@@ -79,14 +71,17 @@ export class ReportesService {
     const pct_cobrado = total === 0 ? 0 : Math.round((pagados / total) * 10000) / 100;
 
     const deudores = pagosMes
-      .filter((p: any) => p.estado === 'pendiente')
-      .map((p: any) => ({
-        id: p.socio.id,
-        dni: p.socio.dni,
-        nombre: p.socio.nombre,
-        apellido: p.socio.apellido,
-        monto: p.monto,
-      }));
+      .filter((p) => p.estado === 'pendiente')
+      .map((p) => {
+        const socio = flattenPerson(p.socio);
+        return {
+          id: socio.id,
+          dni: socio.dni,
+          nombre: socio.nombre,
+          apellido: socio.apellido,
+          monto: p.monto,
+        };
+      });
 
     const horarios_hoy = horarios.filter((h: any) => {
       const dias = h.dias.toLowerCase();
@@ -104,7 +99,10 @@ export class ReportesService {
         pct_cobrado,
       },
       deudores,
-      reservas_hoy: reservasHoy,
+      reservas_hoy: reservasHoy.map((r) => ({
+        ...r,
+        socio: flattenPerson(r.socio),
+      })),
       horarios_hoy,
       alertas_fuga_count: alerta.total,
     };
@@ -118,14 +116,17 @@ export class ReportesService {
     hace30.setDate(hace30.getDate() - 30);
     hace30.setHours(0, 0, 0, 0);
 
-    const socios = await this.prisma.socio.findMany({
-      where: { club_id: clubId },
-      select: {
-        id: true,
-        dni: true,
-        nombre: true,
-        apellido: true,
-        telefono: true,
+    const socios = await this.prisma.membresia.findMany({
+      where: { club_id: clubId, rol: { in: [...MEMBER_ROLES] }, ...NOT_DELETED },
+      include: {
+        usuario: {
+          select: {
+            dni: true,
+            nombre: true,
+            apellido: true,
+            telefono: true,
+          },
+        },
         pagos: {
           where: { estado: 'pendiente' },
           select: { id: true },
@@ -169,16 +170,16 @@ export class ReportesService {
       }
       if (motivos.length === 0) continue;
 
-      const mensaje = `Hola ${s.nombre}, te escribimos desde el club. ¿Todo bien? Queremos saber si necesitás algo.`;
+      const mensaje = `Hola ${s.usuario.nombre}, te escribimos desde el club. ¿Todo bien? Queremos saber si necesitás algo.`;
       items.push({
         id: s.id,
-        dni: s.dni,
-        nombre: s.nombre,
-        apellido: s.apellido,
+        dni: s.usuario.dni,
+        nombre: s.usuario.nombre,
+        apellido: s.usuario.apellido,
         cuotas_pendientes,
         asistencia_pct,
         motivo: motivos.join('+'),
-        whatsapp_url: whatsappUrl(s.telefono, mensaje),
+        whatsapp_url: whatsappUrl(s.usuario.telefono, mensaje),
       });
     }
 
@@ -192,27 +193,34 @@ export class ReportesService {
       return { mes: m, socios: [] };
     }
 
-    const socios = await this.prisma.socio.findMany({
+    const socios = await this.prisma.membresia.findMany({
       where: {
         club_id: clubId,
-        fecha_nacimiento: { not: null },
+        rol: { in: [...MEMBER_ROLES] },
+        ...NOT_DELETED,
+        usuario: { fecha_nacimiento: { not: null } },
       },
-      select: {
-        id: true,
-        dni: true,
-        nombre: true,
-        apellido: true,
-        fecha_nacimiento: true,
-        telefono: true,
-        email: true,
+      include: {
+        usuario: {
+          select: {
+            dni: true,
+            nombre: true,
+            apellido: true,
+            fecha_nacimiento: true,
+            telefono: true,
+            email: true,
+          },
+        },
       },
-      orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+      orderBy: [{ usuario: { apellido: 'asc' } }, { usuario: { nombre: 'asc' } }],
     });
 
-    const filtrados = socios.filter((s: any) => {
-      if (!s.fecha_nacimiento) return false;
-      return s.fecha_nacimiento.getMonth() + 1 === monthNum;
-    });
+    const filtrados = socios
+      .filter((s) => {
+        if (!s.usuario.fecha_nacimiento) return false;
+        return s.usuario.fecha_nacimiento.getMonth() + 1 === monthNum;
+      })
+      .map((s) => flattenPerson(s));
 
     return { mes: m, socios: filtrados };
   }
@@ -225,24 +233,25 @@ export class ReportesService {
     }
 
     const now = new Date();
-    const socios = await this.prisma.socio.findMany({
+    const socios = await this.prisma.membresia.findMany({
       where: {
         club_id: clubId,
-        fecha_nacimiento: { not: null },
+        rol: { in: [...MEMBER_ROLES] },
+        ...NOT_DELETED,
+        usuario: { fecha_nacimiento: { not: null } },
       },
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        fecha_nacimiento: true,
+      include: {
+        usuario: {
+          select: { nombre: true, apellido: true, fecha_nacimiento: true },
+        },
       },
     });
 
-    const cumpleHoy = socios.filter((s: any) => {
-      if (!s.fecha_nacimiento) return false;
+    const cumpleHoy = socios.filter((s) => {
+      if (!s.usuario.fecha_nacimiento) return false;
       return (
-        s.fecha_nacimiento.getDate() === now.getDate() &&
-        s.fecha_nacimiento.getMonth() === now.getMonth()
+        s.usuario.fecha_nacimiento.getDate() === now.getDate() &&
+        s.usuario.fecha_nacimiento.getMonth() === now.getMonth()
       );
     });
 
@@ -250,12 +259,13 @@ export class ReportesService {
     const inicioDia = startOfDay(now);
 
     for (const s of cumpleHoy) {
-      const nombreCompleto = `${s.nombre} ${s.apellido}`;
+      const nombreCompleto = `${s.usuario.nombre} ${s.usuario.apellido}`;
       const existing = await this.prisma.noticia.findFirst({
         where: {
           club_id: clubId,
+          ...NOT_DELETED,
           fecha: { gte: inicioDia },
-          titulo: { contains: s.nombre, mode: 'insensitive' },
+          titulo: { contains: s.usuario.nombre, mode: 'insensitive' },
         },
       });
       if (existing) continue;

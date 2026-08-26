@@ -10,13 +10,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { FamiliasService } from './familias.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import { CreateFamiliaDto, UpdateFamiliaDto } from './dto/familia.dto';
 
 @Controller('familias')
-@UseGuards(JwtAuthGuard)
+@UseClubAuth(ClubStaffGuard)
 export class FamiliasController {
   constructor(private readonly familias: FamiliasService) {}
 

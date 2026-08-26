@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NOT_DELETED } from '../common/club-users';
 import { CreateHorarioDto, UpdateHorarioDto } from './dto/horario.dto';
 
 @Injectable()
@@ -8,7 +9,7 @@ export class HorariosService {
 
   list(clubId: number) {
     return this.prisma.horario.findMany({
-      where: { club_id: clubId },
+      where: { club_id: clubId, ...NOT_DELETED },
       orderBy: { hora_inicio: 'asc' },
     });
   }
@@ -44,13 +45,16 @@ export class HorariosService {
 
   async remove(clubId: number, id: number) {
     await this.ensureInClub(clubId, id);
-    await this.prisma.horario.delete({ where: { id } });
+    await this.prisma.horario.update({
+      where: { id },
+      data: { eliminado: true },
+    });
     return { ok: true };
   }
 
   private async ensureInClub(clubId: number, id: number) {
     const h = await this.prisma.horario.findFirst({
-      where: { id, club_id: clubId },
+      where: { id, club_id: clubId, ...NOT_DELETED },
     });
     if (!h) throw new NotFoundException('Horario no encontrado');
     return h;

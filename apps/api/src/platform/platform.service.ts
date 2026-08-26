@@ -15,6 +15,12 @@ import {
   UpdateClubPlatformDto,
   UpdatePlatformAdminDto,
 } from './dto/platform.dto';
+import { NOT_DELETED } from '../common/club-users';
+import {
+  clubLoginUrl,
+  isReservedTenantSlug,
+  tenantBaseFromWebUrl,
+} from '../common/tenant-host';
 
 function slugify(nombre: string) {
   const base = nombre
@@ -39,33 +45,34 @@ export class PlatformService {
     private readonly config: ConfigService,
   ) {}
 
-  listClubs() {
-    return this.prisma.club.findMany({
+  async listClubs() {
+    const clubs = await this.prisma.club.findMany({
       orderBy: { nombre: 'asc' },
       include: {
-        _count: { select: { admins: true, socios: true } },
-        admins: {
-          select: { id: true, email: true, nombre: true, rol: true },
+        membresias: {
+          where: NOT_DELETED,
+          include: { usuario: { select: { email: true, nombre: true } } },
           orderBy: { id: 'asc' },
-          take: 5,
         },
       },
     });
+    return clubs.map((club) => this.shapeClub(club));
   }
 
   async getClub(id: number) {
     const club = await this.prisma.club.findUnique({
       where: { id },
       include: {
-        admins: {
-          select: { id: true, email: true, nombre: true, rol: true },
+        membresias: {
+          where: NOT_DELETED,
+          include: { usuario: { select: { email: true, nombre: true } } },
           orderBy: { id: 'asc' },
         },
-        _count: { select: { socios: true, pagos: true } },
+        _count: { select: { pagos: true } },
       },
     });
     if (!club) throw new NotFoundException('Club no encontrado');
-    return club;
+    return this.shapeClub(club);
   }
 
   async createClub(dto: CreateClubPlatformDto) {
@@ -73,11 +80,22 @@ export class PlatformService {
     const password = randomPassword();
     const password_hash = await bcrypt.hash(password, 10);
     const adminEmail = dto.admin_email.toLowerCase().trim();
+    const taken = await this.prisma.membresia.findFirst({
+      where: { rol: 'admin', ...NOT_DELETED, usuario: { email: adminEmail } },
+    });
+    if (taken) {
+      throw new BadRequestException(
+        'Ese email ya administra un club. La comisión no se comparte entre clubes.',
+      );
+    }
     const adminNombre = dto.admin_nombre?.trim() || 'Admin';
     const webUrl = (
       this.config.get<string>('WEB_APP_URL') || 'http://localhost:3000'
     ).replace(/\/$/, '');
-    const login_url = `${webUrl}/login/${slug}`;
+    const tenantBase =
+      this.config.get<string>('TENANT_BASE_DOMAIN') ||
+      tenantBaseFromWebUrl(webUrl);
+    const login_url = clubLoginUrl(slug, webUrl, tenantBase);
 
     const created = await this.prisma.$transaction(async (tx: any) => {
       const club = await tx.club.create({
@@ -90,19 +108,45 @@ export class PlatformService {
         },
       });
 
-      const admin = await tx.admin.create({
+      const existingUser = await tx.usuario.findUnique({
+        where: { email: adminEmail },
+      });
+      const usuario = existingUser
+        ? existingUser
+        : await tx.usuario.create({
+            data: {
+              email: adminEmail,
+              nombre: adminNombre,
+              password_hash,
+            },
+          });
+      if (existingUser && adminNombre) {
+        await tx.usuario.update({
+          where: { id: existingUser.id },
+          data: { nombre: adminNombre },
+        });
+      }
+
+      const adminRow = await tx.membresia.create({
         data: {
+          usuario_id: usuario.id,
           club_id: club.id,
-          email: adminEmail,
-          nombre: adminNombre,
-          password_hash,
           rol: 'admin',
           must_change_password: true,
         },
-        select: { id: true, email: true, nombre: true, rol: true },
+        include: { usuario: { select: { email: true, nombre: true } } },
       });
 
-      return { club, admin };
+      return {
+        club,
+        newUser: !existingUser,
+        admin: {
+          id: adminRow.id,
+          email: adminRow.usuario.email,
+          nombre: adminRow.usuario.nombre,
+          rol: adminRow.rol,
+        },
+      };
     });
 
     const mail = await this.mail.sendClubWelcome({
@@ -110,7 +154,7 @@ export class PlatformService {
       clubNombre: created.club.nombre,
       slug,
       email: adminEmail,
-      password,
+      password: created.newUser ? password : '(tu contraseña actual)',
       loginUrl: login_url,
     });
 
@@ -119,7 +163,8 @@ export class PlatformService {
       admin: created.admin,
       credentials_once: {
         email: adminEmail,
-        password,
+        password: created.newUser ? password : undefined,
+        existing_account: !created.newUser,
         login_url,
       },
       mail,
@@ -173,24 +218,64 @@ export class PlatformService {
   async addAdmin(clubId: number, dto: CreateClubAdminDto) {
     await this.ensureClub(clubId);
     const email = dto.email.toLowerCase().trim();
-    const existing = await this.prisma.admin.findUnique({
-      where: { club_id_email: { club_id: clubId, email } },
-    });
-    if (existing) {
-      throw new BadRequestException('Ya existe un admin con ese email en el club');
+    if (dto.rol !== 'entrada') {
+      const existingAdmin = await this.prisma.membresia.findFirst({
+        where: { rol: 'admin', ...NOT_DELETED, usuario: { email } },
+      });
+      if (existingAdmin) {
+        throw new BadRequestException(
+          'Ese email ya administra un club. La comisión no se comparte entre clubes.',
+        );
+      }
     }
     const password_hash = await bcrypt.hash(dto.password, 10);
-    return this.prisma.admin.create({
-      data: {
-        club_id: clubId,
+    const usuario = await this.prisma.usuario.upsert({
+      where: { email },
+      update: { nombre: dto.nombre.trim(), password_hash },
+      create: {
         email,
         nombre: dto.nombre.trim(),
         password_hash,
+      },
+    });
+    const already = await this.prisma.membresia.findUnique({
+      where: { usuario_id_club_id: { usuario_id: usuario.id, club_id: clubId } },
+    });
+    if (already && !already.eliminado) {
+      throw new BadRequestException('Ese usuario ya está en este club');
+    }
+    if (already?.eliminado) {
+      const restored = await this.prisma.membresia.update({
+        where: { id: already.id },
+        data: {
+          eliminado: false,
+          rol: dto.rol === 'entrada' ? 'entrada' : 'admin',
+          must_change_password: false,
+        },
+        include: { usuario: { select: { email: true, nombre: true } } },
+      });
+      return {
+        id: restored.id,
+        email: restored.usuario.email,
+        nombre: restored.usuario.nombre,
+        rol: restored.rol,
+      };
+    }
+    const row = await this.prisma.membresia.create({
+      data: {
+        usuario_id: usuario.id,
+        club_id: clubId,
         rol: dto.rol === 'entrada' ? 'entrada' : 'admin',
         must_change_password: false,
       },
-      select: { id: true, email: true, nombre: true, rol: true },
+      include: { usuario: { select: { email: true, nombre: true } } },
     });
+    return {
+      id: row.id,
+      email: row.usuario.email,
+      nombre: row.usuario.nombre,
+      rol: row.rol,
+    };
   }
 
   listPlatformAdmins() {
@@ -272,13 +357,48 @@ export class PlatformService {
   }
 
   private async uniqueSlug(base: string) {
-    let slug = base;
+    let slug = isReservedTenantSlug(base) ? `${base}-club` : base;
     let n = 2;
-    while (await this.prisma.club.findUnique({ where: { slug } })) {
+    while (
+      isReservedTenantSlug(slug) ||
+      (await this.prisma.club.findUnique({ where: { slug } }))
+    ) {
       slug = `${base}-${n}`;
       n += 1;
     }
     return slug;
+  }
+
+  private shapeClub(club: {
+    membresias: Array<{
+      id: number;
+      rol: string;
+      usuario: { email: string; nombre: string };
+    }>;
+    _count?: { pagos?: number };
+    [key: string]: unknown;
+  }) {
+    const staff = club.membresias.filter(
+      (m) => m.rol === 'admin' || m.rol === 'entrada',
+    );
+    const socios = club.membresias.filter(
+      (m) => m.rol === 'socio' || m.rol === 'profe',
+    );
+    const { membresias: _membresias, _count, ...rest } = club;
+    return {
+      ...rest,
+      admins: staff.map((m) => ({
+        id: m.id,
+        email: m.usuario.email,
+        nombre: m.usuario.nombre,
+        rol: m.rol,
+      })),
+      _count: {
+        socios: socios.length,
+        admins: staff.length,
+        pagos: _count?.pagos ?? 0,
+      },
+    };
   }
 
   private async ensureClub(id: number) {

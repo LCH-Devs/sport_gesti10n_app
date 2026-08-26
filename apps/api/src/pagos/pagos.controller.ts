@@ -7,12 +7,12 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { PagosService } from './pagos.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import { GenerarCobrosDto } from './dto/generar-cobros.dto';
 
 @Controller()
@@ -20,26 +20,26 @@ export class PagosController {
   constructor(private readonly pagos: PagosService) {}
 
   @Get('pagos/resumen')
-  @UseGuards(JwtAuthGuard)
+  @UseClubAuth(ClubStaffGuard)
   resumen(@ClubId() clubId: number, @Query('mes') mes?: string) {
     return this.pagos.resumen(clubId, mes);
   }
 
   @Post('pagos/cobrar-mes')
-  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @UseClubAuth(AdminRoleGuard)
   cobrarMes(@ClubId() clubId: number, @Body() dto: GenerarCobrosDto) {
     return this.pagos.generarYEnviar(clubId, dto);
   }
 
   /** Alias del prompt / docs. */
   @Post('api/cuotas/generar-links')
-  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @UseClubAuth(AdminRoleGuard)
   generarLinks(@ClubId() clubId: number, @Body() dto: GenerarCobrosDto) {
     return this.pagos.generarYEnviar(clubId, dto);
   }
 
   @Patch('pagos/:id/marcar-manual')
-  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @UseClubAuth(AdminRoleGuard)
   marcarManual(
     @ClubId() clubId: number,
     @Param('id', ParseIntPipe) id: number,

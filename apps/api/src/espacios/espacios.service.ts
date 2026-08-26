@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEspacioDto, UpdateEspacioDto } from './dto/espacio.dto';
+import { NOT_DELETED } from '../common/club-users';
 
 function parseHm(hm: string): number {
   const [h, m] = hm.split(':').map(Number);
@@ -23,7 +24,7 @@ export class EspaciosService {
 
   list(clubId: number) {
     return this.prisma.espacio.findMany({
-      where: { club_id: clubId },
+      where: { club_id: clubId, ...NOT_DELETED },
       orderBy: { nombre: 'asc' },
     });
   }
@@ -70,7 +71,7 @@ export class EspaciosService {
     await this.ensureInClub(clubId, id);
     return this.prisma.espacio.update({
       where: { id },
-      data: { activo: false },
+      data: { eliminado: true },
     });
   }
 
@@ -128,7 +129,7 @@ export class EspaciosService {
 
   private async ensureInClub(clubId: number, id: number) {
     const espacio = await this.prisma.espacio.findFirst({
-      where: { id, club_id: clubId },
+      where: { id, club_id: clubId, ...NOT_DELETED },
     });
     if (!espacio) throw new NotFoundException('Espacio no encontrado');
     return espacio;

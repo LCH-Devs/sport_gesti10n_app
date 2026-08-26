@@ -6,10 +6,10 @@ import {
   apiFetch,
   applyClubTheme,
   ClubLoginBranding,
-  ClubSession,
+  LoginResult,
   mediaUrl,
-  saveSession,
 } from '@/lib/api';
+import { enterAfterLogin, V2_LOGIN_PATHS } from '@/lib/apply-login';
 import { useTranslation } from '@/lib/useTranslation';
 
 export default function ClubLoginPage() {
@@ -54,7 +54,7 @@ export default function ClubLoginPage() {
     setError('');
     setLoading(true);
     try {
-      const data = await apiFetch<ClubSession>('/auth/admin/login', {
+      const data = await apiFetch<LoginResult>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           club_slug: slug,
@@ -62,11 +62,7 @@ export default function ClubLoginPage() {
           password,
         }),
       });
-      saveSession(data);
-      applyClubTheme(data.club);
-      router.push(
-        data.must_complete_onboarding ? '/gestion/onboarding' : '/gestion',
-      );
+      enterAfterLogin(data, (href) => router.push(href), V2_LOGIN_PATHS);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     } finally {
@@ -116,7 +112,10 @@ export default function ClubLoginPage() {
         <h1 className="mt-1 text-center text-2xl font-bold text-slate-900">
           {club.nombre}
         </h1>
-        <p className="mt-2 text-center text-sm text-slate-600">
+        <p className="mt-2 text-center text-sm font-medium text-slate-800">
+          {t('entrar.commission')}
+        </p>
+        <p className="mt-1 text-center text-sm text-slate-600">
           {t('login.subtitle')}
         </p>
 

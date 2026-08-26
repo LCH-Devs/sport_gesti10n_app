@@ -8,6 +8,8 @@
     "dev": "pnpm run -r dev",
     "build": "pnpm run -r build",
     "api:dev": "pnpm --filter api start:dev",
+    "db:sync": "pnpm --filter api db:sync",
+    "db:reset": "pnpm --filter api db:reset",
     "web:dev": "pnpm --filter web dev",
     "web-v2:dev": "pnpm --filter web-v2 dev",
     "mobile:dev": "pnpm --filter mobile start",

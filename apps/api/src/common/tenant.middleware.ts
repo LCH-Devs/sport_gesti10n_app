@@ -1,10 +1,8 @@
-import {
-  Injectable,
-  NestMiddleware,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NestMiddleware, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Request, Response, NextFunction } from 'express';
 import { PrismaService } from '../prisma/prisma.service';
+import { slugFromOrigin, tenantBaseFromWebUrl } from './tenant-host';
 
 export type TenantRequest = Request & {
   clubId?: number;
@@ -12,17 +10,33 @@ export type TenantRequest = Request & {
 };
 
 /**
- * Resuelve el club (tenant) por header X-Club-Slug o query ?club=.
- * Deja clubId en el request para que los servicios filtren por club_id.
+ * Resuelve el club por X-Club-Slug, ?club=, o Origin/Referer (subdominio).
+ * En rutas autenticadas del club, TenantGuard pisa esto con el club_id del JWT.
  */
 @Injectable()
 export class TenantMiddleware implements NestMiddleware {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
 
   async use(req: TenantRequest, _res: Response, next: NextFunction) {
-    const slug =
-      (req.headers['x-club-slug'] as string | undefined)?.trim() ||
-      (req.query.club as string | undefined)?.trim();
+    const baseDomain =
+      this.config.get<string>('TENANT_BASE_DOMAIN') ||
+      tenantBaseFromWebUrl(
+        this.config.get<string>('WEB_APP_URL') || 'http://localhost:3000',
+      );
+
+    const headerSlug = (
+      req.headers['x-club-slug'] as string | undefined
+    )?.trim();
+    const querySlug = (req.query.club as string | undefined)?.trim();
+    const originSlug =
+      slugFromOrigin(req.headers.origin, baseDomain) ||
+      slugFromOrigin(req.headers.referer, baseDomain);
+
+    const explicitSlug = headerSlug || querySlug;
+    const slug = explicitSlug || originSlug || undefined;
 
     if (!slug) {
       return next();
@@ -30,7 +44,10 @@ export class TenantMiddleware implements NestMiddleware {
 
     const club = await this.prisma.club.findUnique({ where: { slug } });
     if (!club) {
-      throw new NotFoundException(`Club no encontrado: ${slug}`);
+      if (explicitSlug) {
+        throw new NotFoundException(`Club no encontrado: ${slug}`);
+      }
+      return next();
     }
 
     req.clubId = club.id;
@@ -38,4 +55,3 @@ export class TenantMiddleware implements NestMiddleware {
     next();
   }
 }
-

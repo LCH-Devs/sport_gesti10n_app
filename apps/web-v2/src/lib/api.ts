@@ -1,4 +1,18 @@
+import { parseTenantHost } from './tenant-host';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+function clubSlugFromBrowser(): string | undefined {
+  if (typeof window === 'undefined') return undefined;
+  const host = window.location.host;
+  const base =
+    process.env.NEXT_PUBLIC_TENANT_BASE_DOMAIN ||
+    (window.location.hostname === 'localhost' ||
+    window.location.hostname.endsWith('.localhost')
+      ? 'localhost'
+      : undefined);
+  return parseTenantHost(host, base).slug ?? undefined;
+}
 
 export type ClubColors = {
   color_primario: string;
@@ -6,8 +20,21 @@ export type ClubColors = {
   color_terciario?: string | null;
 };
 
+export type CuentaOption = {
+  membresia_id: number;
+  rol: string;
+  club: {
+    id: number;
+    slug: string;
+    nombre: string;
+    logo_url: string | null;
+  };
+};
+
 export type ClubSession = {
   access_token: string;
+  role?: string;
+  cuentas?: CuentaOption[];
   must_complete_onboarding?: boolean;
   must_change_password?: boolean;
   impersonated_by_platform?: boolean;
@@ -41,8 +68,67 @@ export type ClubLoginBranding = {
   activo: boolean;
 };
 
+export type SocioSession = {
+  access_token: string;
+  role?: string;
+  cuentas?: CuentaOption[];
+  socio: {
+    id: number;
+    email: string;
+    nombre: string;
+    apellido: string;
+    dni: string;
+    estado: string;
+    rol: string;
+  };
+  club: {
+    id: number;
+    slug: string;
+    nombre: string;
+    color_primario: string;
+    color_secundario?: string | null;
+    color_terciario?: string | null;
+    logo_url: string | null;
+    cuota_monto: number;
+  };
+};
+
+export type LoginResult = {
+  access_token: string;
+  role: string;
+  cuentas?: CuentaOption[];
+  must_complete_onboarding?: boolean;
+  must_change_password?: boolean;
+  impersonated_by_platform?: boolean;
+  admin?: ClubSession['admin'];
+  socio?: SocioSession['socio'];
+  club: ClubSession['club'];
+};
+
+export function isStaffRole(role: string | undefined) {
+  return role === 'admin' || role === 'entrada';
+}
+
+export type SocioClubOption = {
+  id: number;
+  slug: string;
+  nombre: string;
+  logo_url: string | null;
+};
+
+export type SocioLoginResponse =
+  | SocioSession
+  | { needs_club_choice: true; clubs: SocioClubOption[] };
+
+export function isSocioSession(
+  data: SocioLoginResponse,
+): data is SocioSession {
+  return 'access_token' in data;
+}
+
 const SESSION_KEY = 'clubapp_session';
 const PLATFORM_SESSION_KEY = 'clubapp_platform_session';
+const SOCIO_SESSION_KEY = 'clubapp_socio_session';
 
 export function resolveClubTheme(colors: ClubColors): {
   primary: string;
@@ -106,6 +192,27 @@ export function clearPlatformSession() {
   localStorage.removeItem(PLATFORM_SESSION_KEY);
 }
 
+export function saveSocioSession(session: SocioSession) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(SOCIO_SESSION_KEY, JSON.stringify(session));
+}
+
+export function getSocioSession(): SocioSession | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem(SOCIO_SESSION_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as SocioSession;
+  } catch {
+    return null;
+  }
+}
+
+export function clearSocioSession() {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(SOCIO_SESSION_KEY);
+}
+
 export function mediaUrl(url: string | null | undefined): string {
   if (!url) return '';
   if (
@@ -131,7 +238,9 @@ export async function apiUpload<T>(
     body,
     headers: {
       ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
-      ...(options.clubSlug ? { 'X-Club-Slug': options.clubSlug } : {}),
+      ...((options.clubSlug || clubSlugFromBrowser())
+        ? { 'X-Club-Slug': options.clubSlug || clubSlugFromBrowser()! }
+        : {}),
     },
   });
   if (!res.ok) {
@@ -149,12 +258,13 @@ export async function apiFetch<T>(
   options: RequestInit & { token?: string; clubSlug?: string } = {},
 ): Promise<T> {
   const { token, clubSlug, headers, ...rest } = options;
+  const slug = clubSlug || clubSlugFromBrowser();
   const res = await fetch(`${API_URL}${path}`, {
     ...rest,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(clubSlug ? { 'X-Club-Slug': clubSlug } : {}),
+      ...(slug ? { 'X-Club-Slug': slug } : {}),
       ...headers,
     },
   });
