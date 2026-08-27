@@ -6,7 +6,7 @@ import {
   apiFetch,
   applyClubTheme,
   ClubLoginBranding,
-  ClubSession,
+  LoginResult,
   mediaUrl,
   saveSession,
 } from '@/lib/api';
@@ -54,7 +54,7 @@ export default function ClubLoginPage() {
     setError('');
     setLoading(true);
     try {
-      const data = await apiFetch<ClubSession>('/auth/admin/login', {
+      const data = await apiFetch<LoginResult>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({
           club_slug: slug,
@@ -62,7 +62,10 @@ export default function ClubLoginPage() {
           password,
         }),
       });
-      saveSession(data);
+      if (!data.admin) {
+        throw new Error(t('messages.errorCreating'));
+      }
+      saveSession({ ...data, admin: data.admin });
       applyClubTheme(data.club);
       router.push(
         data.must_complete_onboarding ? '/supercalifragilisticoespiralidoso/gestion/onboarding' : '/supercalifragilisticoespiralidoso/gestion',
@@ -116,7 +119,10 @@ export default function ClubLoginPage() {
         <h1 className="mt-1 text-center text-2xl font-bold text-slate-900">
           {club.nombre}
         </h1>
-        <p className="mt-2 text-center text-sm text-slate-600">
+        <p className="mt-2 text-center text-sm font-medium text-slate-800">
+          {t('entrar.commission')}
+        </p>
+        <p className="mt-1 text-center text-sm text-slate-600">
           {t('login.subtitle')}
         </p>
 

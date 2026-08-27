@@ -35,8 +35,7 @@ model Club {
   telefono_club         String?
   email_contacto        String?
 
-  admins            Admin[]
-  socios            Socio[]
+  membresias        Membresia[]
   pagos             Pago[]
   espacios          Espacio[]
   reservas          Reserva[]
@@ -61,61 +60,64 @@ model PlatformAdmin {
   created_at    DateTime @default(now())
 }
 
-model Admin {
-  id            Int    @id @default(autoincrement())
-  club_id       Int
-  club          Club   @relation(fields: [club_id], references: [id])
-  email         String
-  password_hash String
-  nombre        String
-  rol           String @default("admin") // admin | entrada
-  must_change_password Boolean @default(true)
+/// Identidad de login (comisión, portería, socio, profe). Superadmin va en PlatformAdmin.
+model Usuario {
+  id               Int          @id @default(autoincrement())
+  email            String       @unique
+  password_hash    String
+  nombre           String
+  apellido         String       @default("")
+  dni              String       @default("")
+  telefono         String       @default("")
+  fecha_nacimiento DateTime?
+  created_at       DateTime     @default(now())
+  membresias       Membresia[]
+}
 
-  @@unique([club_id, email])
+/// Vínculo usuario ↔ club. El rol vive acá (un socio puede estar en varios clubes).
+model Membresia {
+  id                   Int      @id @default(autoincrement())
+  usuario_id           Int
+  usuario              Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  club_id              Int
+  club                 Club     @relation(fields: [club_id], references: [id])
+  rol                  String   @default("socio") // admin | entrada | socio | profe
+  estado               String   @default("activo") // activo | moroso | suspendido
+  eliminado            Boolean  @default(false)
+  must_change_password Boolean  @default(false)
+  grupo_familiar_id    Int?
+  grupo_familiar       GrupoFamiliar? @relation("MiembrosGrupo", fields: [grupo_familiar_id], references: [id])
+  grupos_titular       GrupoFamiliar[] @relation("TitularGrupo")
+
+  pagos             Pago[]
+  reservas          Reserva[]
+  asistencias       Asistencia[]
+  actividades       SocioActividad[]
+  cobros_profe      CobroProfe[]     @relation("AlumnoCobro")
+  cobros_como_profe CobroProfe[]     @relation("ProfeCobro")
+  liquidaciones     LiquidacionProfe[]
+  actividades_profe Actividad[]
+
+  @@unique([usuario_id, club_id])
   @@index([club_id])
+  @@index([usuario_id])
+  @@index([club_id, rol])
+  @@index([club_id, eliminado])
+  @@index([grupo_familiar_id])
 }
 
 model GrupoFamiliar {
-  id         Int     @id @default(autoincrement())
+  id         Int         @id @default(autoincrement())
   club_id    Int
-  club       Club    @relation(fields: [club_id], references: [id])
+  club       Club        @relation(fields: [club_id], references: [id])
   nombre     String
   titular_id Int
-  titular    Socio   @relation("TitularGrupo", fields: [titular_id], references: [id])
-  socios     Socio[] @relation("MiembrosGrupo")
+  titular    Membresia   @relation("TitularGrupo", fields: [titular_id], references: [id])
+  socios     Membresia[] @relation("MiembrosGrupo")
+  eliminado  Boolean     @default(false)
 
   @@index([club_id])
-}
-
-model Socio {
-  id               Int       @id @default(autoincrement())
-  club_id          Int
-  club             Club      @relation(fields: [club_id], references: [id])
-  dni              String
-  nombre           String
-  apellido         String
-  email            String
-  telefono         String    @default("")
-  password_hash    String
-  estado           String    @default("activo") // activo | moroso | suspendido
-  rol              String    @default("socio") // socio | profe
-  fecha_nacimiento DateTime?
-  grupo_familiar_id Int?
-  grupo_familiar   GrupoFamiliar? @relation("MiembrosGrupo", fields: [grupo_familiar_id], references: [id])
-  grupos_titular   GrupoFamiliar[] @relation("TitularGrupo")
-
-  pagos            Pago[]
-  reservas         Reserva[]
-  asistencias      Asistencia[]
-  actividades      SocioActividad[]
-  cobros_profe     CobroProfe[]     @relation("AlumnoCobro")
-  cobros_como_profe CobroProfe[]    @relation("ProfeCobro")
-  liquidaciones    LiquidacionProfe[]
-  actividades_profe Actividad[]
-
-  @@unique([club_id, dni])
-  @@index([club_id])
-  @@index([grupo_familiar_id])
+  @@index([club_id, eliminado])
 }
 
 model Actividad {
@@ -126,20 +128,22 @@ model Actividad {
   modo_cobro      String  @default("club") // club | profe
   monto_adicional Float   @default(0)
   profe_id        Int?
-  profe           Socio?  @relation(fields: [profe_id], references: [id])
+  profe           Membresia? @relation(fields: [profe_id], references: [id])
   comision_tipo   String? // porcentaje | fijo
   comision_valor  Float?
   activo          Boolean @default(true)
+  eliminado       Boolean @default(false)
   socios          SocioActividad[]
   cobros_profe    CobroProfe[]
 
   @@index([club_id])
+  @@index([club_id, eliminado])
 }
 
 model SocioActividad {
   socio_id     Int
   actividad_id Int
-  socio        Socio     @relation(fields: [socio_id], references: [id], onDelete: Cascade)
+  socio        Membresia @relation(fields: [socio_id], references: [id], onDelete: Cascade)
   actividad    Actividad @relation(fields: [actividad_id], references: [id], onDelete: Cascade)
 
   @@id([socio_id, actividad_id])
@@ -152,9 +156,9 @@ model CobroProfe {
   actividad_id  Int
   actividad     Actividad @relation(fields: [actividad_id], references: [id])
   socio_id      Int
-  socio         Socio   @relation("AlumnoCobro", fields: [socio_id], references: [id])
+  socio         Membresia @relation("AlumnoCobro", fields: [socio_id], references: [id])
   profe_id      Int
-  profe         Socio   @relation("ProfeCobro", fields: [profe_id], references: [id])
+  profe         Membresia @relation("ProfeCobro", fields: [profe_id], references: [id])
   mes           String
   monto_alumno  Float
   comision_club Float
@@ -171,7 +175,7 @@ model LiquidacionProfe {
   club_id       Int
   club          Club      @relation(fields: [club_id], references: [id])
   profe_id      Int
-  profe         Socio     @relation(fields: [profe_id], references: [id])
+  profe         Membresia @relation(fields: [profe_id], references: [id])
   mes           String
   total_club    Float
   estado        String    @default("pendiente") // pendiente | pagada
@@ -187,7 +191,7 @@ model Pago {
   club_id          Int
   club             Club      @relation(fields: [club_id], references: [id])
   socio_id         Int
-  socio            Socio     @relation(fields: [socio_id], references: [id])
+  socio            Membresia @relation(fields: [socio_id], references: [id])
   mes              String
   monto            Float
   estado           String    @default("pendiente") // pendiente | pagado
@@ -208,6 +212,7 @@ model Espacio {
   tipo              String
   descripcion       String?
   activo            Boolean  @default(true)
+  eliminado         Boolean  @default(false)
   duracion_slot_min Int      @default(60)
   precio_opcional   Float?
   hora_apertura     String   @default("08:00")
@@ -215,6 +220,7 @@ model Espacio {
   reservas          Reserva[]
 
   @@index([club_id])
+  @@index([club_id, eliminado])
 }
 
 model Reserva {
@@ -224,7 +230,7 @@ model Reserva {
   espacio_id Int
   espacio    Espacio  @relation(fields: [espacio_id], references: [id])
   socio_id   Int
-  socio      Socio    @relation(fields: [socio_id], references: [id])
+  socio      Membresia @relation(fields: [socio_id], references: [id])
   inicio     DateTime
   fin        DateTime
   estado     String   @default("confirmada") // confirmada | cancelada | no_show
@@ -245,9 +251,11 @@ model Horario {
   hora_fin    String
   profe_id    Int?
   activo      Boolean @default(true)
+  eliminado   Boolean @default(false)
   asistencias Asistencia[]
 
   @@index([club_id])
+  @@index([club_id, eliminado])
 }
 
 model Noticia {
@@ -260,8 +268,10 @@ model Noticia {
   es_evento  Boolean  @default(false)
   fecha      DateTime @default(now())
   published  Boolean  @default(true)
+  eliminado  Boolean  @default(false)
 
   @@index([club_id, fecha])
+  @@index([club_id, eliminado])
 }
 
 model Asistencia {
@@ -271,7 +281,7 @@ model Asistencia {
   horario_id  Int
   horario     Horario  @relation(fields: [horario_id], references: [id])
   socio_id    Int
-  socio       Socio    @relation(fields: [socio_id], references: [id])
+  socio       Membresia @relation(fields: [socio_id], references: [id])
   fecha       DateTime @db.Date
   estado      String // presente | ausente | justificado
   marcada_por Int

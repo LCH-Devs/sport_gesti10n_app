@@ -175,12 +175,16 @@ export class ClubsService {
           ...(dto.cuota_monto !== undefined && { cuota_monto: dto.cuota_monto }),
         },
       }),
-      this.prisma.admin.update({
+      this.prisma.membresia.update({
         where: { id: adminId },
         data: {
-          password_hash,
           must_change_password: false,
-          nombre: `${dto.titular_nombre.trim()} ${dto.titular_apellido.trim()}`,
+          usuario: {
+            update: {
+              password_hash,
+              nombre: `${dto.titular_nombre.trim()} ${dto.titular_apellido.trim()}`,
+            },
+          },
         },
       }),
     ]);

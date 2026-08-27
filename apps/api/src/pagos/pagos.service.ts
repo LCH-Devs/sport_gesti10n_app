@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MercadoPagoService } from './mercadopago.service';
+import { flattenPerson, MEMBER_ROLES, NOT_DELETED, personInclude } from '../common/club-users';
 import { GenerarCobrosDto } from './dto/generar-cobros.dto';
 
 @Injectable()
@@ -25,21 +26,18 @@ export class PagosService {
     const pagos = await this.prisma.pago.findMany({
       where: { club_id: clubId, mes: m },
       include: {
-        socio: {
-          select: {
-            id: true,
-            dni: true,
-            nombre: true,
-            apellido: true,
-            email: true,
-          },
-        },
+        socio: { include: personInclude },
       },
       orderBy: { id: 'asc' },
     });
 
-    const pagados = pagos.filter((p: any) => p.estado === 'pagado');
-    const pendientes = pagos.filter((p: any) => p.estado === 'pendiente');
+    const mapped = pagos.map((p) => ({
+      ...p,
+      socio: flattenPerson(p.socio),
+    }));
+
+    const pagados = mapped.filter((p: any) => p.estado === 'pagado');
+    const pendientes = mapped.filter((p: any) => p.estado === 'pendiente');
 
     return {
       mes: m,
@@ -48,7 +46,7 @@ export class PagosService {
       cantidad_pendientes: pendientes.length,
       monto_pagado: pagados.reduce((s: number, p: any) => s + p.monto, 0),
       monto_pendiente: pendientes.reduce((s: number, p: any) => s + p.monto, 0),
-      pagos,
+      pagos: mapped,
     };
   }
 
@@ -63,8 +61,14 @@ export class PagosService {
     const mes = dto.mes || this.mesActual();
     const monto = dto.monto ?? club.cuota_monto;
 
-    const socios = await this.prisma.socio.findMany({
-      where: { club_id: clubId, estado: 'activo' },
+    const socios = await this.prisma.membresia.findMany({
+      where: {
+        club_id: clubId,
+        estado: 'activo',
+        rol: { in: [...MEMBER_ROLES] },
+        ...NOT_DELETED,
+      },
+      include: { usuario: { select: { email: true } } },
     });
 
     const resultados: Array<{
@@ -109,7 +113,7 @@ export class PagosService {
           pagoId: pago.id,
           titulo: `Cuota ${mes} — ${club.nombre}`,
           monto: pago.monto,
-          payerEmail: socio.email,
+          payerEmail: socio.usuario.email,
         });
         pago = await this.prisma.pago.update({
           where: { id: pago.id },

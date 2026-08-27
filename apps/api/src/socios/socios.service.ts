@@ -6,105 +6,181 @@ import {
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSocioDto, UpdateSocioDto } from './dto/socio.dto';
+import {
+  flattenPerson,
+  MEMBER_ROLES,
+  NOT_DELETED,
+  personInclude,
+} from '../common/club-users';
 
 const PLAN_BASICO_MAX = 100;
+
+const socioWhere = (clubId: number) => ({
+  club_id: clubId,
+  rol: { in: [...MEMBER_ROLES] },
+});
 
 @Injectable()
 export class SociosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(clubId: number) {
-    return this.prisma.socio.findMany({
-      where: { club_id: clubId },
-      select: {
-        id: true,
-        dni: true,
-        nombre: true,
-        apellido: true,
-        email: true,
-        telefono: true,
-        estado: true,
-        rol: true,
-        fecha_nacimiento: true,
-        grupo_familiar_id: true,
-      },
-      orderBy: [{ apellido: 'asc' }, { nombre: 'asc' }],
+  async list(clubId: number) {
+    const rows = await this.prisma.membresia.findMany({
+      where: { ...socioWhere(clubId), ...NOT_DELETED },
+      include: personInclude,
+      orderBy: [{ usuario: { apellido: 'asc' } }, { usuario: { nombre: 'asc' } }],
     });
+    return rows.map(flattenPerson);
   }
 
   async create(clubId: number, dto: CreateSocioDto) {
-    const count = await this.prisma.socio.count({ where: { club_id: clubId } });
+    const count = await this.prisma.membresia.count({
+      where: { ...socioWhere(clubId), ...NOT_DELETED },
+    });
     if (count >= PLAN_BASICO_MAX) {
       throw new BadRequestException(
         `Plan básico: máximo ${PLAN_BASICO_MAX} socios`,
       );
     }
 
-    const password_hash = await bcrypt.hash(dto.password || 'socio123', 10);
+    const email = dto.email.toLowerCase().trim();
+    const dni = dto.dni.trim();
+    const rol = dto.rol === 'profe' ? 'profe' : 'socio';
+    await this.assertDniFree(clubId, dni);
 
-    return this.prisma.socio.create({
-      data: {
-        club_id: clubId,
-        dni: dto.dni.trim(),
-        nombre: dto.nombre.trim(),
-        apellido: dto.apellido.trim(),
-        email: dto.email.toLowerCase(),
-        telefono: dto.telefono || '',
-        password_hash,
-        rol: dto.rol || 'socio',
-        ...(dto.fecha_nacimiento
-          ? { fecha_nacimiento: new Date(dto.fecha_nacimiento) }
-          : {}),
-      },
-      select: {
-        id: true,
-        dni: true,
-        nombre: true,
-        apellido: true,
-        email: true,
-        telefono: true,
-        estado: true,
-        rol: true,
-        fecha_nacimiento: true,
-        grupo_familiar_id: true,
-      },
+    const existingUser = await this.prisma.usuario.findUnique({
+      where: { email },
     });
+    if (existingUser) {
+      const already = await this.prisma.membresia.findUnique({
+        where: {
+          usuario_id_club_id: { usuario_id: existingUser.id, club_id: clubId },
+        },
+      });
+      if (already && !already.eliminado) {
+        throw new BadRequestException('Ese usuario ya está en este club');
+      }
+      if (already?.eliminado) {
+        await this.prisma.usuario.update({
+          where: { id: existingUser.id },
+          data: {
+            nombre: dto.nombre.trim(),
+            apellido: dto.apellido.trim(),
+            dni,
+            telefono: dto.telefono || existingUser.telefono,
+            ...(dto.fecha_nacimiento
+              ? { fecha_nacimiento: new Date(dto.fecha_nacimiento) }
+              : {}),
+          },
+        });
+        const restored = await this.prisma.membresia.update({
+          where: { id: already.id },
+          data: { eliminado: false, rol, estado: 'activo' },
+          include: personInclude,
+        });
+        return flattenPerson(restored);
+      }
+    }
+
+    const password_hash = existingUser
+      ? existingUser.password_hash
+      : await bcrypt.hash(dto.password || 'socio123', 10);
+
+    const created = await this.prisma.$transaction(async (tx) => {
+      const usuario = existingUser
+        ? await tx.usuario.update({
+            where: { id: existingUser.id },
+            data: {
+              nombre: dto.nombre.trim(),
+              apellido: dto.apellido.trim(),
+              dni,
+              telefono: dto.telefono || existingUser.telefono,
+              ...(dto.fecha_nacimiento
+                ? { fecha_nacimiento: new Date(dto.fecha_nacimiento) }
+                : {}),
+            },
+          })
+        : await tx.usuario.create({
+            data: {
+              email,
+              password_hash,
+              nombre: dto.nombre.trim(),
+              apellido: dto.apellido.trim(),
+              dni,
+              telefono: dto.telefono || '',
+              ...(dto.fecha_nacimiento
+                ? { fecha_nacimiento: new Date(dto.fecha_nacimiento) }
+                : {}),
+            },
+          });
+
+      return tx.membresia.create({
+        data: {
+          usuario_id: usuario.id,
+          club_id: clubId,
+          rol,
+          estado: 'activo',
+        },
+        include: personInclude,
+      });
+    });
+
+    return flattenPerson(created);
   }
 
   async update(clubId: number, id: number, dto: UpdateSocioDto) {
-    await this.ensureInClub(clubId, id);
-    return this.prisma.socio.update({
-      where: { id },
-      data: {
-        ...(dto.nombre !== undefined && { nombre: dto.nombre }),
-        ...(dto.apellido !== undefined && { apellido: dto.apellido }),
-        ...(dto.email !== undefined && { email: dto.email.toLowerCase() }),
-        ...(dto.telefono !== undefined && { telefono: dto.telefono }),
-        ...(dto.estado !== undefined && { estado: dto.estado }),
-        ...(dto.rol !== undefined && { rol: dto.rol }),
-        ...(dto.fecha_nacimiento !== undefined && {
-          fecha_nacimiento: new Date(dto.fecha_nacimiento),
-        }),
-      },
-      select: {
-        id: true,
-        dni: true,
-        nombre: true,
-        apellido: true,
-        email: true,
-        telefono: true,
-        estado: true,
-        rol: true,
-        fecha_nacimiento: true,
-        grupo_familiar_id: true,
-      },
+    const membresia = await this.ensureInClub(clubId, id);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (
+        dto.nombre !== undefined ||
+        dto.apellido !== undefined ||
+        dto.email !== undefined ||
+        dto.telefono !== undefined ||
+        dto.fecha_nacimiento !== undefined
+      ) {
+        if (dto.email !== undefined) {
+          const email = dto.email.toLowerCase();
+          const taken = await tx.usuario.findFirst({
+            where: { email, NOT: { id: membresia.usuario_id } },
+          });
+          if (taken) {
+            throw new BadRequestException('Ese email ya está en uso');
+          }
+        }
+        await tx.usuario.update({
+          where: { id: membresia.usuario_id },
+          data: {
+            ...(dto.nombre !== undefined && { nombre: dto.nombre }),
+            ...(dto.apellido !== undefined && { apellido: dto.apellido }),
+            ...(dto.email !== undefined && { email: dto.email.toLowerCase() }),
+            ...(dto.telefono !== undefined && { telefono: dto.telefono }),
+            ...(dto.fecha_nacimiento !== undefined && {
+              fecha_nacimiento: new Date(dto.fecha_nacimiento),
+            }),
+          },
+        });
+      }
+
+      return tx.membresia.update({
+        where: { id },
+        data: {
+          ...(dto.estado !== undefined && { estado: dto.estado }),
+          ...(dto.rol !== undefined && {
+            rol: dto.rol === 'profe' ? 'profe' : 'socio',
+          }),
+        },
+        include: personInclude,
+      });
     });
+    return flattenPerson(updated);
   }
 
   async remove(clubId: number, id: number) {
     await this.ensureInClub(clubId, id);
-    await this.prisma.pago.deleteMany({ where: { socio_id: id, club_id: clubId } });
-    await this.prisma.socio.delete({ where: { id } });
+    await this.prisma.membresia.update({
+      where: { id },
+      data: { eliminado: true, grupo_familiar_id: null },
+    });
     return { ok: true };
   }
 
@@ -138,7 +214,6 @@ export class SociosService {
     let created = 0;
     let updated = 0;
     const errors: string[] = [];
-    const password_hash = await bcrypt.hash('socio123', 10);
 
     for (let i = 1; i < lines.length; i++) {
       const cols = this.parseCsvLine(lines[i]);
@@ -155,16 +230,20 @@ export class SociosService {
       }
 
       try {
-        const count = await this.prisma.socio.count({
-          where: { club_id: clubId },
+        const count = await this.prisma.membresia.count({
+          where: { ...socioWhere(clubId), ...NOT_DELETED },
         });
-        const existing = await this.prisma.socio.findUnique({
-          where: { club_id_dni: { club_id: clubId, dni } },
+        const existing = await this.prisma.membresia.findFirst({
+          where: {
+            ...socioWhere(clubId),
+            ...NOT_DELETED,
+            usuario: { dni },
+          },
         });
 
         if (existing) {
-          await this.prisma.socio.update({
-            where: { id: existing.id },
+          await this.prisma.usuario.update({
+            where: { id: existing.usuario_id },
             data: { nombre, apellido, email, telefono },
           });
           updated++;
@@ -173,16 +252,13 @@ export class SociosService {
             errors.push(`Fila ${i + 1}: límite de plan básico alcanzado`);
             continue;
           }
-          await this.prisma.socio.create({
-            data: {
-              club_id: clubId,
-              dni,
-              nombre,
-              apellido,
-              email,
-              telefono,
-              password_hash,
-            },
+          await this.create(clubId, {
+            dni,
+            nombre,
+            apellido,
+            email,
+            telefono,
+            password: 'socio123',
           });
           created++;
         }
@@ -216,12 +292,92 @@ export class SociosService {
     return result;
   }
 
+  async portalMe(clubId: number, socioId: number) {
+    const membresia = await this.prisma.membresia.findFirst({
+      where: { id: socioId, club_id: clubId, ...NOT_DELETED },
+      include: personInclude,
+    });
+    if (!membresia) {
+      throw new NotFoundException('Socio no encontrado en este club');
+    }
+    const socio = flattenPerson(membresia);
+
+    const [club, pagos, noticias, inscripciones] = await Promise.all([
+      this.prisma.club.findUnique({
+        where: { id: clubId },
+        select: {
+          id: true,
+          slug: true,
+          nombre: true,
+          logo_url: true,
+          color_primario: true,
+          color_secundario: true,
+          color_terciario: true,
+          cuota_monto: true,
+        },
+      }),
+      this.prisma.pago.findMany({
+        where: { club_id: clubId, socio_id: socioId },
+        orderBy: { mes: 'desc' },
+        take: 12,
+        select: {
+          id: true,
+          mes: true,
+          monto: true,
+          estado: true,
+          mp_init_point: true,
+          fecha_pago: true,
+        },
+      }),
+      this.prisma.noticia.findMany({
+        where: { club_id: clubId, published: true, ...NOT_DELETED },
+        orderBy: { fecha: 'desc' },
+        take: 8,
+        select: {
+          id: true,
+          titulo: true,
+          cuerpo: true,
+          fecha: true,
+          es_evento: true,
+          imagen_url: true,
+        },
+      }),
+      this.prisma.socioActividad.findMany({
+        where: { socio_id: socioId, actividad: NOT_DELETED },
+        include: {
+          actividad: { select: { id: true, nombre: true } },
+        },
+      }),
+    ]);
+
+    return {
+      socio,
+      club,
+      pagos,
+      noticias,
+      actividades: inscripciones.map((row) => row.actividad),
+    };
+  }
+
+  private async assertDniFree(clubId: number, dni: string, exceptId?: number) {
+    const taken = await this.prisma.membresia.findFirst({
+      where: {
+        club_id: clubId,
+        ...NOT_DELETED,
+        usuario: { dni },
+        ...(exceptId ? { NOT: { id: exceptId } } : {}),
+      },
+    });
+    if (taken) {
+      throw new BadRequestException('Ya hay un usuario con ese DNI en el club');
+    }
+  }
+
   private async ensureInClub(clubId: number, id: number) {
-    const socio = await this.prisma.socio.findFirst({
-      where: { id, club_id: clubId },
+    const socio = await this.prisma.membresia.findFirst({
+      where: { id, club_id: clubId, rol: { in: [...MEMBER_ROLES] }, ...NOT_DELETED },
     });
     if (!socio) throw new NotFoundException('Socio no encontrado en este club');
     return socio;
   }
 }
-

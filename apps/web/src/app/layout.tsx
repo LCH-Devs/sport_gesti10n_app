@@ -23,6 +23,10 @@ function RootLayoutContent({
     pathname.startsWith('/supercalifragilisticoespiralidoso/login/');
   const isPrefixedRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/');
   const isClubManagementRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/gestion');
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/entrar') ||
+    pathname.startsWith('/socio') ||
+    pathname.startsWith('/sesion');
   const showNavbarSidebar = !isPublicPage;
 
   return (

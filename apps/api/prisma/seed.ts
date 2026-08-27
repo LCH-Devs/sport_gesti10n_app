@@ -57,16 +57,26 @@ async function main() {
     },
   });
 
-  await prisma.admin.upsert({
-    where: {
-      club_id_email: { club_id: club.id, email: 'admin@clubprueba.com' },
-    },
-    update: { must_change_password: false },
+  await prisma.usuario.upsert({
+    where: { email: 'admin@clubprueba.com' },
+    update: { password_hash: passwordHash, nombre: 'Admin Prueba' },
     create: {
-      club_id: club.id,
       email: 'admin@clubprueba.com',
       password_hash: passwordHash,
       nombre: 'Admin Prueba',
+    },
+  });
+  const adminUser = await prisma.usuario.findUniqueOrThrow({
+    where: { email: 'admin@clubprueba.com' },
+  });
+  await prisma.membresia.upsert({
+    where: {
+      usuario_id_club_id: { usuario_id: adminUser.id, club_id: club.id },
+    },
+    update: { rol: 'admin', must_change_password: false },
+    create: {
+      usuario_id: adminUser.id,
+      club_id: club.id,
       rol: 'admin',
       must_change_password: false,
     },
@@ -103,36 +113,73 @@ async function main() {
   ];
 
   for (const s of sociosData) {
-    await prisma.socio.upsert({
-      where: { club_id_dni: { club_id: club.id, dni: s.dni } },
+    await prisma.usuario.upsert({
+      where: { email: s.email },
       update: {
-        fecha_nacimiento: s.fecha_nacimiento,
-        telefono: s.telefono,
-      },
-      create: {
-        club_id: club.id,
-        dni: s.dni,
         nombre: s.nombre,
         apellido: s.apellido,
-        email: s.email,
+        dni: s.dni,
         telefono: s.telefono,
-        password_hash: socioPass,
-        estado: 'activo',
-        rol: s.rol,
         fecha_nacimiento: s.fecha_nacimiento,
+        password_hash: socioPass,
+      },
+      create: {
+        email: s.email,
+        password_hash: socioPass,
+        nombre: s.nombre,
+        apellido: s.apellido,
+        dni: s.dni,
+        telefono: s.telefono,
+        fecha_nacimiento: s.fecha_nacimiento,
+      },
+    });
+    const user = await prisma.usuario.findUniqueOrThrow({
+      where: { email: s.email },
+    });
+    await prisma.membresia.upsert({
+      where: {
+        usuario_id_club_id: { usuario_id: user.id, club_id: club.id },
+      },
+      update: { rol: s.rol, estado: 'activo' },
+      create: {
+        usuario_id: user.id,
+        club_id: club.id,
+        rol: s.rol,
+        estado: 'activo',
       },
     });
   }
 
-  const juan = await prisma.socio.findUnique({
-    where: { club_id_dni: { club_id: club.id, dni: '30111222' } },
+  const juanUser = await prisma.usuario.findUnique({
+    where: { email: 'juan@test.com' },
   });
-  const ana = await prisma.socio.findUnique({
-    where: { club_id_dni: { club_id: club.id, dni: '30222333' } },
+  const anaUser = await prisma.usuario.findUnique({
+    where: { email: 'ana@test.com' },
   });
-  const luis = await prisma.socio.findUnique({
-    where: { club_id_dni: { club_id: club.id, dni: '30333444' } },
+  const luisUser = await prisma.usuario.findUnique({
+    where: { email: 'profe@test.com' },
   });
+  const juan = juanUser
+    ? await prisma.membresia.findUnique({
+        where: {
+          usuario_id_club_id: { usuario_id: juanUser.id, club_id: club.id },
+        },
+      })
+    : null;
+  const ana = anaUser
+    ? await prisma.membresia.findUnique({
+        where: {
+          usuario_id_club_id: { usuario_id: anaUser.id, club_id: club.id },
+        },
+      })
+    : null;
+  const luis = luisUser
+    ? await prisma.membresia.findUnique({
+        where: {
+          usuario_id_club_id: { usuario_id: luisUser.id, club_id: club.id },
+        },
+      })
+    : null;
 
   if (juan) {
     await prisma.pago.upsert({
@@ -187,7 +234,7 @@ async function main() {
           titular_id: juan.id,
         },
       });
-      await prisma.socio.updateMany({
+      await prisma.membresia.updateMany({
         where: { id: { in: [juan.id, ana.id] } },
         data: { grupo_familiar_id: g.id },
       });
@@ -415,9 +462,9 @@ async function main() {
   }
 
   console.log('Seed OK: Club Prueba (slug: club-prueba)');
-  console.log('Platform: platform@clubapp.com / platform123 → /platform/login');
-  console.log('Admin: admin@clubprueba.com / admin123 → /login/club-prueba');
-  console.log('Socios pass: socio123 (DNI 30111222, 30222333, 30333444)');
+  console.log('Platform: platform@clubapp.com / platform123 → http://platform.localhost:3000/login');
+  console.log('Admin: admin@clubprueba.com / admin123 → http://club-prueba.localhost:3000/login');
+  console.log('Socio: juan@test.com / socio123 → http://localhost:3000/entrar');
 }
 
 main()

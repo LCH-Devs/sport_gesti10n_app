@@ -11,13 +11,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { EspaciosService } from './espacios.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import { CreateEspacioDto, UpdateEspacioDto } from './dto/espacio.dto';
 
 @Controller('espacios')
-@UseGuards(JwtAuthGuard)
+@UseClubAuth(ClubStaffGuard)
 export class EspaciosController {
   constructor(private readonly espacios: EspaciosService) {}
 

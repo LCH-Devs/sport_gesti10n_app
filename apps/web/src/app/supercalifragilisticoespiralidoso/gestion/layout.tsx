@@ -10,6 +10,7 @@ import {
   getSession,
   mediaUrl,
 } from '@/lib/api';
+import ClubAccountSwitcher from '@/components/ClubAccountSwitcher';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -99,6 +100,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm">
+            <ClubAccountSwitcher
+              token={session.access_token}
+              cuentas={session.cuentas}
+              currentMembresiaId={session.admin.id}
+            />
             <span className="text-slate-600">{session.admin.nombre}</span>
             <button
               type="button"

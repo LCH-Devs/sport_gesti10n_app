@@ -23,19 +23,17 @@ SaaS multi-tenant para clubes de barrio.
 
 ```bash
 docker compose up db -d
+pnpm db:sync
 ```
 
-Postgres: `localhost:5432` — user/pass/db: `clubapp` / `clubapp` / `clubapp`
+Postgres: `localhost:5432` — user/pass/db: `clubapp` / `clubapp` / `clubapp`  
+`pnpm db:sync` aplica tablas/columnas nuevas y quita las viejas (`Admin`/`Socio` → `Usuario`/`Membresia`).  
+Si hay que arrancar de cero (borra datos locales): `pnpm db:reset`.
 
 ### 2. API
 
 ```bash
-cd apps/api
-cp ../../.env.example .env   # o usar el .env ya incluido
-npm install
-npx prisma migrate dev --name init
-npm run prisma:seed
-npm run start:dev
+pnpm api:dev
 ```
 
 API: http://localhost:3001 — health: `GET /health`

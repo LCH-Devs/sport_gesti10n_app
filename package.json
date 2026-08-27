@@ -5,9 +5,17 @@
   "private": true,
   "packageManager": "pnpm@9.0.0",
   "scripts": {
+<<<<<<< HEAD
     "dev": "pnpm -r --parallel --if-present dev",
     "build": "pnpm -r --if-present build",
     "api:dev": "pnpm --filter @clubapp/api dev",
+=======
+    "dev": "pnpm run -r dev",
+    "build": "pnpm run -r build",
+    "api:dev": "pnpm --filter api start:dev",
+    "db:sync": "pnpm --filter api db:sync",
+    "db:reset": "pnpm --filter api db:reset",
+>>>>>>> 020d49925f24b143c83dca188906b031d754af13
     "web:dev": "pnpm --filter web dev",
     "mobile:dev": "pnpm --filter mobile start",
     "type-check": "pnpm -r --if-present type-check",

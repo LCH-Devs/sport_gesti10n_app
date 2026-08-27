@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { flattenPerson, NOT_DELETED, personInclude } from '../common/club-users';
 import {
   CreateActividadDto,
   SetSociosActividadDto,
@@ -14,17 +15,19 @@ import {
 export class ActividadesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(clubId: number) {
-    return this.prisma.actividad.findMany({
-      where: { club_id: clubId },
+  async list(clubId: number) {
+    const rows = await this.prisma.actividad.findMany({
+      where: { club_id: clubId, ...NOT_DELETED },
       include: {
-        profe: {
-          select: { id: true, nombre: true, apellido: true },
-        },
+        profe: { include: personInclude },
         _count: { select: { socios: true } },
       },
       orderBy: { nombre: 'asc' },
     });
+    return rows.map((a) => ({
+      ...a,
+      profe: a.profe ? flattenPerson(a.profe) : null,
+    }));
   }
 
   create(clubId: number, dto: CreateActividadDto) {
@@ -66,18 +69,18 @@ export class ActividadesService {
 
   async remove(clubId: number, id: number) {
     await this.ensureInClub(clubId, id);
-    await this.prisma.socioActividad.deleteMany({
-      where: { actividad_id: id },
+    await this.prisma.actividad.update({
+      where: { id },
+      data: { eliminado: true },
     });
-    await this.prisma.actividad.delete({ where: { id } });
     return { ok: true };
   }
 
   async setSocios(clubId: number, id: number, dto: SetSociosActividadDto) {
     await this.ensureInClub(clubId, id);
     if (dto.socio_ids.length) {
-      const count = await this.prisma.socio.count({
-        where: { club_id: clubId, id: { in: dto.socio_ids } },
+      const count = await this.prisma.membresia.count({
+        where: { club_id: clubId, id: { in: dto.socio_ids }, ...NOT_DELETED },
       });
       if (count !== dto.socio_ids.length) {
         throw new BadRequestException('Algunos socios no pertenecen al club');
@@ -104,25 +107,15 @@ export class ActividadesService {
     const rows = await this.prisma.socioActividad.findMany({
       where: { actividad_id: id },
       include: {
-        socio: {
-          select: {
-            id: true,
-            dni: true,
-            nombre: true,
-            apellido: true,
-            email: true,
-            telefono: true,
-            estado: true,
-          },
-        },
+        socio: { include: personInclude },
       },
     });
-    return rows.map((r: any) => r.socio);
+    return rows.map((r) => flattenPerson(r.socio));
   }
 
   private async ensureInClub(clubId: number, id: number) {
     const a = await this.prisma.actividad.findFirst({
-      where: { id, club_id: clubId },
+      where: { id, club_id: clubId, ...NOT_DELETED },
     });
     if (!a) throw new NotFoundException('Actividad no encontrada');
     return a;

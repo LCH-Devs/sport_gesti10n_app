@@ -10,13 +10,14 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { LiquidacionesService } from './liquidaciones.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import { CerrarMesDto, CreateCobroProfeDto } from './dto/liquidacion.dto';
 
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseClubAuth(ClubStaffGuard)
 export class LiquidacionesController {
   constructor(private readonly liquidaciones: LiquidacionesService) {}
 

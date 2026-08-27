@@ -8,14 +8,14 @@ import {
   Query,
   Req,
   UploadedFile,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClubsService } from './clubs.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminRoleGuard } from '../common/admin-role.guard';
+import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
+import { UseClubAuth } from '../common/use-club-auth';
 import { UpdateClubConfigDto } from './dto/update-club-config.dto';
 import { CompleteOnboardingDto } from './dto/complete-onboarding.dto';
 import { JwtPayload } from '../auth/jwt.strategy';
@@ -34,19 +34,19 @@ export class ClubsController {
     return this.clubs.findBySlug(slug);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseClubAuth(ClubStaffGuard)
   @Get('me')
   me(@ClubId() clubId: number) {
     return this.clubs.findById(clubId);
   }
 
-  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @UseClubAuth(AdminRoleGuard)
   @Patch('me')
   updateMe(@ClubId() clubId: number, @Body() dto: UpdateClubConfigDto) {
     return this.clubs.updateConfig(clubId, dto);
   }
 
-  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @UseClubAuth(AdminRoleGuard)
   @Post('me/logo')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -60,7 +60,7 @@ export class ClubsController {
     return this.clubs.uploadLogo(clubId, file);
   }
 
-  @UseGuards(JwtAuthGuard, AdminRoleGuard)
+  @UseClubAuth(AdminRoleGuard)
   @Patch('me/onboarding')
   completeOnboarding(
     @ClubId() clubId: number,
