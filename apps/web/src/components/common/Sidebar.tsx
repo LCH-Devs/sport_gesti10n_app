@@ -14,9 +14,12 @@ import {
   Cog6ToothIcon,
   ClipboardDocumentListIcon,
   BanknotesIcon,
+  ChartBarIcon,
+  UserGroupIcon,
+  CalendarIcon,
 } from "@heroicons/react/24/outline";
 
-const menuItems = [
+const clubMenuItems = [
   { icon: HomeIcon, label: "Inicio", href: "/dashboard" },
   { icon: UsersIcon, label: "Socios", href: "/socios" },
   { icon: CurrencyDollarIcon, label: "Cobros", href: "/cobros" },
@@ -25,16 +28,32 @@ const menuItems = [
   { icon: ClockIcon, label: "Horarios", href: "/horarios" },
   { icon: NewspaperIcon, label: "Noticias", href: "/noticias" },
   { icon: Cog6ToothIcon, label: "Config", href: "/config" },
-  { icon: ClipboardDocumentListIcon, label: "Actividades", href: "/actividades" },
+  {
+    icon: ClipboardDocumentListIcon,
+    label: "Actividades",
+    href: "/actividades",
+  },
   { icon: BanknotesIcon, label: "Liquidaciones", href: "/liquidaciones" },
 ];
 
 interface SidebarProps {
   isOpen?: boolean;
+  variant?: "club" | "superadmin";
 }
 
-export function Sidebar({ isOpen = true }: SidebarProps) {
+export function Sidebar({ isOpen = true, variant = "club" }: SidebarProps) {
   const pathname = usePathname();
+  const prefix = "/supercalifragilisticoespiralidoso";
+  const menuItems =
+    variant === "superadmin"
+      ? [
+          { icon: ChartBarIcon, label: "Overview", href: "/supercalifragilisticoespiralidoso/panel" },
+          { icon: BuildingLibraryIcon, label: "Clubs", href: "/supercalifragilisticoespiralidoso/entidades" },
+          { icon: UserGroupIcon, label: "Members", href: "/supercalifragilisticoespiralidoso/usuarios" },
+          { icon: CalendarIcon, label: "Events", href: "/supercalifragilisticoespiralidoso/eventos" },
+          { icon: NewspaperIcon, label: "News", href: "/supercalifragilisticoespiralidoso/novedades" },
+        ]
+      : clubMenuItems;
 
   return (
     <aside

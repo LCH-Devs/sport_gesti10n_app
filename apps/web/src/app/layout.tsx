@@ -18,7 +18,11 @@ function RootLayoutContent({
   const isPublicPage =
     pathname === '/landing' ||
     pathname === '/' ||
-    pathname.startsWith('/login');
+    pathname.startsWith('/login') ||
+    pathname === '/supercalifragilisticoespiralidoso/login' ||
+    pathname.startsWith('/supercalifragilisticoespiralidoso/login/');
+  const isPrefixedRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/');
+  const isClubManagementRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/gestion');
   const showNavbarSidebar = !isPublicPage;
 
   return (
@@ -29,7 +33,10 @@ function RootLayoutContent({
 
       <div className={showNavbarSidebar ? 'flex' : ''}>
         {showNavbarSidebar && (
-          <Sidebar isOpen={sidebarOpen} />
+          <Sidebar
+            isOpen={sidebarOpen}
+            variant={isPrefixedRoute && !isClubManagementRoute ? 'superadmin' : 'club'}
+          />
         )}
 
         <main className={showNavbarSidebar ? 'flex-1 overflow-auto max-h-[calc(100vh-4rem)] mt-16' : ''}>{children}</main>
