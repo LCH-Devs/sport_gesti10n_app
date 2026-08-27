@@ -31,7 +31,7 @@ export function Sidebar({ isOpen = true }: SidebarProps) {
 
   return (
     <aside
-      className={`${isOpen ? "w-48" : "w-16"} mt-16 bg-slate-50 border-r border-slate-200 flex flex-col h-screen max-h-[calc(100vh-4rem)] transition-all duration-300`}
+      className={`${isOpen ? "w-48" : "w-16"} mt-16 bg-slate-50 border-r border-slate-200 flex flex-col h-[calc(100vh-4rem)] overflow-y-auto transition-all duration-300`}
     >
       <nav className="flex-1 px-3 py-4">
         {menuItems.map((item) => {

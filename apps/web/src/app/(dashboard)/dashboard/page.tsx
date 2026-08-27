@@ -95,7 +95,7 @@ export default function AdminHomePage() {
               </p>
             </div>
             <Link
-              href="/admin/fuga"
+              href="/fuga"
               className="rounded-xl border bg-white p-4 hover:bg-slate-50"
             >
               <p className="text-xs text-slate-500">Alertas fuga</p>

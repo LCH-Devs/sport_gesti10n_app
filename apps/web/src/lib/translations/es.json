@@ -116,7 +116,6 @@
     "viewAll": "Ver Todo",
     "member": "Miembro",
     "dni": "DNI",
-    "status": "Estado",
     "goalPercentage": "85% de la meta",
     "exampleClub1": "Metro City FC",
     "exampleClub2": "Northside Athletics"
@@ -137,8 +136,12 @@
   "admin": {
     "socios": {
       "title": "Socios",
-      "subtitle": "Listado multi-tenant: solo socios de tu club",
+      "subtitle": "Listado de socios del club",
       "quickCreate": "Alta Rápida",
+      "newSocio": "Crear Nuevo Socio",
+      "createSubtitle": "Ingresa los datos del nuevo socio",
+      "editSocio": "Editar Socio",
+      "addSocio": "Agregar Socio",
       "dni": "DNI",
       "nombre": "Nombre",
       "apellido": "Apellido",
@@ -155,6 +158,9 @@
     "espacios": {
       "title": "Espacios",
       "subtitle": "Canchas, quinchos y otros espacios reservables",
+      "newEspacio": "Crear Nuevo Espacio",
+      "editEspacio": "Editar Espacio",
+      "createSubtitle": "Ingresa los datos del nuevo espacio",
       "nombre": "Nombre",
       "tipo": "Tipo",
       "descripcion": "Descripción",
@@ -180,6 +186,9 @@
     "reservas": {
       "title": "Reservas",
       "subtitle": "Listado y alta de reservas de espacios",
+      "newReserva": "Crear Nueva Reserva",
+      "editReserva": "Editar Reserva",
+      "createSubtitle": "Ingresa los datos de la nueva reserva",
       "nueva": "Nueva Reserva",
       "espacio": "Espacio",
       "socio": "Socio",
@@ -205,7 +214,9 @@
       "nombre": "Nombre",
       "titular": "Titular",
       "miembros": "Miembros",
-      "createFamilia": "Crear Familia"
+      "createFamilia": "Crear Familia",
+      "newFamilia": "Nueva Familia",
+      "editFamilia": "Editar Familia"
     },
     "noticias": {
       "title": "Noticias",

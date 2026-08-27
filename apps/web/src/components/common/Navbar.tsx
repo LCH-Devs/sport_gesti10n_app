@@ -9,7 +9,12 @@ import {
 import React from "react";
 import { useRouter } from "next/navigation";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { clearPlatformSession, clearSession } from "@/lib/api";
+import {
+  clearPlatformSession,
+  clearSession,
+  getSession,
+  mediaUrl,
+} from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 
 interface NavbarProps {
@@ -24,8 +29,23 @@ export function Navbar({
   userInitial = "U",
 }: NavbarProps) {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
+  const [clubName, setClubName] = React.useState("ClubApp Arg");
+  const [clubLogoUrl, setClubLogoUrl] = React.useState<string | null>(null);
   const router = useRouter();
   const { t } = useTranslation();
+
+  React.useEffect(() => {
+    function syncSession() {
+      const session = getSession();
+      setClubName(session?.club.nombre || "ClubApp Arg");
+      setClubLogoUrl(session?.club.logo_url || null);
+    }
+
+    syncSession();
+    window.addEventListener("club-session-changed", syncSession);
+    return () =>
+      window.removeEventListener("club-session-changed", syncSession);
+  }, []);
 
   function handleLogout() {
     clearSession();
@@ -49,13 +69,22 @@ export function Navbar({
             </button>
           </div>
           <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xl font-bold text-blue-600">⚡</span>
-            <h1 className="text-lg font-bold text-slate-900">AthlletiCorp</h1>
+            {clubLogoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={mediaUrl(clubLogoUrl)}
+                alt={clubName}
+                className="h-8 w-8 rounded-full object-contain"
+              />
+            ) : (
+              <span className="text-xl font-bold text-blue-600">⚡</span>
+            )}
+            <h1 className="text-lg font-bold text-slate-900">{clubName}</h1>
           </div>
         </div>
 
         {/* Center Section: Search */}
-        <div className="hidden md:flex flex-1 max-w-md mx-4">
+{/*         <div className="hidden md:flex flex-1 max-w-md mx-4">
           <div className="relative w-full">
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <input
@@ -64,7 +93,7 @@ export function Navbar({
               className="w-full pl-10 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-md text-sm placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white"
             />
           </div>
-        </div>
+        </div> */}
 
         {/* Right Section: Language, Notifications, User */}
         <div className="flex items-center gap-4">

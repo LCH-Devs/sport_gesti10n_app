@@ -62,7 +62,7 @@ export default function DashboardPage() {
           <Button
             variant="secondary"
             size="md"
-            onClick={() => router.push('/dashboard/clubs/new')}
+            onClick={() => router.push('/platform/clubs/new')}
           >
             {t('dashboard.addInstitution')}
           </Button>

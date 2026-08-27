@@ -1,6 +1,7 @@
 'use client';
 
-import '@/app/globals.css';
+import './globals.css';
+import 'leaflet/dist/leaflet.css';
 import { Navbar, Sidebar } from '@/components/common';
 import { LanguageProvider } from '@/lib/LanguageContext';
 import React from 'react';
@@ -23,7 +24,7 @@ function RootLayoutContent({
   return (
     <>
       {showNavbarSidebar && (
-        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} userName="Admin User" userInitial="A" />
+        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       )}
 
       <div className={showNavbarSidebar ? 'flex' : ''}>
@@ -45,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>AthlletiCorp - Sports Management System</title>
+        <title>Sports Management System</title>
         <meta name="description" content="Multi-institutional sports club management platform" />
       </head>
       <body className="bg-slate-50">

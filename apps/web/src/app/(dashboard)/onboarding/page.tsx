@@ -42,7 +42,7 @@ export default function OnboardingPage() {
       return;
     }
     if (!s.must_complete_onboarding) {
-      router.replace('/admin');
+      router.replace('/dashboard');
       return;
     }
     setForm((f) => ({
@@ -99,7 +99,7 @@ export default function OnboardingPage() {
         },
       });
       applyClubTheme(updated);
-      router.replace('/admin');
+      router.replace('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
