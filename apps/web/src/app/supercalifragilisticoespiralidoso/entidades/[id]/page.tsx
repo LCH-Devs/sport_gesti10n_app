@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { notFound, useRouter, useParams } from "next/navigation";
 import {
   UserGroupIcon,
   HomeModernIcon,
@@ -21,7 +21,7 @@ import { DataTable } from "@/components/common/DataTable";
 import { useTranslation } from "@/lib/useTranslation";
 import { apiFetch, getPlatformSession, mediaUrl } from "@/lib/api";
 
-type ClubReadSession = { access_token: string; clubSlug: string };
+type ClubReadSession = { access_token: string; clubSlug: string; clubId: number };
 
 type ClubData = {
   id: number;
@@ -34,8 +34,7 @@ type ClubData = {
   direccion: string | null;
   telefono_club: string | null;
   email_contacto: string | null;
-  cuit: string | null;
-  cuil: string | null;
+  cuit_cuil: string | null;
   titular_nombre: string | null;
   titular_apellido: string | null;
 };
@@ -68,11 +67,8 @@ function buildSectionConfig(
   t: (key: string, defaultValue?: string) => string,
 ): Record<SectionKey, SectionDef> {
   const yesNo = (v: boolean) => (v ? t("common.yes") : t("common.no"));
-  const fetchList = (session: ClubReadSession, path: string) =>
-    apiFetch<any[]>(path, {
-      token: session.access_token,
-      clubSlug: session.clubSlug,
-    });
+  const fetchList = (session: ClubReadSession, resource: string) =>
+    apiFetch<any[]>(`/platform/clubs/${session.clubId}/resources/${resource}`, { token: session.access_token });
 
   return {
     socios: {
@@ -84,7 +80,7 @@ function buildSectionConfig(
         { key: "email", label: t("admin.socios.email"), render: (r) => r.email },
         { key: "estado", label: t("admin.socios.estado"), render: (r) => r.estado },
       ],
-      fetch: (session) => fetchList(session, "/socios"),
+      fetch: (session) => fetchList(session, "socios"),
     },
     espacios: {
       label: t("clubManagement.links.espacios"),
@@ -107,7 +103,7 @@ function buildSectionConfig(
           render: (r) => yesNo(r.activo),
         },
       ],
-      fetch: (session) => fetchList(session, "/espacios"),
+      fetch: (session) => fetchList(session, "espacios"),
     },
     actividades: {
       label: t("clubManagement.links.actividades"),
@@ -129,7 +125,7 @@ function buildSectionConfig(
           render: (r) => yesNo(r.activo),
         },
       ],
-      fetch: (session) => fetchList(session, "/actividades"),
+      fetch: (session) => fetchList(session, "actividades"),
     },
     horarios: {
       label: t("clubManagement.links.horarios"),
@@ -147,7 +143,7 @@ function buildSectionConfig(
           render: (r) => yesNo(r.activo),
         },
       ],
-      fetch: (session) => fetchList(session, "/horarios"),
+      fetch: (session) => fetchList(session, "horarios"),
     },
     reservas: {
       label: t("clubManagement.links.reservas"),
@@ -174,7 +170,7 @@ function buildSectionConfig(
         },
         { key: "estado", label: t("admin.reservas.estado"), render: (r) => r.estado },
       ],
-      fetch: (session) => fetchList(session, "/reservas"),
+      fetch: (session) => fetchList(session, "reservas"),
     },
     familias: {
       label: t("clubManagement.links.familias"),
@@ -191,7 +187,7 @@ function buildSectionConfig(
           render: (r) => r.socios?.length ?? 0,
         },
       ],
-      fetch: (session) => fetchList(session, "/familias"),
+      fetch: (session) => fetchList(session, "familias"),
     },
     noticias: {
       label: t("clubManagement.links.noticias"),
@@ -208,7 +204,7 @@ function buildSectionConfig(
           render: (r) => new Date(r.fecha).toLocaleDateString("es-AR"),
         },
       ],
-      fetch: (session) => fetchList(session, "/noticias"),
+      fetch: (session) => fetchList(session, "noticias"),
     },
     usuarios: {
       label: t("clubManagement.links.usuarios"),
@@ -217,7 +213,7 @@ function buildSectionConfig(
         { key: "email", label: t("dashboard.email"), render: (r) => r.email },
         { key: "rol", label: t("dashboard.role"), render: (r) => r.rol },
       ],
-      fetch: (session) => fetchList(session, "/admins"),
+      fetch: (session) => fetchList(session, "usuarios"),
     },
     torneos: {
       label: t("clubManagement.links.torneos"),
@@ -231,7 +227,7 @@ function buildSectionConfig(
           render: (r) => r._count?.partidos ?? 0,
         },
       ],
-      fetch: (session) => fetchList(session, "/torneos"),
+      fetch: (session) => fetchList(session, "torneos"),
     },
     cobros: {
       label: t("clubManagement.links.cobros"),
@@ -249,8 +245,8 @@ function buildSectionConfig(
         const now = new Date();
         const mes = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
         const data = await apiFetch<{ pagos: any[] }>(
-          `/pagos/resumen?mes=${mes}`,
-          { token: session.access_token, clubSlug: session.clubSlug },
+          `/platform/clubs/${session.clubId}/resources/cobros`,
+          { token: session.access_token },
         );
         return data.pagos || [];
       },
@@ -271,7 +267,7 @@ function buildSectionConfig(
         },
         { key: "estado", label: t("dashboard.status"), render: (r) => r.estado },
       ],
-      fetch: (session) => fetchList(session, "/liquidaciones-profe"),
+      fetch: (session) => fetchList(session, "liquidaciones"),
     },
   };
 }
@@ -351,7 +347,7 @@ export default function ClubManagementPage() {
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [notFound, setNotFound] = useState(false);
+  const [isClubNotFound, setIsClubNotFound] = useState(false);
 
   const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -364,12 +360,12 @@ export default function ClubManagementPage() {
   const load = useCallback(async () => {
     const platformSession = getPlatformSession();
     if (!platformSession) {
-      router.push("/supercalifragilisticoespiralidoso/acceso");
+      notFound();
       return;
     }
     setLoading(true);
     setError("");
-    setNotFound(false);
+    setIsClubNotFound(false);
     try {
       const clubData = await apiFetch<ClubData>(
         `/platform/clubs/${params.id}`,
@@ -377,26 +373,17 @@ export default function ClubManagementPage() {
       );
       const clubSlug = clubData.slug;
       const [actividadesData, sociosData, espaciosData] = await Promise.all([
-        apiFetch<Actividad[]>("/actividades", {
-          token: platformSession.access_token,
-          clubSlug,
-        }),
-        apiFetch<Socio[]>("/socios", {
-          token: platformSession.access_token,
-          clubSlug,
-        }),
-        apiFetch<Espacio[]>("/espacios", {
-          token: platformSession.access_token,
-          clubSlug,
-        }),
+        apiFetch<Actividad[]>(`/platform/clubs/${params.id}/resources/actividades`, { token: platformSession.access_token }),
+        apiFetch<Socio[]>(`/platform/clubs/${params.id}/resources/socios`, { token: platformSession.access_token }),
+        apiFetch<Espacio[]>(`/platform/clubs/${params.id}/resources/espacios`, { token: platformSession.access_token }),
       ]);
       setClub(clubData);
       setActividades(actividadesData);
       setSocios(sociosData);
       setEspacios(espaciosData);
-      setReadSession({ access_token: platformSession.access_token, clubSlug });
+      setReadSession({ access_token: platformSession.access_token, clubSlug, clubId: clubData.id });
     } catch (err) {
-      setNotFound(true);
+      setIsClubNotFound(true);
       setError(err instanceof Error ? err.message : t("messages.errorLoading"));
     } finally {
       setLoading(false);
@@ -425,7 +412,7 @@ export default function ClubManagementPage() {
     }
   }
 
-  if (notFound) {
+  if (isClubNotFound) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Header title={t("clubManagement.title")} />
@@ -547,8 +534,10 @@ export default function ClubManagementPage() {
                       ? `${club.titular_nombre} ${club.titular_apellido || ""}`
                       : t("clubManagement.notProvided")}
                   </p>
-                  <p>CUIT: {club.cuit || t("clubManagement.notProvided")}</p>
-                  <p>CUIL: {club.cuil || t("clubManagement.notProvided")}</p>
+                  <p>
+                    CUIT/CUIL:{" "}
+                    {club.cuit_cuil || t("clubManagement.notProvided")}
+                  </p>
                   <p>
                     {t("clubManagement.monthlyFee")}: ${club.cuota_monto}
                   </p>

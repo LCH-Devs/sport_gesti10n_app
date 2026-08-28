@@ -124,6 +124,22 @@ export class CreatePlatformAdminDto {
   password: string;
 }
 
+export class UpdateSelfPlatformAdminDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  nombre?: string;
+
+  @IsOptional()
+  @IsString()
+  currentPassword?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(8)
+  newPassword?: string;
+}
+
 export class UpdatePlatformAdminDto {
   @IsOptional()
   @IsString()

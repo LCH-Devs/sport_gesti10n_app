@@ -8,50 +8,83 @@ import {
 } from "@heroicons/react/24/outline";
 import React from "react";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   clearPlatformSession,
   clearSession,
+  clearSocioSession,
+  getPlatformSession,
   getSession,
+  getSocioSession,
   mediaUrl,
 } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 
 interface NavbarProps {
   onMenuClick?: () => void;
-  userName?: string;
-  userInitial?: string;
 }
 
-export function Navbar({
-  onMenuClick,
-  userName = "User",
-  userInitial = "U",
-}: NavbarProps) {
+export function Navbar({ onMenuClick }: NavbarProps) {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [clubName, setClubName] = React.useState("ClubApp Arg");
   const [clubLogoUrl, setClubLogoUrl] = React.useState<string | null>(null);
+  const [userName, setUserName] = React.useState("User");
+  const [profileHref, setProfileHref] = React.useState(
+    "/gestion/perfil",
+  );
+  const [preferencesHref, setPreferencesHref] = React.useState(
+    "/gestion/preferencias",
+  );
   const router = useRouter();
+  const pathname = usePathname();
   const { t } = useTranslation();
 
   React.useEffect(() => {
     function syncSession() {
       const session = getSession();
-      setClubName(session?.club.nombre || "ClubApp Arg");
-      setClubLogoUrl(session?.club.logo_url || null);
+      const socioSession = getSocioSession();
+      const platformSession = getPlatformSession();
+      const isPlatformRoute = pathname.startsWith(
+        "/supercalifragilisticoespiralidoso/",
+      );
+
+      if (isPlatformRoute) {
+        setClubName("ClubApp Arg");
+        setClubLogoUrl(null);
+        setUserName(platformSession?.platform_admin.nombre || "SuperAdmin");
+        setProfileHref("/supercalifragilisticoespiralidoso/panel/perfil");
+        setPreferencesHref(
+          "/supercalifragilisticoespiralidoso/panel/preferencias",
+        );
+      } else {
+        setClubName(session?.club.nombre || "ClubApp Arg");
+        setClubLogoUrl(session?.club.logo_url || null);
+        setUserName(session?.admin.nombre || socioSession?.socio.nombre || "User");
+        setProfileHref("/gestion/perfil");
+        setPreferencesHref("/gestion/preferencias");
+      }
     }
 
     syncSession();
     window.addEventListener("club-session-changed", syncSession);
     return () =>
       window.removeEventListener("club-session-changed", syncSession);
-  }, []);
+  }, [pathname]);
+
+  const userInitial = userName.charAt(0).toUpperCase() || "U";
 
   function handleLogout() {
     clearSession();
+    clearSocioSession();
     clearPlatformSession();
     setShowUserMenu(false);
-    router.push("/landing");
+    router.push("/");
+  }
+
+  function goTo(path: string) {
+    setShowUserMenu(false);
+    router.push(path);
   }
 
   return (
@@ -129,10 +162,16 @@ export function Navbar({
             {/* User Dropdown Menu */}
             {showUserMenu && (
               <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg py-2 z-50">
-                <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                <button
+                  onClick={() => goTo(profileHref)}
+                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                >
                   {t("common.profileSettings")}
                 </button>
-                <button className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors">
+                <button
+                  onClick={() => goTo(preferencesHref)}
+                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+                >
                   {t("common.preferences")}
                 </button>
                 <hr className="my-2" />

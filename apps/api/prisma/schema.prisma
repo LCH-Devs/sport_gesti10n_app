@@ -27,11 +27,13 @@ model Club {
   cancelar_reserva_horas Int     @default(2)
   activo                Boolean  @default(true)
   onboarding_completo   Boolean  @default(false)
-  cuit                  String?
-  cuil                  String?
+  cuit_cuil             String?
   titular_nombre        String?
   titular_apellido      String?
   direccion             String?
+  provincia             String?
+  ciudad                String?
+  ubicacion_json        Json?
   telefono_club         String?
   email_contacto        String?
 

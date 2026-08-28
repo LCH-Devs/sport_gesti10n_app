@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import {
   UserGroupIcon,
   DocumentTextIcon,
@@ -28,7 +28,7 @@ export default function DashboardPage() {
   const loadUsers = useCallback(async () => {
     const session = getPlatformSession();
     if (!session) {
-      router.push("/supercalifragilisticoespiralidoso/acceso");
+      notFound();
       return;
     }
     setLoading(true);

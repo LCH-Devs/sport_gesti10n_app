@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { notFound, useRouter, useParams } from "next/navigation";
 import {
   UserGroupIcon,
   HomeModernIcon,
@@ -33,8 +33,7 @@ type ClubData = {
   direccion: string | null;
   telefono_club: string | null;
   email_contacto: string | null;
-  cuit: string | null;
-  cuil: string | null;
+  cuit_cuil: string | null;
   titular_nombre: string | null;
   titular_apellido: string | null;
 };
@@ -330,7 +329,7 @@ export default function ClubManagementPage() {
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [notFound, setNotFound] = useState(false);
+  const [isClubNotFound, setIsClubNotFound] = useState(false);
 
   const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
   const [sectionLoading, setSectionLoading] = useState(false);
@@ -343,12 +342,12 @@ export default function ClubManagementPage() {
   const load = useCallback(async () => {
     const platformSession = getPlatformSession();
     if (!platformSession) {
-      router.push("/login");
+      notFound();
       return;
     }
     setLoading(true);
     setError("");
-    setNotFound(false);
+    setIsClubNotFound(false);
     try {
       const clubData = await apiFetch<ClubData>(
         `/platform/clubs/${params.id}`,
@@ -375,7 +374,7 @@ export default function ClubManagementPage() {
       setEspacios(espaciosData);
       setReadSession({ access_token: platformSession.access_token, clubSlug });
     } catch (err) {
-      setNotFound(true);
+      setIsClubNotFound(true);
       setError(err instanceof Error ? err.message : t("messages.errorLoading"));
     } finally {
       setLoading(false);
@@ -404,7 +403,7 @@ export default function ClubManagementPage() {
     }
   }
 
-  if (notFound) {
+  if (isClubNotFound) {
     return (
       <div className="min-h-screen bg-slate-50">
         <Header title={t("clubManagement.title")} />
@@ -526,8 +525,10 @@ export default function ClubManagementPage() {
                       ? `${club.titular_nombre} ${club.titular_apellido || ""}`
                       : t("clubManagement.notProvided")}
                   </p>
-                  <p>CUIT: {club.cuit || t("clubManagement.notProvided")}</p>
-                  <p>CUIL: {club.cuil || t("clubManagement.notProvided")}</p>
+                  <p>
+                    CUIT/CUIL:{" "}
+                    {club.cuit_cuil || t("clubManagement.notProvided")}
+                  </p>
                   <p>
                     {t("clubManagement.monthlyFee")}: ${club.cuota_monto}
                   </p>

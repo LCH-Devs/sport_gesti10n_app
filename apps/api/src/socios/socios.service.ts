@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateSocioDto, UpdateSocioDto } from './dto/socio.dto';
+import { CreateSocioDto, UpdateSelfSocioDto, UpdateSocioDto } from './dto/socio.dto';
 import {
   flattenPerson,
   MEMBER_ROLES,
@@ -290,6 +290,43 @@ export class SociosService {
     }
     result.push(current);
     return result;
+  }
+
+  async updateSelf(clubId: number, socioId: number, dto: UpdateSelfSocioDto) {
+    const membresia = await this.prisma.membresia.findFirst({
+      where: { id: socioId, club_id: clubId, ...NOT_DELETED },
+    });
+    if (!membresia) {
+      throw new NotFoundException('Socio no encontrado en este club');
+    }
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: membresia.usuario_id },
+    });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    let password_hash: string | undefined;
+    if (dto.newPassword) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Ingresá tu contraseña actual');
+      }
+      const ok = await bcrypt.compare(dto.currentPassword, usuario.password_hash);
+      if (!ok) {
+        throw new BadRequestException('Contraseña actual incorrecta');
+      }
+      password_hash = await bcrypt.hash(dto.newPassword, 10);
+    }
+
+    const updated = await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
+        ...(dto.apellido !== undefined && { apellido: dto.apellido.trim() }),
+        ...(dto.telefono !== undefined && { telefono: dto.telefono.trim() }),
+        ...(password_hash && { password_hash }),
+      },
+    });
+
+    return flattenPerson({ ...membresia, usuario: updated });
   }
 
   async portalMe(clubId: number, socioId: number) {

@@ -37,6 +37,29 @@ export class CreateSocioDto {
   fecha_nacimiento?: string;
 }
 
+export class UpdateSelfSocioDto {
+  @IsOptional()
+  @IsString()
+  nombre?: string;
+
+  @IsOptional()
+  @IsString()
+  apellido?: string;
+
+  @IsOptional()
+  @IsString()
+  telefono?: string;
+
+  @IsOptional()
+  @IsString()
+  currentPassword?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(4)
+  newPassword?: string;
+}
+
 export class UpdateSocioDto {
   @IsOptional()
   @IsString()

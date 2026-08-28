@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { Header, Card, Button } from '@/components/common';
 import { apiFetch, getPlatformSession } from '@/lib/api';
 import { useTranslation } from '@/lib/useTranslation';
@@ -22,7 +22,7 @@ export default function NewClubPage() {
     e.preventDefault();
     const session = getPlatformSession();
     if (!session) {
-      router.push('/supercalifragilisticoespiralidoso/acceso');
+      notFound();
       return;
     }
     setSaving(true);

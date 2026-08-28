@@ -3,7 +3,13 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiFetch, PlatformSession, savePlatformSession } from "@/lib/api";
+import {
+  apiFetch,
+  clearSession,
+  clearSocioSession,
+  PlatformSession,
+  savePlatformSession,
+} from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 
 export default function LoginPage() {
@@ -25,6 +31,8 @@ export default function LoginPage() {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
+      clearSession();
+      clearSocioSession();
       savePlatformSession(data);
       router.push("/supercalifragilisticoespiralidoso/panel");
     } catch (err) {
@@ -37,11 +45,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-slate-50 px-4">
-      <Link
-        href="/supercalifragilisticoespiralidoso/inicio"
-        className="absolute left-6 top-6 flex items-center gap-2"
-      >
+    <main className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-sky-700 to-gray-600 px-4">
+      <Link href="/" className="absolute left-6 top-6 flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
           <span className="text-sm font-bold text-white">A</span>
         </div>
@@ -121,7 +126,7 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-sm text-slate-500">
           {t("login.noAccount")}{" "}
           <Link
-            href="/supercalifragilisticoespiralidoso/inicio"
+            href="/"
             className="font-medium text-blue-600 hover:text-blue-700"
           >
             {t("login.backToHome")}
@@ -149,7 +154,7 @@ export default function LoginPage() {
  *     e.preventDefault();
  *     const clean = slug.trim().toLowerCase();
  *     if (!clean) return;
- *     router.push(`/login/${clean}`);
+ *     router.push('/login');
  *   }
  *
  *   return (

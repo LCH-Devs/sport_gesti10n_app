@@ -1,10 +1,23 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { Header, Card, Badge, Button } from '@/components/common';
 import { useTranslation } from '@/lib/useTranslation';
 import { apiFetch, getPlatformSession, mediaUrl } from '@/lib/api';
+
+const ClubsMap = dynamic(
+  () => import('@/app/landing/components/MapContent'),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-96 rounded-md bg-slate-100 flex items-center justify-center text-slate-600">
+        {`Cargando mapa...`}
+      </div>
+    ),
+  },
+);
 
 type ClubRow = {
   id: number;
@@ -44,10 +57,26 @@ export default function ClubsPage() {
   const [created, setCreated] = useState<CreateClubResponse | null>(null);
   const [saving, setSaving] = useState(false);
 
+  async function clubAction(club: ClubRow, action: 'edit' | 'suspend' | 'delete') {
+    const session = getPlatformSession();
+    if (!session) return;
+    if (action === 'delete') {
+      if (!window.confirm(`¿Eliminar permanentemente ${club.nombre}? Se borrarán el club y todos sus datos. Esta acción no se puede deshacer.`)) return;
+      await apiFetch(`/platform/clubs/${club.id}`, { method: 'DELETE', token: session.access_token });
+    } else if (action === 'suspend') {
+      await apiFetch(`/platform/clubs/${club.id}`, { method: 'PATCH', token: session.access_token, body: JSON.stringify({ activo: club.activo === false }) });
+    } else {
+      const nombre = window.prompt('Nombre del club:', club.nombre);
+      if (!nombre || nombre.trim() === club.nombre) return;
+      await apiFetch(`/platform/clubs/${club.id}`, { method: 'PATCH', token: session.access_token, body: JSON.stringify({ nombre: nombre.trim() }) });
+    }
+    await load();
+  }
+
   const load = useCallback(async () => {
     const session = getPlatformSession();
     if (!session) {
-      router.push('/supercalifragilisticoespiralidoso/acceso');
+      notFound();
       return;
     }
     setLoading(true);
@@ -283,6 +312,11 @@ export default function ClubsPage() {
                 >
                   {t('clubs.manageClub')}
                 </Button>
+                <div className="mt-2 grid grid-cols-3 gap-2">
+                  <Button variant="secondary" size="sm" onClick={() => void clubAction(club, 'edit')}>Editar</Button>
+                  <Button variant="secondary" size="sm" onClick={() => void clubAction(club, 'suspend')}>{club.activo ? 'Suspender' : 'Reactivar'}</Button>
+                  <Button variant="secondary" size="sm" onClick={() => void clubAction(club, 'delete')}>Eliminar</Button>
+                </div>
               </Card>
             ))}
           </div>
@@ -291,9 +325,7 @@ export default function ClubsPage() {
         {/* Map Placeholder */}
         <Card className="mt-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-4">{t('clubs.mapTitle')}</h2>
-          <div className="h-96 bg-slate-200 rounded-md flex items-center justify-center text-slate-600">
-            🗺️ {t('clubs.mapComingSoon')}
-          </div>
+          <ClubsMap />
         </Card>
       </div>
     </div>

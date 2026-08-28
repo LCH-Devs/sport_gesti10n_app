@@ -37,3 +37,18 @@ export class UpdateAdminDto {
   password?: string;
 }
 
+export class UpdateSelfDto {
+  @IsOptional()
+  @IsString()
+  nombre?: string;
+
+  @IsOptional()
+  @IsString()
+  currentPassword?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(4)
+  newPassword?: string;
+}
+

@@ -66,7 +66,7 @@ export function HeroSection() {
               return (
                 <Link
                   key={club.id}
-                  href={`/login/${club.slug}`}
+                  href="/login"
                   className="group flex items-center mb-3 gap-4 rounded-2xl transition-all hover:-translate-y-0.5 hover:border-blue-200 hover:bg-white hover:shadow-md"
                 >
                   <div

@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "@/context/LanguageContext";
+import { router } from "expo-router";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -54,6 +55,14 @@ export default function ProfileScreen() {
         style={[styles.container]}
         contentContainerStyle={{ paddingBottom: 100 }}
     >
+      <TouchableOpacity style={styles.adminEntry} onPress={() => router.push('/admin/' as never)} activeOpacity={0.8}>
+        <View style={styles.adminIcon}><Ionicons name="shield-checkmark-outline" size={20} color="#ffffff" /></View>
+        <View style={styles.adminCopy}>
+          <Text style={styles.adminTitle}>Modo administración</Text>
+          <Text style={styles.adminSubtitle}>Gestionar el club</Text>
+        </View>
+        <Text style={styles.adminArrow}>›</Text>
+      </TouchableOpacity>
       {/* Profile Header */}
       <Card style={styles.profileCard}>
         <View style={styles.profileContent}>
@@ -119,6 +128,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#f8f9ff",
   },
+  adminEntry: {
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#00288e',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  adminIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#ffffff2b',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminCopy: { flex: 1, marginLeft: 12 },
+  adminTitle: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
+  adminSubtitle: { color: '#c9d3ff', fontSize: 12, marginTop: 3 },
+  adminArrow: { color: '#ffffff', fontSize: 24, fontWeight: '300' },
   profileCard: {
     marginHorizontal: 16,
     marginVertical: 12,

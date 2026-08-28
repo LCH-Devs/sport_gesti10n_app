@@ -4,6 +4,7 @@ import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import { Navbar, Sidebar } from '@/components/common';
 import { LanguageProvider } from '@/lib/LanguageContext';
+import { ChromeProvider, useChrome } from '@/lib/ChromeContext';
 import React from 'react';
 import { usePathname } from 'next/navigation';
 
@@ -14,20 +15,15 @@ function RootLayoutContent({
 }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const pathname = usePathname();
+  const { hideChrome } = useChrome();
 
   const isPublicPage =
-    pathname === '/landing' ||
     pathname === '/' ||
+    pathname === '/landing' ||
     pathname.startsWith('/login') ||
-    pathname === '/supercalifragilisticoespiralidoso/login' ||
-    pathname.startsWith('/supercalifragilisticoespiralidoso/login/');
+    pathname === '/supercalifragilisticoespiralidoso/acceso';
   const isPrefixedRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/');
-  const isClubManagementRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/gestion');
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/entrar') ||
-    pathname.startsWith('/socio') ||
-    pathname.startsWith('/sesion');
-  const showNavbarSidebar = !isPublicPage;
+  const showNavbarSidebar = !isPublicPage && !hideChrome;
 
   return (
     <>
@@ -39,7 +35,7 @@ function RootLayoutContent({
         {showNavbarSidebar && (
           <Sidebar
             isOpen={sidebarOpen}
-            variant={isPrefixedRoute && !isClubManagementRoute ? 'superadmin' : 'club'}
+            variant={isPrefixedRoute ? 'superadmin' : 'club'}
           />
         )}
 
@@ -62,7 +58,9 @@ export default function RootLayout({
       </head>
       <body className="bg-slate-50">
         <LanguageProvider>
-          <RootLayoutContent>{children}</RootLayoutContent>
+          <ChromeProvider>
+            <RootLayoutContent>{children}</RootLayoutContent>
+          </ChromeProvider>
         </LanguageProvider>
       </body>
     </html>

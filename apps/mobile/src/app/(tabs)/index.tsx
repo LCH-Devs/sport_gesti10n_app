@@ -9,10 +9,13 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "@/context/AuthContext";
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const { session } = useAuth();
+  const member = session?.socio;
 
   const quickActions = [
     { icon: "time-outline", label: "history" },
@@ -40,8 +43,8 @@ export default function HomeScreen() {
           <View style={styles.avatarPlaceholder}>
             <Text style={styles.initials}>AM</Text>
           </View>
-          <Text style={styles.name}>Alex Morgan</Text>
-          <Text style={styles.membership}>{t("premiumMembership")}</Text>
+          <Text style={styles.name}>{member ? `${member.nombre} ${member.apellido}` : 'Socio'}</Text>
+          <Text style={styles.membership}>{session?.club.nombre ?? t("clubConnect")}</Text>
           <View style={styles.barcodeContainer}>
             <Text style={styles.barcode}>|||||||||||||||||||</Text>
           </View>

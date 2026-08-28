@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiFetch, PlatformSession, savePlatformSession } from "@/lib/api";
+import { apiFetch, isStaffRole, LoginResult, saveSession } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 
 export default function LoginPage() {
@@ -21,12 +21,25 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const data = await apiFetch<PlatformSession>("/auth/platform/login", {
+      const data = await apiFetch<LoginResult>("/auth/admin/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      savePlatformSession(data);
-      router.push("/platform");
+      if (!isStaffRole(data.role) || !data.admin) {
+        throw new Error("Este acceso es solo para la comisión del club.");
+      }
+      saveSession({
+        access_token: data.access_token,
+        role: data.role,
+        cuentas: data.cuentas,
+        must_complete_onboarding: data.must_complete_onboarding,
+        must_change_password: data.must_change_password,
+        impersonated_by_platform: data.impersonated_by_platform,
+        admin: data.admin,
+        club: data.club,
+      });
+      window.dispatchEvent(new Event("club-session-changed"));
+      router.push("/dashboard");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("messages.errorCreating"),
@@ -39,7 +52,7 @@ export default function LoginPage() {
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-white to-slate-50 px-4">
       <Link
-        href="/landing"
+        href="/"
         className="absolute left-6 top-6 flex items-center gap-2"
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
@@ -121,7 +134,7 @@ export default function LoginPage() {
         <p className="mt-6 text-center text-sm text-slate-500">
           {t("login.noAccount")}{" "}
           <Link
-            href="/landing"
+            href="/"
             className="font-medium text-blue-600 hover:text-blue-700"
           >
             {t("login.backToHome")}
@@ -149,7 +162,7 @@ export default function LoginPage() {
  *     e.preventDefault();
  *     const clean = slug.trim().toLowerCase();
  *     if (!clean) return;
- *     router.push(`/login/${clean}`);
+ *     router.push('/login');
  *   }
  *
  *   return (
