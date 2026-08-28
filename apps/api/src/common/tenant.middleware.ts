@@ -43,7 +43,7 @@ export class TenantMiddleware implements NestMiddleware {
     }
 
     const club = await this.prisma.club.findUnique({ where: { slug } });
-    if (!club) {
+    if (!club || club.eliminado) {
       if (explicitSlug) {
         throw new NotFoundException(`Club no encontrado: ${slug}`);
       }

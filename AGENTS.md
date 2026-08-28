@@ -70,7 +70,7 @@ Auth unificado: `POST /auth/login` (aliases `/auth/admin/login` y `/auth/socio/l
 
 Helpers: `apps/api/src/common/club-users.ts` (`NOT_DELETED`, `flattenPerson`, `personInclude`). Reusarlos. No reimplementar.
 
-Bajas: **soft delete** `eliminado: true` en `Membresia` (y entidades de negocio que ya lo usan). No borrar filas de usuario si puede tener otra membresía.
+Bajas: **soft delete** `eliminado: true` en `Membresia` (y entidades de negocio que ya lo usan). Baja de **club** (plataforma): `Club.eliminado=true` + `activo=false` + membresías de ese club `eliminado=true`. No borrar filas. El mail del admin se libera; **suspender** (`activo=false`) no libera el mail. No borrar filas de usuario si puede tener otra membresía.
 
 DNI único **por club**, no global. Email único en `Usuario`. Si el email ya existe, se **vincula** una membresía nueva (o se restaura una `eliminado`); no se duplica el usuario.
 

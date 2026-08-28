@@ -15,6 +15,7 @@ const club = {
   logo_url: null,
   cuota_monto: 5000,
   onboarding_completo: true,
+  eliminado: false,
 };
 
 const membresiaSocio = {

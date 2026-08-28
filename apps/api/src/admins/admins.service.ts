@@ -6,7 +6,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdminDto, UpdateAdminDto, UpdateSelfDto } from './dto/admin.dto';
-import { flattenAdmin, isStaffRole, NOT_DELETED, STAFF_ROLES } from '../common/club-users';
+import { flattenAdmin, isStaffRole, NOT_DELETED, STAFF_ROLES, adminEmailInUseWhere } from '../common/club-users';
 
 @Injectable()
 export class AdminsService {
@@ -177,7 +177,7 @@ export class AdminsService {
 
   private async assertAdminEmailFree(email: string) {
     const taken = await this.prisma.membresia.findFirst({
-      where: { rol: 'admin', ...NOT_DELETED, usuario: { email } },
+      where: adminEmailInUseWhere(email),
     });
     if (taken) {
       throw new BadRequestException(

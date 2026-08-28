@@ -10,6 +10,17 @@ export function isMemberRole(rol: string) {
 }
 
 export const NOT_DELETED = { eliminado: false } as const;
+export const CLUB_NOT_DELETED = { eliminado: false } as const;
+
+/** Un email no puede ser admin de dos clubes vivos. Club dado de baja no cuenta. */
+export function adminEmailInUseWhere(email: string) {
+  return {
+    rol: 'admin',
+    ...NOT_DELETED,
+    club: CLUB_NOT_DELETED,
+    usuario: { email },
+  };
+}
 
 export const usuarioPublicSelect = {
   email: true,

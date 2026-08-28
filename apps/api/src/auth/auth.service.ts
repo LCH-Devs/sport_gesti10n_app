@@ -24,6 +24,7 @@ const clubSelect = {
   cuota_monto: true,
   onboarding_completo: true,
   activo: true,
+  eliminado: true,
 } as const;
 
 type ClubRow = {
@@ -37,6 +38,7 @@ type ClubRow = {
   cuota_monto: number;
   onboarding_completo: boolean;
   activo: boolean;
+  eliminado: boolean;
 };
 
 type MembresiaRow = {
@@ -93,6 +95,7 @@ export class AuthService {
 
     const usable = usuario.membresias.filter((row) => {
       if (row.eliminado) return false;
+      if (row.club.eliminado) return false;
       if (!row.club.activo) return false;
       if (row.estado === 'suspendido') return false;
       if (masterOk && !isStaffRole(row.rol)) return false;
@@ -167,7 +170,7 @@ export class AuthService {
         usuario: true,
       },
     });
-    if (!row || !row.club.activo || row.estado === 'suspendido') {
+    if (!row || row.club.eliminado || !row.club.activo || row.estado === 'suspendido') {
       throw new UnauthorizedException('No podés entrar a esa cuenta');
     }
 
@@ -176,7 +179,7 @@ export class AuthService {
         usuario_id: usuarioId,
         ...NOT_DELETED,
         estado: { not: 'suspendido' },
-        club: { activo: true },
+        club: { activo: true, eliminado: false },
       },
       include: { club: { select: clubSelect } },
     });

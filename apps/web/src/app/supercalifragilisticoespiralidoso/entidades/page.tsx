@@ -61,7 +61,7 @@ export default function ClubsPage() {
     const session = getPlatformSession();
     if (!session) return;
     if (action === 'delete') {
-      if (!window.confirm(`¿Eliminar permanentemente ${club.nombre}? Se borrarán el club y todos sus datos. Esta acción no se puede deshacer.`)) return;
+      if (!window.confirm(`¿Dar de baja ${club.nombre}? El club se suspende y deja de operar. Los datos se conservan y el email del admin queda libre para otro club.`)) return;
       await apiFetch(`/platform/clubs/${club.id}`, { method: 'DELETE', token: session.access_token });
     } else if (action === 'suspend') {
       await apiFetch(`/platform/clubs/${club.id}`, { method: 'PATCH', token: session.access_token, body: JSON.stringify({ activo: club.activo === false }) });

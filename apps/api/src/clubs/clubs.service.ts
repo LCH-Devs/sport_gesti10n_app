@@ -17,6 +17,7 @@ const CLUB_PUBLIC_SELECT = {
   cuota_monto: true,
   plan: true,
   activo: true,
+  eliminado: true,
   onboarding_completo: true,
   cuit_cuil: true,
   titular_nombre: true,
@@ -44,6 +45,7 @@ const CLUB_LOGIN_SELECT = {
   color_secundario: true,
   color_terciario: true,
   activo: true,
+  eliminado: true,
 } as const;
 
 @Injectable()
@@ -55,14 +57,17 @@ export class ClubsService {
 
   buscar(q: string) {
     return this.prisma.club.findMany({
-      where: q
-        ? {
-            OR: [
-              { nombre: { contains: q, mode: 'insensitive' } },
-              { slug: { contains: q, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
+      where: {
+        eliminado: false,
+        ...(q
+          ? {
+              OR: [
+                { nombre: { contains: q, mode: 'insensitive' } },
+                { slug: { contains: q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
+      },
       select: {
         id: true,
         slug: true,
@@ -82,7 +87,7 @@ export class ClubsService {
       where: { slug },
       select: CLUB_LOGIN_SELECT,
     });
-    if (!club) throw new NotFoundException('Club no encontrado');
+    if (!club || club.eliminado) throw new NotFoundException('Club no encontrado');
     return club;
   }
 
@@ -91,7 +96,7 @@ export class ClubsService {
       where: { id },
       select: CLUB_PUBLIC_SELECT,
     });
-    if (!club) throw new NotFoundException('Club no encontrado');
+    if (!club || club.eliminado) throw new NotFoundException('Club no encontrado');
     return club;
   }
 

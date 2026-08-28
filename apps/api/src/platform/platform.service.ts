@@ -16,7 +16,7 @@ import {
   UpdatePlatformAdminDto,
   UpdateSelfPlatformAdminDto,
 } from './dto/platform.dto';
-import { NOT_DELETED } from '../common/club-users';
+import { NOT_DELETED, adminEmailInUseWhere } from '../common/club-users';
 import {
   clubLoginUrl,
   isReservedTenantSlug,
@@ -48,6 +48,7 @@ export class PlatformService {
 
   async listClubs() {
     const clubs = await this.prisma.club.findMany({
+      where: { eliminado: false },
       orderBy: { nombre: 'asc' },
       include: {
         membresias: {
@@ -72,7 +73,7 @@ export class PlatformService {
         _count: { select: { pagos: true } },
       },
     });
-    if (!club) throw new NotFoundException('Club no encontrado');
+    if (!club || club.eliminado) throw new NotFoundException('Club no encontrado');
     return this.shapeClub(club);
   }
 
@@ -104,7 +105,7 @@ export class PlatformService {
     const password_hash = await bcrypt.hash(password, 10);
     const adminEmail = dto.admin_email.toLowerCase().trim();
     const taken = await this.prisma.membresia.findFirst({
-      where: { rol: 'admin', ...NOT_DELETED, usuario: { email: adminEmail } },
+      where: adminEmailInUseWhere(adminEmail),
     });
     if (taken) {
       throw new BadRequestException(
@@ -239,25 +240,21 @@ export class PlatformService {
   }
 
   async deleteClub(id: number) {
-    await this.ensureClub(id);
-    await this.prisma.$transaction(async (tx) => {
-      // Se eliminan primero las relaciones que no tienen cascade configurado.
-      await tx.asistencia.deleteMany({ where: { club_id: id } });
-      await tx.reserva.deleteMany({ where: { club_id: id } });
-      await tx.socioActividad.deleteMany({ where: { socio: { club_id: id } } });
-      await tx.cobroProfe.deleteMany({ where: { club_id: id } });
-      await tx.liquidacionProfe.deleteMany({ where: { club_id: id } });
-      await tx.pago.deleteMany({ where: { club_id: id } });
-      await tx.partido.deleteMany({ where: { club_id: id } });
-      await tx.grupoFamiliar.deleteMany({ where: { club_id: id } });
-      await tx.actividad.deleteMany({ where: { club_id: id } });
-      await tx.espacio.deleteMany({ where: { club_id: id } });
-      await tx.horario.deleteMany({ where: { club_id: id } });
-      await tx.noticia.deleteMany({ where: { club_id: id } });
-      await tx.torneo.deleteMany({ where: { club_id: id } });
-      await tx.membresia.deleteMany({ where: { club_id: id } });
-      await tx.club.delete({ where: { id } });
-    });
+    const club = await this.ensureClub(id);
+    await this.prisma.$transaction([
+      this.prisma.membresia.updateMany({
+        where: { club_id: id, eliminado: false },
+        data: { eliminado: true },
+      }),
+      this.prisma.club.update({
+        where: { id },
+        data: {
+          activo: false,
+          eliminado: true,
+          slug: `${club.slug}__del${id}`,
+        },
+      }),
+    ]);
     return { deleted: true, id };
   }
 
@@ -266,7 +263,7 @@ export class PlatformService {
     const email = dto.email.toLowerCase().trim();
     if (dto.rol !== 'entrada') {
       const existingAdmin = await this.prisma.membresia.findFirst({
-        where: { rol: 'admin', ...NOT_DELETED, usuario: { email } },
+        where: adminEmailInUseWhere(email),
       });
       if (existingAdmin) {
         throw new BadRequestException(
@@ -484,7 +481,7 @@ export class PlatformService {
 
   private async ensureClub(id: number) {
     const club = await this.prisma.club.findUnique({ where: { id } });
-    if (!club) throw new NotFoundException('Club no encontrado');
+    if (!club || club.eliminado) throw new NotFoundException('Club no encontrado');
     return club;
   }
 }

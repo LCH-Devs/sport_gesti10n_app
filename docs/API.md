@@ -38,7 +38,8 @@ JWT con `role: platform` (sin `club_id`).
 - `GET /platform/clubs/:id`
 - `POST /platform/clubs` — alta `{ nombre, admin_email, admin_nombre?, precio_usd_mes }`  
   Genera slug + password aleatoria. Respuesta incluye `credentials_once` (email, password, login_url) **solo en el create** y `mail.sent` (true si SMTP está configurado).
-- `PATCH /platform/clubs/:id` — branding, plan, `precio_usd_mes`, `activo` (suspender)
+- `PATCH /platform/clubs/:id` — branding, plan, `precio_usd_mes`, `activo` (suspender: el mail del admin **sigue ocupado**)
+- `DELETE /platform/clubs/:id` — baja lógica: `activo=false`, `eliminado=true`, membresías `eliminado=true`. El club queda en DB, no entra, y el mail del admin **se libera**. No borra filas.
 - `POST /platform/clubs/:id/admins` — agregar admin/entrada al club
 - `GET /platform/admins` — superusuarios ClubApp
 - `POST /platform/admins` — `{ email, nombre, password }` (mín. 8)
