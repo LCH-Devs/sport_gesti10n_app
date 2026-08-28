@@ -11,7 +11,6 @@ export default function LandingPage() {
 
   return (
     <div className="scroll-auto min-h-screen bg-gradient-to-b from-white to-slate-50">
-      {/* Header */}
       <header className="fixed top-0 left-0 right-0 bg-white border-b border-slate-200 z-50">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -22,17 +21,8 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
-            <a
-              href="/entrar"
-              className="px-4 py-2 text-slate-700 font-medium hover:text-blue-700 transition-colors"
-            >
+            <a href="/login" className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors">
               {t("landing.signIn")}
-            </a>
-            <a
-              href="#contacto"
-              className="px-4 py-2 bg-blue-600 text-white rounded-md font-medium hover:bg-blue-700 transition-colors"
-            >
-              {t("landing.requestDemo")}
             </a>
           </div>
         </div>

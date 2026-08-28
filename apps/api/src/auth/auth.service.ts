@@ -11,6 +11,7 @@ import { isStaffRole, NOT_DELETED } from '../common/club-users';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { PlatformLoginDto } from './dto/platform-login.dto';
 import { SocioLoginDto } from './dto/socio-login.dto';
+import { LoginResponseDto } from './dto/login-response.dto';
 
 const clubSelect = {
   id: true,
@@ -65,7 +66,7 @@ export class AuthService {
   ) {}
 
   /** Login único: comisión, portería, socio o profe. */
-  async login(dto: AdminLoginDto | SocioLoginDto) {
+  async login(dto: AdminLoginDto | SocioLoginDto): Promise<LoginResponseDto> {
     const email = dto.email.toLowerCase().trim();
     const slug = dto.club_slug?.trim().toLowerCase();
     const master = this.config.get<string>('PLATFORM_MASTER_PASSWORD') || '';
@@ -136,15 +137,18 @@ export class AuthService {
     );
   }
 
-  loginAdmin(dto: AdminLoginDto) {
+  loginAdmin(dto: AdminLoginDto): Promise<LoginResponseDto> {
     return this.login(dto);
   }
 
-  loginSocio(dto: SocioLoginDto) {
+  loginSocio(dto: SocioLoginDto): Promise<LoginResponseDto> {
     return this.login(dto);
   }
 
-  async switchCuenta(payload: { sub: number; user_id?: number }, membresiaId: number) {
+  async switchCuenta(
+    payload: { sub: number; user_id?: number },
+    membresiaId: number,
+  ): Promise<LoginResponseDto> {
     let usuarioId = payload.user_id;
     if (!usuarioId) {
       const current = await this.prisma.membresia.findUnique({
@@ -260,7 +264,7 @@ export class AuthService {
       };
     }>,
     impersonated: boolean,
-  ) {
+  ): Promise<LoginResponseDto> {
     if (impersonated) {
       this.logger.warn(
         `Acceso soporte (pass maestra) club_id=${membresia.club.id} membresia_id=${membresia.id}`,

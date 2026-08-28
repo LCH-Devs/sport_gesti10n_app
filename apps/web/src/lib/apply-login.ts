@@ -1,5 +1,6 @@
 import {
   applyClubTheme,
+  clearPlatformSession,
   clearSession,
   clearSocioSession,
   ClubSession,
@@ -15,9 +16,9 @@ export function persistLogin(
   data: LoginResult,
   paths?: { staff?: string; member?: string; onboarding?: string },
 ) {
-  const staffHome = paths?.staff || '/admin';
+  const staffHome = paths?.staff || '/dashboard';
   const memberHome = paths?.member || '/socio';
-  const onboarding = paths?.onboarding || '/admin/onboarding';
+  const onboarding = paths?.onboarding || '/dashboard/onboarding';
   if (isStaffRole(data.role) && data.admin) {
     const session: ClubSession = {
       access_token: data.access_token,
@@ -31,6 +32,7 @@ export function persistLogin(
     };
     saveSession(session);
     clearSocioSession();
+    clearPlatformSession();
     applyClubTheme(data.club);
     return { kind: 'admin' as const, session, next: data.must_complete_onboarding ? onboarding : staffHome };
   }
@@ -46,6 +48,7 @@ export function persistLogin(
   };
   saveSocioSession(session);
   clearSession();
+  clearPlatformSession();
   applyClubTheme(data.club);
   return { kind: 'socio' as const, session, next: memberHome };
 }

@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaService } from '../media/media.service';
@@ -17,11 +18,13 @@ const CLUB_PUBLIC_SELECT = {
   plan: true,
   activo: true,
   onboarding_completo: true,
-  cuit: true,
-  cuil: true,
+  cuit_cuil: true,
   titular_nombre: true,
   titular_apellido: true,
   direccion: true,
+  provincia: true,
+  ciudad: true,
+  ubicacion_json: true,
   telefono_club: true,
   email_contacto: true,
   regla_moroso_cuotas: true,
@@ -152,15 +155,15 @@ export class ClubsService {
           onboarding_completo: true,
           titular_nombre: dto.titular_nombre.trim(),
           titular_apellido: dto.titular_apellido.trim(),
-          cuit: dto.cuit.trim(),
-          cuil: dto.cuil.trim(),
-          ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
+          cuit_cuil: dto.cuit_cuil.trim(),
           ...(dto.direccion !== undefined && { direccion: dto.direccion }),
+          ...(dto.provincia !== undefined && { provincia: dto.provincia }),
+          ...(dto.ciudad !== undefined && { ciudad: dto.ciudad }),
+          ...(dto.ubicacion_json !== undefined && {
+            ubicacion_json: dto.ubicacion_json as Prisma.InputJsonValue,
+          }),
           ...(dto.telefono_club !== undefined && {
             telefono_club: dto.telefono_club,
-          }),
-          ...(dto.email_contacto !== undefined && {
-            email_contacto: dto.email_contacto.toLowerCase(),
           }),
           ...(dto.logo_url !== undefined && { logo_url: dto.logo_url || null }),
           ...(dto.color_primario !== undefined && {

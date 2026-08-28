@@ -184,6 +184,10 @@
       "title": "Members",
       "subtitle": "Multi-tenant list: only your club members",
       "quickCreate": "Quick Create",
+      "newSocio": "Create New Member",
+      "createSubtitle": "Enter the new member's information",
+      "editSocio": "Edit Member",
+      "addSocio": "Add Member",
       "dni": "ID Number",
       "nombre": "First Name",
       "apellido": "Last Name",
@@ -200,6 +204,9 @@
     "espacios": {
       "title": "Spaces",
       "subtitle": "Courts, pavilions and other reservable spaces",
+      "newEspacio": "Create New Space",
+      "editEspacio": "Edit Space",
+      "createSubtitle": "Enter the new space details",
       "nombre": "Name",
       "tipo": "Type",
       "descripcion": "Description",
@@ -225,6 +232,9 @@
     "reservas": {
       "title": "Reservations",
       "subtitle": "List and create space reservations",
+      "newReserva": "Create New Reservation",
+      "editReserva": "Edit Reservation",
+      "createSubtitle": "Enter the new reservation details",
       "nueva": "New Reservation",
       "espacio": "Space",
       "socio": "Member",
@@ -250,7 +260,9 @@
       "nombre": "Name",
       "titular": "Holder",
       "miembros": "Members",
-      "createFamilia": "Create Family"
+      "createFamilia": "Create Family",
+      "newFamilia": "New Family",
+      "editFamilia": "Edit Family"
     },
     "noticias": {
       "title": "News",

@@ -14,7 +14,7 @@ const mockClubs = [
 
 export default function MapContent() {
   const [mapContainer, setMapContainer] = useState<HTMLDivElement | null>(null);
-  const [map, setMap] = useState<L.Map | null>(null);
+  const [isLocked, setIsLocked] = useState(true);
 
   useEffect(() => {
     if (!mapContainer) return;
@@ -43,8 +43,6 @@ export default function MapContent() {
       marker.addTo(leafletMap);
     });
 
-    setMap(leafletMap);
-
     // Cleanup
     return () => {
       leafletMap.remove();
@@ -52,10 +50,25 @@ export default function MapContent() {
   }, [mapContainer]);
 
   return (
-    <div
-      ref={setMapContainer}
-      className="w-full h-96 rounded-lg border border-slate-200 overflow-hidden shadow-sm"
-      style={{ zIndex: 0 }}
-    />
+    <div className="relative">
+      <div
+        ref={setMapContainer}
+        className="w-full h-96 rounded-lg border border-slate-200 overflow-hidden shadow-sm"
+        style={{ zIndex: 0 }}
+      />
+
+      {isLocked && (
+        <button
+          type="button"
+          onClick={() => setIsLocked(false)}
+          className="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-slate-900/20 backdrop-blur-[1px]"
+          aria-label="Activar mapa"
+        >
+          <span className="rounded-full bg-white/95 px-5 py-3 text-sm font-medium text-slate-900 shadow-lg">
+            Click para activar el mapa
+          </span>
+        </button>
+      )}
+    </div>
   );
 }

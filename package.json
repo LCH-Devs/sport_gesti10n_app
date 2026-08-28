@@ -5,16 +5,16 @@
   "private": true,
   "packageManager": "pnpm@9.0.0",
   "scripts": {
-    "dev": "pnpm run -r dev",
-    "build": "pnpm run -r build",
-    "api:dev": "pnpm --filter api start:dev",
-    "db:sync": "pnpm --filter api db:sync",
-    "db:reset": "pnpm --filter api db:reset",
+    "dev": "pnpm -r --parallel --if-present dev",
+    "build": "pnpm -r --if-present build",
+    "api:dev": "pnpm --filter @clubapp/api dev",
+    "db:sync": "pnpm --filter @clubapp/api db:sync",
+    "db:reset": "pnpm --filter @clubapp/api db:reset",
     "web:dev": "pnpm --filter web dev",
-    "web-v2:dev": "pnpm --filter web-v2 dev",
     "mobile:dev": "pnpm --filter mobile start",
-    "test": "pnpm run -r test",
-    "lint": "pnpm run -r lint"
+    "type-check": "pnpm -r --if-present type-check",
+    "test": "pnpm -r --if-present test",
+    "lint": "pnpm -r --if-present lint"
   },
   "dependencies": {},
   "devDependencies": {}

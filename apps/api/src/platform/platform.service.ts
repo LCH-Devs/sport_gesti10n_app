@@ -14,6 +14,7 @@ import {
   CreatePlatformAdminDto,
   UpdateClubPlatformDto,
   UpdatePlatformAdminDto,
+  UpdateSelfPlatformAdminDto,
 } from './dto/platform.dto';
 import { NOT_DELETED } from '../common/club-users';
 import {
@@ -73,6 +74,28 @@ export class PlatformService {
     });
     if (!club) throw new NotFoundException('Club no encontrado');
     return this.shapeClub(club);
+  }
+
+  /** Lecturas del superadmin, aisladas de los endpoints mutables del club. */
+  async getClubResource(id: number, resource: string) {
+    await this.ensureClub(id);
+    switch (resource) {
+      case 'socios':
+        return this.prisma.membresia.findMany({ where: { club_id: id, rol: { in: ['socio', 'profe'] }, eliminado: false }, include: { usuario: true }, orderBy: { id: 'asc' } });
+      case 'usuarios':
+        return this.prisma.membresia.findMany({ where: { club_id: id, rol: { in: ['admin', 'entrada'] }, eliminado: false }, include: { usuario: { select: { email: true, nombre: true } } }, orderBy: { id: 'asc' } });
+      case 'familias':
+        return this.prisma.grupoFamiliar.findMany({ where: { club_id: id, eliminado: false }, include: { titular: { include: { usuario: true } }, socios: true }, orderBy: { id: 'asc' } });
+      case 'actividades': return this.prisma.actividad.findMany({ where: { club_id: id, eliminado: false }, orderBy: { nombre: 'asc' } });
+      case 'espacios': return this.prisma.espacio.findMany({ where: { club_id: id, eliminado: false }, orderBy: { nombre: 'asc' } });
+      case 'horarios': return this.prisma.horario.findMany({ where: { club_id: id, eliminado: false }, orderBy: { id: 'asc' } });
+      case 'reservas': return this.prisma.reserva.findMany({ where: { club_id: id }, include: { espacio: true, socio: { include: { usuario: true } } }, orderBy: { inicio: 'desc' } });
+      case 'noticias': return this.prisma.noticia.findMany({ where: { club_id: id, eliminado: false }, orderBy: { fecha: 'desc' } });
+      case 'torneos': return this.prisma.torneo.findMany({ where: { club_id: id }, include: { _count: { select: { partidos: true } } }, orderBy: { id: 'desc' } });
+      case 'liquidaciones': return this.prisma.liquidacionProfe.findMany({ where: { club_id: id }, include: { profe: { include: { usuario: true } } }, orderBy: { mes: 'desc' } });
+      case 'cobros': return this.prisma.pago.findMany({ where: { club_id: id }, include: { socio: { include: { usuario: true } } }, orderBy: { mes: 'desc' } });
+      default: throw new NotFoundException('Recurso de lectura no encontrado');
+    }
   }
 
   async createClub(dto: CreateClubPlatformDto) {
@@ -215,6 +238,29 @@ export class PlatformService {
     });
   }
 
+  async deleteClub(id: number) {
+    await this.ensureClub(id);
+    await this.prisma.$transaction(async (tx) => {
+      // Se eliminan primero las relaciones que no tienen cascade configurado.
+      await tx.asistencia.deleteMany({ where: { club_id: id } });
+      await tx.reserva.deleteMany({ where: { club_id: id } });
+      await tx.socioActividad.deleteMany({ where: { socio: { club_id: id } } });
+      await tx.cobroProfe.deleteMany({ where: { club_id: id } });
+      await tx.liquidacionProfe.deleteMany({ where: { club_id: id } });
+      await tx.pago.deleteMany({ where: { club_id: id } });
+      await tx.partido.deleteMany({ where: { club_id: id } });
+      await tx.grupoFamiliar.deleteMany({ where: { club_id: id } });
+      await tx.actividad.deleteMany({ where: { club_id: id } });
+      await tx.espacio.deleteMany({ where: { club_id: id } });
+      await tx.horario.deleteMany({ where: { club_id: id } });
+      await tx.noticia.deleteMany({ where: { club_id: id } });
+      await tx.torneo.deleteMany({ where: { club_id: id } });
+      await tx.membresia.deleteMany({ where: { club_id: id } });
+      await tx.club.delete({ where: { id } });
+    });
+    return { deleted: true, id };
+  }
+
   async addAdmin(clubId: number, dto: CreateClubAdminDto) {
     await this.ensureClub(clubId);
     const email = dto.email.toLowerCase().trim();
@@ -288,6 +334,41 @@ export class PlatformService {
         activo: true,
         created_at: true,
       },
+    });
+  }
+
+  async getSelf(id: number) {
+    const admin = await this.prisma.platformAdmin.findUnique({
+      where: { id },
+      select: { id: true, email: true, nombre: true, activo: true, created_at: true },
+    });
+    if (!admin) throw new NotFoundException('Superusuario no encontrado');
+    return admin;
+  }
+
+  async updateSelf(id: number, dto: UpdateSelfPlatformAdminDto) {
+    const admin = await this.prisma.platformAdmin.findUnique({ where: { id } });
+    if (!admin) throw new NotFoundException('Superusuario no encontrado');
+
+    let password_hash: string | undefined;
+    if (dto.newPassword) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Ingresá tu contraseña actual');
+      }
+      const ok = await bcrypt.compare(dto.currentPassword, admin.password_hash);
+      if (!ok) {
+        throw new BadRequestException('Contraseña actual incorrecta');
+      }
+      password_hash = await bcrypt.hash(dto.newPassword, 10);
+    }
+
+    return this.prisma.platformAdmin.update({
+      where: { id },
+      data: {
+        ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
+        ...(password_hash && { password_hash }),
+      },
+      select: { id: true, email: true, nombre: true, activo: true, created_at: true },
     });
   }
 
@@ -407,4 +488,3 @@ export class PlatformService {
     return club;
   }
 }
-

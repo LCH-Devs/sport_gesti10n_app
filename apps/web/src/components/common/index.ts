@@ -4,6 +4,7 @@ export { Sidebar } from './Sidebar';
 export { Card } from './Card';
 export { Badge } from './Badge';
 export { Button } from './Button';
+export { FloatingActionButton } from './FloatingActionButton';
 export { DataTable } from './DataTable';
 export type {
   Column,

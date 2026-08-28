@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateAdminDto, UpdateAdminDto } from './dto/admin.dto';
+import { CreateAdminDto, UpdateAdminDto, UpdateSelfDto } from './dto/admin.dto';
 import { flattenAdmin, isStaffRole, NOT_DELETED, STAFF_ROLES } from '../common/club-users';
 
 @Injectable()
@@ -115,6 +115,45 @@ export class AdminsService {
       });
     });
     return flattenAdmin(updated);
+  }
+
+  async getSelf(clubId: number, membresiaId: number) {
+    const membresia = await this.ensureInClub(clubId, membresiaId);
+    const full = await this.prisma.membresia.findUnique({
+      where: { id: membresia.id },
+      include: { usuario: { select: { email: true, nombre: true } } },
+    });
+    return flattenAdmin(full!);
+  }
+
+  async updateSelf(clubId: number, membresiaId: number, dto: UpdateSelfDto) {
+    const membresia = await this.ensureInClub(clubId, membresiaId);
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: membresia.usuario_id },
+    });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    let password_hash: string | undefined;
+    if (dto.newPassword) {
+      if (!dto.currentPassword) {
+        throw new BadRequestException('Ingresá tu contraseña actual');
+      }
+      const ok = await bcrypt.compare(dto.currentPassword, usuario.password_hash);
+      if (!ok) {
+        throw new BadRequestException('Contraseña actual incorrecta');
+      }
+      password_hash = await bcrypt.hash(dto.newPassword, 10);
+    }
+
+    const updated = await this.prisma.usuario.update({
+      where: { id: usuario.id },
+      data: {
+        ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
+        ...(password_hash && { password_hash }),
+      },
+    });
+
+    return flattenAdmin({ id: membresia.id, rol: membresia.rol, usuario: updated });
   }
 
   async remove(clubId: number, id: number, requesterId: number) {

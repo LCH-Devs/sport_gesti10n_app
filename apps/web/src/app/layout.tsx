@@ -1,8 +1,10 @@
 'use client';
 
-import '@/app/globals.css';
+import './globals.css';
+import 'leaflet/dist/leaflet.css';
 import { Navbar, Sidebar } from '@/components/common';
 import { LanguageProvider } from '@/lib/LanguageContext';
+import { ChromeProvider, useChrome } from '@/lib/ChromeContext';
 import React from 'react';
 import { usePathname } from 'next/navigation';
 
@@ -13,25 +15,28 @@ function RootLayoutContent({
 }) {
   const [sidebarOpen, setSidebarOpen] = React.useState(true);
   const pathname = usePathname();
+  const { hideChrome } = useChrome();
 
   const isPublicPage =
-    pathname === '/landing' ||
     pathname === '/' ||
+    pathname === '/landing' ||
     pathname.startsWith('/login') ||
-    pathname.startsWith('/entrar') ||
-    pathname.startsWith('/socio') ||
-    pathname.startsWith('/sesion');
-  const showNavbarSidebar = !isPublicPage;
+    pathname === '/supercalifragilisticoespiralidoso/acceso';
+  const isPrefixedRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/');
+  const showNavbarSidebar = !isPublicPage && !hideChrome;
 
   return (
     <>
       {showNavbarSidebar && (
-        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} userName="Admin User" userInitial="A" />
+        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
       )}
 
       <div className={showNavbarSidebar ? 'flex' : ''}>
         {showNavbarSidebar && (
-          <Sidebar isOpen={sidebarOpen} />
+          <Sidebar
+            isOpen={sidebarOpen}
+            variant={isPrefixedRoute ? 'superadmin' : 'club'}
+          />
         )}
 
         <main className={showNavbarSidebar ? 'flex-1 overflow-auto max-h-[calc(100vh-4rem)] mt-16' : ''}>{children}</main>
@@ -48,12 +53,14 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>AthlletiCorp - Sports Management System</title>
+        <title>Sports Management System</title>
         <meta name="description" content="Multi-institutional sports club management platform" />
       </head>
       <body className="bg-slate-50">
         <LanguageProvider>
-          <RootLayoutContent>{children}</RootLayoutContent>
+          <ChromeProvider>
+            <RootLayoutContent>{children}</RootLayoutContent>
+          </ChromeProvider>
         </LanguageProvider>
       </body>
     </html>

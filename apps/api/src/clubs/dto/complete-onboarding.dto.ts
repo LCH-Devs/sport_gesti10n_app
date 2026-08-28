@@ -1,8 +1,9 @@
 import {
-  IsEmail,
   IsNumber,
+  IsObject,
   IsOptional,
   IsString,
+  Matches,
   Min,
   MinLength,
 } from 'class-validator';
@@ -11,23 +12,23 @@ import { Type } from 'class-transformer';
 export class CompleteOnboardingDto {
   @IsString()
   @MinLength(2)
+  @Matches(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/, {
+    message: 'El nombre solo puede contener letras y espacios',
+  })
   titular_nombre: string;
 
   @IsString()
   @MinLength(2)
+  @Matches(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/, {
+    message: 'El apellido solo puede contener letras y espacios',
+  })
   titular_apellido: string;
 
   @IsString()
-  @MinLength(8)
-  cuit: string;
-
-  @IsString()
-  @MinLength(8)
-  cuil: string;
-
-  @IsOptional()
-  @IsString()
-  nombre?: string;
+  @Matches(/^\d{11}$/, {
+    message: 'El CUIT/CUIL debe tener exactamente 11 dígitos',
+  })
+  cuit_cuil: string;
 
   @IsOptional()
   @IsString()
@@ -35,11 +36,19 @@ export class CompleteOnboardingDto {
 
   @IsOptional()
   @IsString()
-  telefono_club?: string;
+  provincia?: string;
 
   @IsOptional()
-  @IsEmail()
-  email_contacto?: string;
+  @IsString()
+  ciudad?: string;
+
+  @IsOptional()
+  @IsObject()
+  ubicacion_json?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsString()
+  telefono_club?: string;
 
   @IsOptional()
   @IsString()
@@ -64,7 +73,9 @@ export class CompleteOnboardingDto {
   cuota_monto?: number;
 
   @IsString()
-  @MinLength(8)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%&*_\-+=]).{8,}$/, {
+    message:
+      'La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial (! @ # $ % & * _ - + =)',
+  })
   nueva_password: string;
 }
-

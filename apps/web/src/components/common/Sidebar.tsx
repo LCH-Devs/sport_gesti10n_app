@@ -4,36 +4,62 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import React from "react";
 import {
-  ChartBarIcon,
+  HomeIcon,
+  UsersIcon,
+  CurrencyDollarIcon,
+  UserCircleIcon,
   BuildingLibraryIcon,
-  UserGroupIcon,
-  CalendarIcon,
+  ClockIcon,
   NewspaperIcon,
   Cog6ToothIcon,
-  QuestionMarkCircleIcon,
-  ArrowLeftOnRectangleIcon,
+  ClipboardDocumentListIcon,
+  BanknotesIcon,
+  ChartBarIcon,
+  UserGroupIcon,
+  CalendarIcon,
 } from "@heroicons/react/24/outline";
 
-const menuItems = [
-  { icon: ChartBarIcon, label: "Overview", href: "/dashboard" },
-  { icon: BuildingLibraryIcon, label: "Clubs", href: "/clubs" },
-  { icon: UserGroupIcon, label: "Members", href: "/users" },
-  { icon: CalendarIcon, label: "Events", href: "/events" },
-  { icon: NewspaperIcon, label: "News", href: "/news" },
+const clubMenuItems = [
+  { icon: HomeIcon, label: "Inicio", href: "/dashboard" },
+  { icon: UsersIcon, label: "Socios", href: "/socios" },
+  { icon: CurrencyDollarIcon, label: "Cobros", href: "/cobros" },
+  { icon: UserCircleIcon, label: "Usuarios", href: "/usuarios" },
+  { icon: BuildingLibraryIcon, label: "Espacios", href: "/espacios" },
+  { icon: ClockIcon, label: "Horarios", href: "/horarios" },
+  { icon: NewspaperIcon, label: "Noticias", href: "/noticias" },
+  { icon: Cog6ToothIcon, label: "Config", href: "/config" },
+  {
+    icon: ClipboardDocumentListIcon,
+    label: "Actividades",
+    href: "/actividades",
+  },
+  { icon: BanknotesIcon, label: "Liquidaciones", href: "/liquidaciones" },
 ];
 
 interface SidebarProps {
   isOpen?: boolean;
+  variant?: "club" | "superadmin";
 }
 
-export function Sidebar({ isOpen = true }: SidebarProps) {
+export function Sidebar({ isOpen = true, variant = "club" }: SidebarProps) {
   const pathname = usePathname();
+  const prefix = "/supercalifragilisticoespiralidoso";
+  const menuItems =
+    variant === "superadmin"
+      ? [
+          { icon: ChartBarIcon, label: "Overview", href: "/supercalifragilisticoespiralidoso/panel" },
+          { icon: BuildingLibraryIcon, label: "Clubs", href: "/supercalifragilisticoespiralidoso/entidades" },
+          { icon: UserGroupIcon, label: "Members", href: "/supercalifragilisticoespiralidoso/usuarios" },
+          { icon: CalendarIcon, label: "Events", href: "/supercalifragilisticoespiralidoso/eventos" },
+          { icon: NewspaperIcon, label: "News", href: "/supercalifragilisticoespiralidoso/novedades" },
+        ]
+      : clubMenuItems;
 
   return (
     <aside
-      className={`${isOpen ? "w-48" : "w-16"} mt-16 bg-slate-50 border-r border-slate-200 flex flex-col h-screen max-h-[calc(100vh-4rem)] transition-all duration-300`}
+      className={`${isOpen ? "w-48" : "w-16"} mt-16 bg-slate-50 border-r border-slate-200 flex flex-col h-[calc(100vh-4rem)] overflow-y-auto transition-all duration-300`}
     >
-      <nav className="flex-1 px-3 py-4">
+      <nav className="flex-1 px-3 py-2">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;

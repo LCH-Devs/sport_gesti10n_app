@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FormEvent, useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { notFound, useRouter } from 'next/navigation';
 import { Header, Card, Badge, Button } from '@/components/common';
 import { useTranslation } from '@/lib/useTranslation';
 import { apiFetch, getPlatformSession, mediaUrl } from '@/lib/api';
@@ -47,7 +47,7 @@ export default function ClubsPage() {
   const load = useCallback(async () => {
     const session = getPlatformSession();
     if (!session) {
-      router.push('/login');
+      notFound();
       return;
     }
     setLoading(true);
@@ -299,3 +299,4 @@ export default function ClubsPage() {
     </div>
   );
 }
+
