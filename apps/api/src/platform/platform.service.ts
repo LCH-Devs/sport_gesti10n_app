@@ -18,9 +18,8 @@ import {
 } from './dto/platform.dto';
 import { NOT_DELETED, adminEmailInUseWhere } from '../common/club-users';
 import {
-  clubLoginUrl,
   isReservedTenantSlug,
-  tenantBaseFromWebUrl,
+  staffPanelLoginUrl,
 } from '../common/tenant-host';
 
 function slugify(nombre: string) {
@@ -125,13 +124,7 @@ export class PlatformService {
       );
     }
     const adminNombre = dto.admin_nombre?.trim() || 'Admin';
-    const webUrl = (
-      this.config.get<string>('WEB_APP_URL') || 'http://localhost:3000'
-    ).replace(/\/$/, '');
-    const tenantBase =
-      this.config.get<string>('TENANT_BASE_DOMAIN') ||
-      tenantBaseFromWebUrl(webUrl);
-    const login_url = clubLoginUrl(slug, webUrl, tenantBase);
+    const login_url = this.panelLoginUrl();
 
     const created = await this.prisma.$transaction(async (tx: any) => {
       const club = await tx.club.create({
@@ -148,7 +141,13 @@ export class PlatformService {
         where: { email: adminEmail },
       });
       const usuario = existingUser
-        ? existingUser
+        ? await tx.usuario.update({
+            where: { id: existingUser.id },
+            data: {
+              password_hash,
+              nombre: adminNombre,
+            },
+          })
         : await tx.usuario.create({
             data: {
               email: adminEmail,
@@ -156,12 +155,6 @@ export class PlatformService {
               password_hash,
             },
           });
-      if (existingUser && adminNombre) {
-        await tx.usuario.update({
-          where: { id: existingUser.id },
-          data: { nombre: adminNombre },
-        });
-      }
 
       const adminRow = await tx.membresia.create({
         data: {
@@ -175,7 +168,6 @@ export class PlatformService {
 
       return {
         club,
-        newUser: !existingUser,
         admin: {
           id: adminRow.id,
           email: adminRow.usuario.email,
@@ -188,9 +180,8 @@ export class PlatformService {
     const mail = await this.mail.sendClubWelcome({
       to: adminEmail,
       clubNombre: created.club.nombre,
-      slug,
       email: adminEmail,
-      password: created.newUser ? password : '(tu contraseña actual)',
+      password,
       loginUrl: login_url,
     });
 
@@ -199,8 +190,7 @@ export class PlatformService {
       admin: created.admin,
       credentials_once: {
         email: adminEmail,
-        password: created.newUser ? password : undefined,
-        existing_account: !created.newUser,
+        password,
         login_url,
       },
       mail,
@@ -208,8 +198,9 @@ export class PlatformService {
   }
 
   async updateClub(id: number, dto: UpdateClubPlatformDto) {
-    await this.ensureClub(id);
-    return this.prisma.club.update({
+    const club = await this.ensureClub(id);
+    const wasActive = club.activo;
+    const updated = await this.prisma.club.update({
       where: { id },
       data: {
         ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
@@ -249,10 +240,45 @@ export class PlatformService {
         }),
       },
     });
+
+    if (dto.activo === false && wasActive) {
+      const admin = await this.primaryAdmin(id);
+      const mail = admin
+        ? await this.mail.sendClubSuspended({
+            to: admin.usuario.email,
+            clubNombre: updated.nombre,
+          })
+        : undefined;
+      return { ...updated, mail };
+    }
+
+    if (dto.activo === true && !wasActive) {
+      const reset = await this.resetAdminPasswordForReactivation(id);
+      const login_url = this.panelLoginUrl();
+      const mail = reset
+        ? await this.mail.sendClubReactivated({
+            to: reset.email,
+            clubNombre: updated.nombre,
+            email: reset.email,
+            password: reset.password,
+            loginUrl: login_url,
+          })
+        : undefined;
+      return {
+        ...updated,
+        credentials_once: reset
+          ? { email: reset.email, password: reset.password, login_url }
+          : undefined,
+        mail,
+      };
+    }
+
+    return updated;
   }
 
   async deleteClub(id: number) {
     const club = await this.ensureClub(id);
+    const admin = await this.primaryAdmin(id);
     await this.prisma.$transaction([
       this.prisma.membresia.updateMany({
         where: { club_id: id, eliminado: false },
@@ -267,7 +293,13 @@ export class PlatformService {
         },
       }),
     ]);
-    return { deleted: true, id };
+    const mail = admin
+      ? await this.mail.sendClubDeleted({
+          to: admin.usuario.email,
+          clubNombre: club.nombre,
+        })
+      : undefined;
+    return { deleted: true, id, mail };
   }
 
   async addAdmin(clubId: number, dto: CreateClubAdminDto) {
@@ -444,6 +476,38 @@ export class PlatformService {
         created_at: true,
       },
     });
+  }
+
+  private panelLoginUrl() {
+    const webUrl =
+      this.config.get<string>('WEB_APP_URL') || 'http://localhost:3000';
+    return staffPanelLoginUrl(webUrl);
+  }
+
+  private primaryAdmin(clubId: number) {
+    return this.prisma.membresia.findFirst({
+      where: { club_id: clubId, rol: 'admin', ...NOT_DELETED },
+      include: { usuario: { select: { id: true, email: true } } },
+      orderBy: { id: 'asc' },
+    });
+  }
+
+  private async resetAdminPasswordForReactivation(clubId: number) {
+    const admin = await this.primaryAdmin(clubId);
+    if (!admin) return null;
+    const password = randomPassword();
+    const password_hash = await bcrypt.hash(password, 10);
+    await this.prisma.$transaction([
+      this.prisma.usuario.update({
+        where: { id: admin.usuario.id },
+        data: { password_hash },
+      }),
+      this.prisma.membresia.update({
+        where: { id: admin.id },
+        data: { must_change_password: true },
+      }),
+    ]);
+    return { email: admin.usuario.email, password };
   }
 
   private async uniqueSlug(base: string) {

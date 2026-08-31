@@ -39,7 +39,12 @@ export default function LoginPage() {
         club: data.club,
       });
       window.dispatchEvent(new Event("club-session-changed"));
-      router.push("/dashboard");
+      const next = data.must_complete_onboarding
+        ? "/gestion/onboarding"
+        : data.must_change_password
+          ? "/gestion/cambiar-clave"
+          : "/dashboard";
+      router.push(next);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("messages.errorCreating"),

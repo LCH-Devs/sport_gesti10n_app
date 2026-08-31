@@ -99,7 +99,21 @@ export function tenantBaseFromWebUrl(webAppUrl: string): string {
   }
 }
 
-/** URL de login del club: subdominio, o path si WEB_APP_URL es una IP. */
+/** Login del panel de comisión (sin subdominio ni slug). */
+export function staffPanelLoginUrl(
+  webAppUrl: string,
+  loginPath = '/login',
+): string {
+  const path = loginPath.startsWith('/') ? loginPath : `/${loginPath}`;
+  try {
+    const web = new URL(webAppUrl);
+    return `${web.origin}${path}`;
+  } catch {
+    return `${String(webAppUrl).replace(/\/$/, '')}${path}`;
+  }
+}
+
+/** URL de login por subdominio (legacy). El panel actual usa staffPanelLoginUrl. */
 export function clubLoginUrl(
   slug: string,
   webAppUrl: string,

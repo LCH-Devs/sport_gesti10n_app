@@ -135,22 +135,34 @@ export class AdminsService {
 
     let password_hash: string | undefined;
     if (dto.newPassword) {
-      if (!dto.currentPassword) {
-        throw new BadRequestException('Ingresá tu contraseña actual');
-      }
-      const ok = await bcrypt.compare(dto.currentPassword, usuario.password_hash);
-      if (!ok) {
-        throw new BadRequestException('Contraseña actual incorrecta');
+      const forced = membresia.must_change_password;
+      if (!forced) {
+        if (!dto.currentPassword) {
+          throw new BadRequestException('Ingresá tu contraseña actual');
+        }
+        const ok = await bcrypt.compare(dto.currentPassword, usuario.password_hash);
+        if (!ok) {
+          throw new BadRequestException('Contraseña actual incorrecta');
+        }
       }
       password_hash = await bcrypt.hash(dto.newPassword, 10);
     }
 
-    const updated = await this.prisma.usuario.update({
-      where: { id: usuario.id },
-      data: {
-        ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
-        ...(password_hash && { password_hash }),
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const user = await tx.usuario.update({
+        where: { id: usuario.id },
+        data: {
+          ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
+          ...(password_hash && { password_hash }),
+        },
+      });
+      if (password_hash) {
+        await tx.membresia.update({
+          where: { id: membresia.id },
+          data: { must_change_password: false },
+        });
+      }
+      return user;
     });
 
     return flattenAdmin({ id: membresia.id, rol: membresia.rol, usuario: updated });

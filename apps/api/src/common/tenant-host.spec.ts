@@ -7,6 +7,7 @@ import {
   parseTenantHost,
   platformOrigin,
   slugFromOrigin,
+  staffPanelLoginUrl,
 } from './tenant-host';
 
 describe('parseTenantHost', () => {
@@ -32,6 +33,17 @@ describe('parseTenantHost', () => {
     expect(parseTenantHost('clubapp.com.ar', 'clubapp.com.ar').slug).toBeNull();
     expect(parseTenantHost('www.clubapp.com.ar', 'clubapp.com.ar').slug).toBeNull();
     expect(parseTenantHost('api.clubapp.com.ar', 'clubapp.com.ar').slug).toBeNull();
+  });
+});
+
+describe('staffPanelLoginUrl', () => {
+  it('usa el origin del panel, sin slug', () => {
+    expect(staffPanelLoginUrl('http://localhost:3000')).toBe(
+      'http://localhost:3000/login',
+    );
+    expect(staffPanelLoginUrl('https://clubapp.com.ar/')).toBe(
+      'https://clubapp.com.ar/login',
+    );
   });
 });
 

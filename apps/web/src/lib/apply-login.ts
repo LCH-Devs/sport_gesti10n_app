@@ -12,13 +12,24 @@ import {
 } from './api';
 import { handoffSessionToClub } from './tenant-host';
 
+export function staffHomePath(
+  data: Pick<LoginResult, 'must_complete_onboarding' | 'must_change_password'>,
+  paths?: { staff?: string; onboarding?: string; changePassword?: string },
+) {
+  if (data.must_complete_onboarding) {
+    return paths?.onboarding || '/gestion/onboarding';
+  }
+  if (data.must_change_password) {
+    return paths?.changePassword || '/gestion/cambiar-clave';
+  }
+  return paths?.staff || '/dashboard';
+}
+
 export function persistLogin(
   data: LoginResult,
-  paths?: { staff?: string; member?: string; onboarding?: string },
+  paths?: { staff?: string; member?: string; onboarding?: string; changePassword?: string },
 ) {
-  const staffHome = paths?.staff || '/dashboard';
   const memberHome = paths?.member || '/socio';
-  const onboarding = paths?.onboarding || '/dashboard/onboarding';
   if (isStaffRole(data.role) && data.admin) {
     const session: ClubSession = {
       access_token: data.access_token,
@@ -34,7 +45,7 @@ export function persistLogin(
     clearSocioSession();
     clearPlatformSession();
     applyClubTheme(data.club);
-    return { kind: 'admin' as const, session, next: data.must_complete_onboarding ? onboarding : staffHome };
+    return { kind: 'admin' as const, session, next: staffHomePath(data, paths) };
   }
   if (!data.socio) {
     throw new Error('Respuesta de login inválida');
@@ -56,7 +67,7 @@ export function persistLogin(
 export function enterAfterLogin(
   data: LoginResult,
   routerPush: (href: string) => void,
-  paths?: { staff?: string; member?: string; onboarding?: string },
+  paths?: { staff?: string; member?: string; onboarding?: string; changePassword?: string },
 ) {
   const { kind, session, next } = persistLogin(data, paths);
   if (!handoffSessionToClub(data.club.slug, next, kind, session)) {
