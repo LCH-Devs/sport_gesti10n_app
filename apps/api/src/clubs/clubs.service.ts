@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { MediaService } from '../media/media.service';
 import { UpdateClubConfigDto } from './dto/update-club-config.dto';
 import { CompleteOnboardingDto } from './dto/complete-onboarding.dto';
+import { clubNombreInUseWhere, CLUB_NOMBRE_TAKEN } from '../common/club-users';
 
 const CLUB_PUBLIC_SELECT = {
   id: true,
@@ -102,10 +103,18 @@ export class ClubsService {
 
   async updateConfig(clubId: number, dto: UpdateClubConfigDto) {
     await this.findById(clubId);
+    if (dto.nombre !== undefined) {
+      const nombreTaken = await this.prisma.club.findFirst({
+        where: clubNombreInUseWhere(dto.nombre, clubId),
+      });
+      if (nombreTaken) {
+        throw new BadRequestException(CLUB_NOMBRE_TAKEN);
+      }
+    }
     return this.prisma.club.update({
       where: { id: clubId },
       data: {
-        ...(dto.nombre !== undefined && { nombre: dto.nombre }),
+        ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
         ...(dto.logo_url !== undefined && { logo_url: dto.logo_url }),
         ...(dto.color_primario !== undefined && {
           color_primario: dto.color_primario,

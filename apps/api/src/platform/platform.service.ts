@@ -16,7 +16,7 @@ import {
   UpdatePlatformAdminDto,
   UpdateSelfPlatformAdminDto,
 } from './dto/platform.dto';
-import { NOT_DELETED, adminEmailInUseWhere } from '../common/club-users';
+import { NOT_DELETED, adminEmailInUseWhere, clubNombreInUseWhere, CLUB_NOMBRE_TAKEN } from '../common/club-users';
 import {
   isReservedTenantSlug,
   staffPanelLoginUrl,
@@ -123,6 +123,12 @@ export class PlatformService {
         'Ese email ya administra un club. La comisión no se comparte entre clubes.',
       );
     }
+    const nombreTaken = await this.prisma.club.findFirst({
+      where: clubNombreInUseWhere(dto.nombre),
+    });
+    if (nombreTaken) {
+      throw new BadRequestException(CLUB_NOMBRE_TAKEN);
+    }
     const adminNombre = dto.admin_nombre?.trim() || 'Admin';
     const login_url = this.panelLoginUrl();
 
@@ -199,6 +205,14 @@ export class PlatformService {
 
   async updateClub(id: number, dto: UpdateClubPlatformDto) {
     const club = await this.ensureClub(id);
+    if (dto.nombre !== undefined) {
+      const nombreTaken = await this.prisma.club.findFirst({
+        where: clubNombreInUseWhere(dto.nombre, id),
+      });
+      if (nombreTaken) {
+        throw new BadRequestException(CLUB_NOMBRE_TAKEN);
+      }
+    }
     const wasActive = club.activo;
     const updated = await this.prisma.club.update({
       where: { id },

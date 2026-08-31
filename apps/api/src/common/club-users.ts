@@ -22,6 +22,18 @@ export function adminEmailInUseWhere(email: string) {
   };
 }
 
+export const CLUB_NOMBRE_TAKEN =
+  'Ya hay un club con ese nombre. Solo se puede reutilizar si el anterior fue dado de baja.';
+
+/** Nombre de club único entre vivos (activo o suspendido). Dado de baja no cuenta. */
+export function clubNombreInUseWhere(nombre: string, excludeId?: number) {
+  return {
+    ...CLUB_NOT_DELETED,
+    nombre: { equals: nombre.trim(), mode: 'insensitive' as const },
+    ...(excludeId !== undefined ? { id: { not: excludeId } } : {}),
+  };
+}
+
 export const usuarioPublicSelect = {
   email: true,
   nombre: true,
