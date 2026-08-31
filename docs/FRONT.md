@@ -15,7 +15,8 @@ mi_club_online/
 ├── .env.example            # plantilla de env
 ├── docs/
 │   ├── API.md              # contratos HTTP (source of truth)
-│   └── FRONT.md            # este archivo
+│   ├── FRONT.md            # este archivo
+│   └── FRONT_SESION.md     # JWT 8 h, 401, 429, campos extra, CORS
 ├── apps/
 │   ├── api/                # BACK — NestJS + Prisma (puerto 3001)
 │   └── web/                # FRONT — Next.js 14 (puerto 3000)
@@ -379,6 +380,8 @@ Socios (app móvil después): DNI `30111222`, `30222333`, `30333444` — pass `s
 ## Cómo habla el front con el back
 
 Helper: `apps/web/src/lib/api.ts`
+
+**Sesión JWT (8 h, 401, 429, campos extra):** [`FRONT_SESION.md`](./FRONT_SESION.md) — leer antes de tocar login / `apiFetch`.
 
 1. Login → `POST /auth/admin/login` con `{ club_slug, email, password }`
 2. Guardás en `localStorage` el `ClubSession` (`access_token`, `admin`, `club`)

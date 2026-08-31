@@ -58,13 +58,13 @@ Roles de membresía: `admin` | `entrada` | `socio` | `profe`.
 **IDs en la API de negocio son `membresia.id`, no `usuario.id`.**  
 `flattenPerson` / `flattenAdmin` exponen `id: membresia.id` y aplanan el `usuario`. El front consume esa forma plana (`email`, `nombre`, `dni` en el mismo objeto). No devolver el grafo Prisma crudo.
 
-JWT de club:
+JWT de club (TTL **8 h**; login/switch devuelven `expires_in` en segundos):
 
 ```
 { sub: membresia.id, user_id, role, club_id, club_slug, impersonated_by_platform? }
 ```
 
-JWT de plataforma: `{ sub: platformAdmin.id, role: 'platform' }`.
+JWT de plataforma: `{ sub: platformAdmin.id, role: 'platform' }` (mismo TTL).
 
 Auth unificado: `POST /auth/login` (aliases `/auth/admin/login` y `/auth/socio/login`). Cambio de club: `POST /auth/switch` con `membresia_id`.
 
@@ -126,7 +126,7 @@ Portal socio: `socios/socio-portal.controller.ts` con `UseClubAuth(SocioRoleGuar
 
 ### DTOs y validación
 
-- `class-validator` en DTOs. `ValidationPipe` global: `whitelist: true`, `transform: true`.
+- `class-validator` en DTOs. `ValidationPipe` global: `whitelist: true`, `forbidNonWhitelisted: true`, `transform: true`.
 - No aceptar campos de más. No confiar en el client para `club_id` ni `rol` privilegiado.
 - Errores de negocio: `BadRequestException` / `NotFoundException` / `ForbiddenException` / `UnauthorizedException`. Mensajes en español, genéricos en login (“Club o credenciales inválidas”).
 

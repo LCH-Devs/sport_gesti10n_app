@@ -7,6 +7,10 @@ Headers tipicos (rutas autenticadas):
 - `Authorization: Bearer <token>`
 - `X-Club-Slug: club-prueba` (opcional si el JWT ya trae `club_id`)
 
+El JWT dura **8 horas**. Login y switch devuelven `expires_in` (segundos). Ver [`FRONT_SESION.md`](./FRONT_SESION.md).
+
+Body con campos que el DTO no declara → **400**. Login público (`/auth/login` y aliases): **429** si hay demasiados intentos.
+
 ## Credenciales seed
 
 - **Plataforma (superadmin):** `platform@clubapp.com` / `platform123` → web `/platform/login`
@@ -18,10 +22,13 @@ Headers tipicos (rutas autenticadas):
 ## Health / Auth / Clubs
 
 - `GET /health`
-- `POST /auth/admin/login` — `{ club_slug, email, password }`  
-  Respuesta extra: `must_complete_onboarding`, `must_change_password`, `impersonated_by_platform`  
+- `POST /auth/login` — unificado (comisión / socio / profe). `{ club_slug?, email, password }`  
+  Respuesta: `access_token`, **`expires_in`** (28800), `role`, `cuentas`, `must_complete_onboarding`, `must_change_password`, `impersonated_by_platform`, `admin` o `socio`, `club`  
+  **401** credenciales inválidas · **429** demasiados intentos
+- `POST /auth/admin/login` · `POST /auth/socio/login` — aliases del anterior  
   Acepta la pass del admin **o** `PLATFORM_MASTER_PASSWORD`
-- `POST /auth/platform/login` — `{ email, password }` (superadmin ClubApp)
+- `POST /auth/switch` — Bearer, `{ membresia_id }` (emite JWT nuevo, otras 8 h). Sin rate limit de login.
+- `POST /auth/platform/login` — `{ email, password }` (superadmin ClubApp). También `expires_in` y 429.
 - `GET /clubs/buscar?q=`
 - `GET /clubs/slug/:slug` — branding público para login white-label
 - `GET /clubs/me` — Bearer (incluye config + onboarding)

@@ -20,7 +20,7 @@ soluciones concretas propuestas para cada uno, ordenados por prioridad.
 | 5 | Sin reconciliación de respaldo si el webhook no llega | 🟠 Alto | Pendiente |
 | 6 | Renovación del token OAuth (vence a los 180 días) sin proceso robusto | 🟠 Alto | Pendiente |
 | 7 | Aislamiento multi-tenant dependiente de disciplina manual (`club_id`) | 🟠 Alto | Pendiente |
-| 8 | Almacenamiento del JWT del panel admin sin definir (XSS vs CSRF) | 🟡 Medio | Pendiente |
+| 8 | Almacenamiento del JWT del panel admin sin definir (XSS vs CSRF) | 🟡 Medio | Parcial: TTL 8 h + `expires_in`; sigue en `localStorage`. Cookie `httpOnly` pendiente. |
 | 9 | Uploads (fotos/audio) sin validación de tipo/path | 🟡 Medio | Pendiente |
 | 10 | DNI usado como payload del carnet QR | 🟡 Medio | Pendiente |
 | 11 | "Pago con QR en el club" vendido sin diseño técnico | 🟡 Medio | Pendiente |
