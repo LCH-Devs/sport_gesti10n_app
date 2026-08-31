@@ -1,20 +1,20 @@
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import {
-  IsEmail,
-  IsIn,
-  IsOptional,
-  IsString,
-  MinLength,
-} from 'class-validator';
+  IsAppEmail,
+  IsOptionalPersonName,
+  IsOptionalStrongPassword,
+  IsPersonName,
+  IsStrongPassword,
+} from '../../common/dto-constraints';
 
 export class CreateAdminDto {
-  @IsEmail()
+  @IsAppEmail()
   email: string;
 
-  @IsString()
+  @IsPersonName()
   nombre: string;
 
-  @IsString()
-  @MinLength(4)
+  @IsStrongPassword()
   password: string;
 
   @IsOptional()
@@ -23,32 +23,26 @@ export class CreateAdminDto {
 }
 
 export class UpdateAdminDto {
-  @IsOptional()
-  @IsString()
+  @IsOptionalPersonName()
   nombre?: string;
 
   @IsOptional()
   @IsIn(['admin', 'entrada'])
   rol?: string;
 
-  @IsOptional()
-  @IsString()
-  @MinLength(4)
+  @IsOptionalStrongPassword()
   password?: string;
 }
 
 export class UpdateSelfDto {
-  @IsOptional()
-  @IsString()
+  @IsOptionalPersonName()
   nombre?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(72)
   currentPassword?: string;
 
-  @IsOptional()
-  @IsString()
-  @MinLength(4)
+  @IsOptionalStrongPassword()
   newPassword?: string;
 }
-

@@ -1,31 +1,32 @@
+import { Type } from 'class-transformer';
 import {
   IsBoolean,
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptionalColorHex } from '../../common/dto-constraints';
 
 export class UpdateClubConfigDto {
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   nombre?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   logo_url?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_primario?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_secundario?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_terciario?: string;
 
   @IsOptional()
@@ -64,4 +65,3 @@ export class UpdateClubConfigDto {
   @Min(0)
   cancelar_reserva_horas?: number;
 }
-

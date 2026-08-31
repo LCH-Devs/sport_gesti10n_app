@@ -1,35 +1,35 @@
+import { IsDateString, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 import {
-  IsEmail,
-  IsOptional,
-  IsString,
-  IsDateString,
-  MinLength,
-} from 'class-validator';
+  IsAppEmail,
+  IsDni,
+  IsOptionalPersonName,
+  IsOptionalStrongPassword,
+  IsPersonName,
+} from '../../common/dto-constraints';
 
 export class CreateSocioDto {
-  @IsString()
+  @IsDni()
   dni: string;
 
-  @IsString()
+  @IsPersonName()
   nombre: string;
 
-  @IsString()
+  @IsPersonName()
   apellido: string;
 
-  @IsEmail()
+  @IsAppEmail()
   email: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(30)
   telefono?: string;
 
-  @IsOptional()
-  @IsString()
-  @MinLength(4)
+  @IsOptionalStrongPassword()
   password?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['socio', 'profe'])
   rol?: string;
 
   @IsOptional()
@@ -38,55 +38,51 @@ export class CreateSocioDto {
 }
 
 export class UpdateSelfSocioDto {
-  @IsOptional()
-  @IsString()
+  @IsOptionalPersonName()
   nombre?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalPersonName()
   apellido?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(30)
   telefono?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(72)
   currentPassword?: string;
 
-  @IsOptional()
-  @IsString()
-  @MinLength(4)
+  @IsOptionalStrongPassword()
   newPassword?: string;
 }
 
 export class UpdateSocioDto {
-  @IsOptional()
-  @IsString()
+  @IsOptionalPersonName()
   nombre?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalPersonName()
   apellido?: string;
 
   @IsOptional()
-  @IsEmail()
+  @IsAppEmail()
   email?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(30)
   telefono?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['activo', 'moroso', 'suspendido'])
   estado?: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['socio', 'profe'])
   rol?: string;
 
   @IsOptional()
   @IsDateString()
   fecha_nacimiento?: string;
 }
-

@@ -1,4 +1,5 @@
 import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
 import { PlatformLoginDto } from './dto/platform-login.dto';
@@ -8,8 +9,11 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtUser } from '../common/jwt-user.decorator';
 import { JwtPayload } from './jwt.strategy';
 import { LoginResponseDto } from './dto/login-response.dto';
+import { LOGIN_IP_LIMIT, LOGIN_IP_TTL_MS } from './auth-security';
 
 @Controller('auth')
+@UseGuards(ThrottlerGuard)
+@Throttle({ default: { limit: LOGIN_IP_LIMIT, ttl: LOGIN_IP_TTL_MS } })
 export class AuthController {
   constructor(private readonly auth: AuthService) {}
 
@@ -28,6 +32,7 @@ export class AuthController {
     return this.auth.loginSocio(dto);
   }
 
+  @SkipThrottle()
   @Post('switch')
   @UseGuards(JwtAuthGuard)
   switchCuenta(

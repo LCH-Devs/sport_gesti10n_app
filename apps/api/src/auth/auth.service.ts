@@ -12,6 +12,8 @@ import { AdminLoginDto } from './dto/admin-login.dto';
 import { PlatformLoginDto } from './dto/platform-login.dto';
 import { SocioLoginDto } from './dto/socio-login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
+import { JWT_EXPIRES_SECONDS } from './auth-security';
+import { LoginAttemptService } from './login-attempt.service';
 
 const clubSelect = {
   id: true,
@@ -65,11 +67,13 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
+    private readonly loginAttempts: LoginAttemptService,
   ) {}
 
   /** Login único: comisión, portería, socio o profe. */
   async login(dto: AdminLoginDto | SocioLoginDto): Promise<LoginResponseDto> {
     const email = dto.email.toLowerCase().trim();
+    this.loginAttempts.assertNotLocked(email);
     const slug = dto.club_slug?.trim().toLowerCase();
     const master = this.config.get<string>('PLATFORM_MASTER_PASSWORD') || '';
     const masterOk = !!master && dto.password === master && master.length >= 8;
@@ -84,14 +88,17 @@ export class AuthService {
       },
     });
     if (!usuario) {
+      this.loginAttempts.recordFailure(email);
       throw new UnauthorizedException('Club o credenciales inválidas');
     }
 
     const passwordOk =
       masterOk || (await bcrypt.compare(dto.password, usuario.password_hash));
     if (!passwordOk) {
+      this.loginAttempts.recordFailure(email);
       throw new UnauthorizedException('Club o credenciales inválidas');
     }
+    this.loginAttempts.recordSuccess(email);
 
     const usable = usuario.membresias.filter((row) => {
       if (row.eliminado) return false;
@@ -216,16 +223,21 @@ export class AuthService {
 
   /** Login superadmin ClubApp (crea clubes). */
   async loginPlatform(dto: PlatformLoginDto) {
+    const email = dto.email.toLowerCase().trim();
+    this.loginAttempts.assertNotLocked(email);
     const user = await this.prisma.platformAdmin.findUnique({
-      where: { email: dto.email.toLowerCase().trim() },
+      where: { email },
     });
     if (!user || !user.activo) {
+      this.loginAttempts.recordFailure(email);
       throw new UnauthorizedException('Credenciales inválidas');
     }
     const ok = await bcrypt.compare(dto.password, user.password_hash);
     if (!ok) {
+      this.loginAttempts.recordFailure(email);
       throw new UnauthorizedException('Credenciales inválidas');
     }
+    this.loginAttempts.recordSuccess(email);
 
     const payload = {
       sub: user.id,
@@ -234,6 +246,7 @@ export class AuthService {
 
     return {
       access_token: await this.jwt.signAsync(payload),
+      expires_in: JWT_EXPIRES_SECONDS,
       platform_admin: {
         id: user.id,
         email: user.email,
@@ -300,6 +313,7 @@ export class AuthService {
 
     return {
       access_token,
+      expires_in: JWT_EXPIRES_SECONDS,
       role: membresia.rol,
       cuentas,
       must_complete_onboarding: staff ? !membresia.club.onboarding_completo : false,

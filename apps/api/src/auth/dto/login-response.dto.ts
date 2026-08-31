@@ -41,6 +41,8 @@ export class SocioSessionDto {
 /** Respuesta de /auth/login, /auth/admin/login, /auth/socio/login y /auth/switch. */
 export class LoginResponseDto {
   access_token: string;
+  /** Segundos de vida del JWT (hoy 8 h). El `exp` del token es la fuente de verdad. */
+  expires_in: number;
   role: string;
   cuentas: CuentaOptionDto[];
   must_complete_onboarding: boolean;

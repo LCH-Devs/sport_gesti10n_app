@@ -1,15 +1,17 @@
-import { IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
+import { IsAppEmail } from '../../common/dto-constraints';
 
 export class SocioLoginDto {
-  /** Si falta, se resuelve el club por email + password. */
   @IsOptional()
   @IsString()
+  @MaxLength(60)
   club_slug?: string;
 
-  @IsEmail()
+  @IsAppEmail()
   email: string;
 
   @IsString()
   @MinLength(4)
+  @MaxLength(72)
   password: string;
 }

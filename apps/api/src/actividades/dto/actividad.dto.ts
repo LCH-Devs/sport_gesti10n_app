@@ -7,12 +7,14 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateActividadDto {
   @IsString()
+  @MaxLength(120)
   nombre: string;
 
   @IsIn(['club', 'profe'])
@@ -47,6 +49,7 @@ export class CreateActividadDto {
 export class UpdateActividadDto {
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   nombre?: string;
 
   @IsOptional()
@@ -86,4 +89,3 @@ export class SetSociosActividadDto {
   @IsInt({ each: true })
   socio_ids: number[];
 }
-

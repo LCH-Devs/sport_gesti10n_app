@@ -3,20 +3,24 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsHoraHm, IsOptionalHoraHm } from '../../common/dto-constraints';
 
 export class CreateHorarioDto {
   @IsString()
+  @MaxLength(120)
   titulo: string;
 
   @IsString()
+  @MaxLength(80)
   dias: string;
 
-  @IsString()
+  @IsHoraHm()
   hora_inicio: string;
 
-  @IsString()
+  @IsHoraHm()
   hora_fin: string;
 
   @IsOptional()
@@ -32,18 +36,18 @@ export class CreateHorarioDto {
 export class UpdateHorarioDto {
   @IsOptional()
   @IsString()
+  @MaxLength(120)
   titulo?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   dias?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalHoraHm()
   hora_inicio?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalHoraHm()
   hora_fin?: string;
 
   @IsOptional()
@@ -55,4 +59,3 @@ export class UpdateHorarioDto {
   @IsBoolean()
   activo?: boolean;
 }
-

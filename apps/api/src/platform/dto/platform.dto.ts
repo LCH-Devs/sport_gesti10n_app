@@ -1,25 +1,33 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
-  IsEmail,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
+import {
+  IsAppEmail,
+  IsOptionalColorHex,
+  IsOptionalPersonName,
+  IsOptionalStrongPassword,
+  IsPersonName,
+  IsStrongPassword,
+} from '../../common/dto-constraints';
 
 export class CreateClubPlatformDto {
   @IsString()
   @MinLength(2)
+  @MaxLength(120)
   nombre: string;
 
-  @IsEmail()
+  @IsAppEmail()
   admin_email: string;
 
-  @IsOptional()
-  @IsString()
-  @MinLength(2)
+  @IsOptionalPersonName()
   admin_nombre?: string;
 
   @IsNumber()
@@ -32,26 +40,26 @@ export class UpdateClubPlatformDto {
   @IsOptional()
   @IsString()
   @MinLength(2)
+  @MaxLength(120)
   nombre?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   logo_url?: string | null;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_primario?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_secundario?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_terciario?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(32)
   plan?: string;
 
   @IsOptional()
@@ -95,64 +103,52 @@ export class UpdateClubPlatformDto {
 }
 
 export class CreateClubAdminDto {
-  @IsEmail()
+  @IsAppEmail()
   email: string;
 
-  @IsString()
-  @MinLength(2)
+  @IsPersonName()
   nombre: string;
 
-  @IsString()
-  @MinLength(6)
+  @IsStrongPassword()
   password: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(['admin', 'entrada'])
   rol?: string;
 }
 
 export class CreatePlatformAdminDto {
-  @IsEmail()
+  @IsAppEmail()
   email: string;
 
-  @IsString()
-  @MinLength(2)
+  @IsPersonName()
   nombre: string;
 
-  @IsString()
-  @MinLength(8)
+  @IsStrongPassword()
   password: string;
 }
 
 export class UpdateSelfPlatformAdminDto {
-  @IsOptional()
-  @IsString()
-  @MinLength(2)
+  @IsOptionalPersonName()
   nombre?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(72)
   currentPassword?: string;
 
-  @IsOptional()
-  @IsString()
-  @MinLength(8)
+  @IsOptionalStrongPassword()
   newPassword?: string;
 }
 
 export class UpdatePlatformAdminDto {
-  @IsOptional()
-  @IsString()
-  @MinLength(2)
+  @IsOptionalPersonName()
   nombre?: string;
 
-  @IsOptional()
-  @IsString()
-  @MinLength(8)
+  @IsOptionalStrongPassword()
   password?: string;
 
   @IsOptional()
   @IsBoolean()
   activo?: boolean;
 }
-

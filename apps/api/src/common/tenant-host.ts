@@ -191,3 +191,17 @@ export function isAllowedBrowserOrigin(
     return false;
   }
 }
+
+const DEFAULT_WEB_ORIGIN = 'http://localhost:3000';
+
+/** Orígenes extra de CORS. Nunca devolver lista vacía (eso abría `origin: true`). */
+export function corsAllowlistFromEnv(
+  corsOrigin?: string | null,
+  webAppUrl?: string | null,
+): string[] {
+  const raw = (corsOrigin?.trim() || webAppUrl?.trim() || DEFAULT_WEB_ORIGIN)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return raw.length > 0 ? raw : [DEFAULT_WEB_ORIGIN];
+}

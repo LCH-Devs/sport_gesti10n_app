@@ -1,5 +1,6 @@
 import {
   clubLoginUrl,
+  corsAllowlistFromEnv,
   isAllowedBrowserOrigin,
   isPlatformHost,
   isReservedTenantSlug,
@@ -98,6 +99,18 @@ describe('slugFromOrigin / CORS', () => {
         'clubapp.com.ar',
       ),
     ).toBe(false);
+  });
+
+  it('si CORS_ORIGIN está vacío, usa WEB_APP_URL o localhost', () => {
+    expect(corsAllowlistFromEnv('', 'http://localhost:3000')).toEqual([
+      'http://localhost:3000',
+    ]);
+    expect(corsAllowlistFromEnv(undefined, undefined)).toEqual([
+      'http://localhost:3000',
+    ]);
+    expect(
+      corsAllowlistFromEnv('http://localhost:3000,http://127.0.0.1:3000'),
+    ).toEqual(['http://localhost:3000', 'http://127.0.0.1:3000']);
   });
 });
 

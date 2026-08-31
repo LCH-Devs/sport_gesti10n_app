@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -23,6 +24,6 @@ export class CreateReservaDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(300)
   nota?: string;
 }
-

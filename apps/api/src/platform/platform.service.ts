@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
 import {
@@ -35,7 +35,19 @@ function slugify(nombre: string) {
 }
 
 function randomPassword() {
-  return randomBytes(9).toString('base64url').slice(0, 12);
+  const lower = 'abcdefghijkmnopqrstuvwxyz';
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const num = '23456789';
+  const spec = '!@#$%&*_+=-';
+  const all = lower + upper + num + spec;
+  const pick = (s: string) => s[randomInt(s.length)];
+  const chars = [pick(lower), pick(upper), pick(num), pick(spec)];
+  for (let i = 0; i < 8; i++) chars.push(pick(all));
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = randomInt(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
 }
 
 @Injectable()

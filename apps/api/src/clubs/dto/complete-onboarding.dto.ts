@@ -1,45 +1,42 @@
+import { Type } from 'class-transformer';
 import {
   IsNumber,
   IsObject,
   IsOptional,
   IsString,
-  Matches,
+  MaxLength,
   Min,
-  MinLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsCuitCuil,
+  IsOptionalColorHex,
+  IsPersonName,
+  IsStrongPassword,
+} from '../../common/dto-constraints';
 
 export class CompleteOnboardingDto {
-  @IsString()
-  @MinLength(2)
-  @Matches(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/, {
-    message: 'El nombre solo puede contener letras y espacios',
-  })
+  @IsPersonName()
   titular_nombre: string;
 
-  @IsString()
-  @MinLength(2)
-  @Matches(/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]+$/, {
-    message: 'El apellido solo puede contener letras y espacios',
-  })
+  @IsPersonName()
   titular_apellido: string;
 
-  @IsString()
-  @Matches(/^\d{11}$/, {
-    message: 'El CUIT/CUIL debe tener exactamente 11 dígitos',
-  })
+  @IsCuitCuil()
   cuit_cuil: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(200)
   direccion?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   provincia?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(80)
   ciudad?: string;
 
   @IsOptional()
@@ -48,22 +45,21 @@ export class CompleteOnboardingDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(30)
   telefono_club?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(500)
   logo_url?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_primario?: string;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_secundario?: string | null;
 
-  @IsOptional()
-  @IsString()
+  @IsOptionalColorHex()
   color_terciario?: string | null;
 
   @IsOptional()
@@ -72,10 +68,6 @@ export class CompleteOnboardingDto {
   @Min(0)
   cuota_monto?: number;
 
-  @IsString()
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%&*_\-+=]).{8,}$/, {
-    message:
-      'La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula, un número y un carácter especial (! @ # $ % & * _ - + =)',
-  })
+  @IsStrongPassword()
   nueva_password: string;
 }

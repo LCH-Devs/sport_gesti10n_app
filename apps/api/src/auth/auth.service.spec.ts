@@ -1,8 +1,10 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
+import { LoginAttemptService } from './login-attempt.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { JWT_EXPIRES_SECONDS } from './auth-security';
 
 const club = {
   id: 1,
@@ -33,20 +35,29 @@ describe('AuthService.login', () => {
   };
   const jwt = { signAsync: jest.fn().mockResolvedValue('token-socio') };
   const config = { get: jest.fn() };
+  const loginAttempts = {
+    assertNotLocked: jest.fn(),
+    recordFailure: jest.fn(),
+    recordSuccess: jest.fn(),
+  };
   let auth: AuthService;
 
   beforeEach(() => {
     jest.clearAllMocks();
     jwt.signAsync.mockResolvedValue('token-socio');
     config.get.mockReturnValue('');
+    loginAttempts.assertNotLocked.mockReset();
+    loginAttempts.recordFailure.mockReset();
+    loginAttempts.recordSuccess.mockReset();
     auth = new AuthService(
       prisma as unknown as PrismaService,
       jwt as unknown as JwtService,
       config as unknown as ConfigService,
+      loginAttempts as unknown as LoginAttemptService,
     );
   });
 
-  it('rechaza email inexistente', async () => {
+  it('rechaza email inexistente y cuenta el fallo', async () => {
     prisma.usuario.findUnique.mockResolvedValue(null);
     await expect(
       auth.login({
@@ -54,6 +65,27 @@ describe('AuthService.login', () => {
         password: 'socio123',
       }),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(loginAttempts.recordFailure).toHaveBeenCalledWith('juan@test.com');
+    expect(loginAttempts.recordSuccess).not.toHaveBeenCalled();
+  });
+
+  it('si el email está bloqueado, no consulta la DB', async () => {
+    loginAttempts.assertNotLocked.mockImplementation(() => {
+      throw new HttpException('bloqueado', HttpStatus.TOO_MANY_REQUESTS);
+    });
+    try {
+      await auth.login({
+        email: 'juan@test.com',
+        password: 'socio123',
+      });
+      fail('debía lanzar 429');
+    } catch (err) {
+      expect(err).toBeInstanceOf(HttpException);
+      expect((err as HttpException).getStatus()).toBe(
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+    expect(prisma.usuario.findUnique).not.toHaveBeenCalled();
   });
 
   it('sin slug, emite JWT del único club', async () => {
@@ -75,8 +107,10 @@ describe('AuthService.login', () => {
     });
 
     expect(result).toHaveProperty('access_token', 'token-socio');
+    expect(result).toHaveProperty('expires_in', JWT_EXPIRES_SECONDS);
     expect(result).toHaveProperty('role', 'socio');
     expect(result.socio?.email).toBe('juan@test.com');
+    expect(loginAttempts.recordSuccess).toHaveBeenCalledWith('juan@test.com');
   });
 
   it('sin slug, si hay varios clubes entra a uno y arma el switcher', async () => {

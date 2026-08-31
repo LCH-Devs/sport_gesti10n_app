@@ -1,11 +1,6 @@
-import {
-  IsInt,
-  IsNumber,
-  IsOptional,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { IsMesYm } from '../../common/dto-constraints';
 
 export class CreateCobroProfeDto {
   @Type(() => Number)
@@ -16,7 +11,7 @@ export class CreateCobroProfeDto {
   @IsInt()
   socio_id: number;
 
-  @IsString()
+  @IsMesYm()
   mes: string;
 
   @Type(() => Number)
@@ -26,19 +21,20 @@ export class CreateCobroProfeDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(40)
   medio?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(300)
   nota?: string;
 }
 
 export class CerrarMesDto {
-  @IsString()
+  @IsMesYm()
   mes: string;
 
   @Type(() => Number)
   @IsInt()
   profe_id: number;
 }
-

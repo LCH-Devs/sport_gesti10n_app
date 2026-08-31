@@ -12,6 +12,7 @@ import {
   NOT_DELETED,
   personInclude,
 } from '../common/club-users';
+import { isValidDni, isValidPersonName } from '../common/dto-constraints';
 
 const PLAN_BASICO_MAX = 100;
 
@@ -226,6 +227,18 @@ export class SociosService {
 
       if (!dni || !nombre || !apellido || !email) {
         errors.push(`Fila ${i + 1}: datos incompletos`);
+        continue;
+      }
+      if (!isValidDni(dni)) {
+        errors.push(`Fila ${i + 1}: DNI inválido (7 u 8 dígitos)`);
+        continue;
+      }
+      if (!isValidPersonName(nombre) || !isValidPersonName(apellido)) {
+        errors.push(`Fila ${i + 1}: nombre o apellido inválido`);
+        continue;
+      }
+      if (!email.includes('@') || email.length > 254) {
+        errors.push(`Fila ${i + 1}: email inválido`);
         continue;
       }
 
