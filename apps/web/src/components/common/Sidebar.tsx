@@ -48,6 +48,7 @@ export function Sidebar({ isOpen = true, variant = "club" }: SidebarProps) {
     variant === "superadmin"
       ? [
           { icon: ChartBarIcon, label: "Overview", href: "/supercalifragilisticoespiralidoso/panel" },
+          { icon: ClipboardDocumentListIcon, label: "Solicitudes", href: "/supercalifragilisticoespiralidoso/panel/solicitudes" },
           { icon: BuildingLibraryIcon, label: "Clubs", href: "/supercalifragilisticoespiralidoso/entidades" },
           { icon: UserGroupIcon, label: "Members", href: "/supercalifragilisticoespiralidoso/usuarios" },
           { icon: CalendarIcon, label: "Events", href: "/supercalifragilisticoespiralidoso/eventos" },

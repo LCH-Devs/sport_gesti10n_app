@@ -7,7 +7,7 @@ import {
   DocumentTextIcon,
   ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { Header, Card, Badge, Button } from "@/components/common";
+import { Header, Card, Button } from "@/components/common";
 import { apiFetch, getPlatformSession } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -22,10 +22,11 @@ export default function DashboardPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const loadUsers = useCallback(async () => {
+  const load = useCallback(async () => {
     const session = getPlatformSession();
     if (!session) {
       notFound();
@@ -34,20 +35,26 @@ export default function DashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const data = await apiFetch<AdminUser[]>("/platform/admins", {
-        token: session.access_token,
-      });
-      setUsers(data);
+      const [admins, pendientes] = await Promise.all([
+        apiFetch<AdminUser[]>("/platform/admins", {
+          token: session.access_token,
+        }),
+        apiFetch<{ count: number }>("/platform/solicitudes/pendientes/count", {
+          token: session.access_token,
+        }),
+      ]);
+      setUsers(admins);
+      setPendingCount(pendientes.count);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("messages.errorLoading"));
     } finally {
       setLoading(false);
     }
-  }, [router, t]);
+  }, [t]);
 
   useEffect(() => {
-    void loadUsers();
-  }, [loadUsers]);
+    void load();
+  }, [load]);
 
   const metrics = [
     {
@@ -64,7 +71,7 @@ export default function DashboardPage() {
     },
     {
       label: t("dashboard.systemHealth"),
-      value: 4,
+      value: pendingCount,
       change: "solicitudes",
       icon: ExclamationTriangleIcon,
     },
@@ -81,7 +88,9 @@ export default function DashboardPage() {
           <Button
             variant="secondary"
             size="md"
-            onClick={() => router.push("/supercalifragilisticoespiralidoso/panel/entidades/new")}
+            onClick={() =>
+              router.push("/supercalifragilisticoespiralidoso/panel/entidades/new")
+            }
           >
             {t("dashboard.addInstitution")}
           </Button>
@@ -89,10 +98,23 @@ export default function DashboardPage() {
       </Header>
 
       <div className="p-6">
-        {/* Metrics Grid */}
+        {error && (
+          <p className="mb-4 text-sm text-red-600">{error}</p>
+        )}
+        {loading && (
+          <p className="mb-4 text-sm text-slate-500">{t("common.loading")}</p>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           {metrics.map((metric, index) => {
             const Icon = metric.icon;
+            const n = Number(metric.value);
+            const isHealth = metric.icon === ExclamationTriangleIcon;
+            const healthColor =
+              n < 5
+                ? "text-green-600"
+                : n <= 10
+                  ? "text-yellow-600"
+                  : "text-red-600";
             return (
               <Card key={index}>
                 <div className="flex items-start justify-between mb-4">
@@ -106,26 +128,22 @@ export default function DashboardPage() {
                   </div>
                   <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                     <Icon
-                      className={`w-6 h-6 
-                    ${
-                      Number(metric.value) < 5 &&
-                      metric.icon === ExclamationTriangleIcon
-                        ? "text-green-600"
-                        : Number(metric.value) > 5 &&
-                            Number(metric.value) < 10 &&
-                            metric.icon === ExclamationTriangleIcon
-                          ? "text-yellow-600"
-                          : Number(metric.value) > 10 &&
-                              metric.icon === ExclamationTriangleIcon &&
-                              metric.icon === ExclamationTriangleIcon
-                            ? "text-red-600"
-                            : "text-blue-600"
-                    }`}
+                      className={`w-6 h-6 ${isHealth ? healthColor : "text-blue-600"}`}
                     />
                   </div>
                 </div>
-                {metric.change === "solicitudes" && <Button>Resolver</Button>}
-                {metric.change !== "solicitudes" && (
+                {metric.change === "solicitudes" ? (
+                  <Button
+                    size="sm"
+                    onClick={() =>
+                      router.push(
+                        "/supercalifragilisticoespiralidoso/panel/solicitudes",
+                      )
+                    }
+                  >
+                    {t("dashboard.resolve")}
+                  </Button>
+                ) : (
                   <p className="text-sm text-slate-600">{metric.change}</p>
                 )}
               </Card>
@@ -133,7 +151,6 @@ export default function DashboardPage() {
           })}
         </div>
 
-        {/* Bottom Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
           <Card>
             <h3 className="text-lg font-semibold text-slate-900 mb-4">

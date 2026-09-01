@@ -78,11 +78,18 @@
     "signIn": "Sign in",
     "contactTitle": "Want ClubApp for your club?",
     "contactSubtitle": "Leave your details and we'll get in touch. This site is only to learn about the product — each club gets its own login by email.",
-    "contactName": "Name",
+    "contactName": "First name",
+    "contactLastName": "Last name",
     "contactClub": "Club name",
     "contactEmail": "Email",
+    "contactPhone": "Phone",
+    "contactMembers": "Number of members",
+    "contactSocios": "Number of socios",
     "contactMessage": "Message",
-    "contactSend": "Send inquiry",
+    "contactSend": "Send request",
+    "contactSending": "Sending…",
+    "contactSuccess": "Request sent. We'll get in touch shortly.",
+    "contactError": "Could not send the request. Please try again.",
     "contactHint": "Or email us at hola@clubapp.com.ar"
   },
   "login": {
@@ -146,6 +153,7 @@
     "totalAdmins": "Total Admins",
     "activeUsers": "Active Users",
     "systemHealth": "System Health",
+    "resolve": "Resolve",
     "allServices": "All services operational",
     "userManagement": "User & Profile Management",
     "name": "Name",
@@ -165,6 +173,21 @@
     "goalPercentage": "85% of goal",
     "exampleClub1": "Metro City FC",
     "exampleClub2": "Northside Athletics"
+  },
+  "solicitudes": {
+    "title": "Requests",
+    "subtitle": "Sign-up requests from the landing page",
+    "all": "All",
+    "empty": "No requests in this filter",
+    "confirmDelete": "Mark this request as deleted?",
+    "fechaEstado": "Date",
+    "estado": {
+      "pendiente": "Pending",
+      "trial": "Trial",
+      "aprobada": "Approved",
+      "cancelada": "Cancelled",
+      "borradas": "Deleted"
+    }
   },
   "newClub": {
     "title": "New Institution",

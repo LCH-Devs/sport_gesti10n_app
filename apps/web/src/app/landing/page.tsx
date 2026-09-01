@@ -3,6 +3,7 @@
 import { HeroSection } from "./components/HeroSection";
 import { FeaturesGrid } from "./components/FeaturesGrid";
 import { MapSection } from "./components/MapSection";
+import { ContactSection } from "./components/ContactForm";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -39,61 +40,7 @@ export default function LandingPage() {
         {/* Map Section */}
         <MapSection />
 
-        <section
-          id="contacto"
-          className="max-w-xl mx-auto px-6 py-20 text-center"
-        >
-          <h2 className="text-3xl font-bold text-slate-900 mb-4">
-            {t("landing.contactTitle")}
-          </h2>
-          <p className="text-slate-600 mb-8">{t("landing.contactSubtitle")}</p>
-          <form
-            className="grid gap-3 text-left"
-            action="mailto:hola@clubapp.com.ar"
-            method="get"
-          >
-            <label className="text-sm font-medium text-slate-700">
-              {t("landing.contactName")}
-              <input
-                name="name"
-                required
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-              />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              {t("landing.contactClub")}
-              <input
-                name="club"
-                required
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-              />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              {t("landing.contactEmail")}
-              <input
-                type="email"
-                name="email"
-                required
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-              />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              {t("landing.contactMessage")}
-              <textarea
-                name="body"
-                rows={4}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-              />
-            </label>
-            <button
-              type="submit"
-              className="mt-2 rounded-lg bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
-            >
-              {t("landing.contactSend")}
-            </button>
-          </form>
-          <p className="mt-4 text-sm text-slate-500">{t("landing.contactHint")}</p>
-        </section>
+        <ContactSection />
 
         {/* CTA Section */}
         <section className="max-w-7xl mx-auto px-6 py-20 text-center">

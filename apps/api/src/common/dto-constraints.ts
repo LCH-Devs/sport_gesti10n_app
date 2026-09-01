@@ -32,6 +32,10 @@ export const HORA_MESSAGE = 'La hora debe ser HH:mm (00:00 a 23:59)';
 export const COLOR_HEX_REGEX = /^#([0-9A-Fa-f]{6})$/;
 export const COLOR_HEX_MESSAGE = 'El color debe ser #RRGGBB';
 
+export const TELEFONO_REGEX = /^\+?[\d\s\-()]{7,19}$/;
+export const TELEFONO_MESSAGE =
+  'El teléfono debe tener entre 8 y 20 caracteres (dígitos, espacios, +, - o paréntesis)';
+
 export function IsAppEmail() {
   return applyDecorators(IsEmail(), MaxLength(254));
 }
@@ -114,6 +118,15 @@ export function IsOptionalColorHex() {
     ValidateIf((_, v) => v != null && v !== ''),
     IsString(),
     Matches(COLOR_HEX_REGEX, { message: COLOR_HEX_MESSAGE }),
+  );
+}
+
+export function IsTelefono() {
+  return applyDecorators(
+    IsString(),
+    MinLength(8),
+    MaxLength(20),
+    Matches(TELEFONO_REGEX, { message: TELEFONO_MESSAGE }),
   );
 }
 

@@ -3,6 +3,7 @@
 import { HeroSection } from "./landing/components/HeroSection";
 import { FeaturesGrid } from "./landing/components/FeaturesGrid";
 import { MapSection } from "./landing/components/MapSection";
+import { ContactSection } from "./landing/components/ContactForm";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -31,6 +32,7 @@ export default function Home() {
         <HeroSection />
         <FeaturesGrid />
         <MapSection />
+        <ContactSection />
       </div>
     </div>
   );

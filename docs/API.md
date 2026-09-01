@@ -56,6 +56,14 @@ JWT con `role: platform` (sin `club_id`).
 - `GET /platform/admins` — superusuarios ClubApp
 - `POST /platform/admins` — `{ email, nombre, password }` (mín. 8)
 - `PATCH /platform/admins/:id` — `{ nombre?, password?, activo? }` (no se puede desactivar el último ni a uno mismo)
+- `GET /platform/solicitudes?estado=` — leads de la landing (`pendiente` | `trial` | `aprobada` | `cancelada`). Sin `eliminado`.
+- `GET /platform/solicitudes/pendientes/count` — `{ count }` para Salud del Sistema
+- `GET /platform/solicitudes/:id`
+- `PATCH /platform/solicitudes/:id` — `{ estado }` (`pendiente` | `trial` | `aprobada` | `cancelada` | `borradas`). `borradas` pone `eliminado=true` y `fecha_eliminada`. `trial` / `aprobada` / `cancelada` setean `fecha_trial` / `fecha_aprobada` / `fecha_cancelada`.
+
+## Solicitudes (landing, público)
+
+- `POST /solicitudes` — sin JWT. Body `{ nombre, apellido, nombre_club, email, telefono, cantidad_miembros }`. Siempre `estado: pendiente` y `fecha_solicitud` (fecha y hora del alta). Respuesta `{ id, estado, fecha_solicitud }`. **429** si hay demasiados envíos (5/min por IP). Ver [`FRONT_SOLICITUDES.md`](./FRONT_SOLICITUDES.md).
 
 ## Socios / Admins
 

@@ -49,12 +49,18 @@ export function HeroSection() {
             Streamline team management, track events, manage members, and grow your sports organization efficiently.
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
-            <button className="rounded-md bg-blue-600 px-8 py-3 text-lg font-medium text-white transition-colors hover:bg-blue-700">
+            <a
+              href="#contacto"
+              className="rounded-md bg-blue-600 px-8 py-3 text-center text-lg font-medium text-white transition-colors hover:bg-blue-700"
+            >
               Start Free Trial
-            </button>
-            <button className="rounded-md border-2 border-slate-300 bg-white px-8 py-3 text-lg font-medium text-slate-900 transition-colors hover:bg-slate-50">
+            </a>
+            <a
+              href="#contacto"
+              className="rounded-md border-2 border-slate-300 bg-white px-8 py-3 text-center text-lg font-medium text-slate-900 transition-colors hover:bg-slate-50"
+            >
               Watch Demo
-            </button>
+            </a>
           </div>
         </div>
 

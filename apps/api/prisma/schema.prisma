@@ -346,3 +346,27 @@ model Partido {
   @@index([club_id])
   @@index([torneo_id])
 }
+
+/// Lead comercial (landing). No es tenant: el club todavía no existe.
+model Solicitud {
+  id                Int      @id @default(autoincrement())
+  nombre            String
+  apellido          String
+  nombre_club       String
+  email             String
+  telefono          String
+  cantidad_miembros Int
+  cantidad_socios   Int
+  eliminado         Boolean   @default(false)
+  estado            String    @default("pendiente") // pendiente | trial | aprobada | cancelada | borradas
+  fecha_solicitud   DateTime  @default(now())
+  fecha_trial       DateTime?
+  fecha_aprobada    DateTime?
+  fecha_cancelada   DateTime?
+  fecha_eliminada   DateTime?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  @@index([estado, eliminado])
+  @@index([eliminado])
+}

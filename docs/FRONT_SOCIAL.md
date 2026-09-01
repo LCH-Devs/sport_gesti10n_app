@@ -27,7 +27,7 @@ Después: `pnpm api:dev`.
 
 Si `pnpm db:sync` desde la raíz te anda (no choca el contenedor Docker), también aplica migraciones + generate. Si Compose dice que `clubapp_db` ya existe, usá los dos `npx` de arriba.
 
-Esto hay que hacerlo **en cada máquina** que corra la API local después de un pull que traiga migraciones nuevas, no solo en Social.
+Esto hay que hacerlo **en cada máquina** que corra la API local después de un pull que traiga migraciones nuevas, no solo en Social (también Solicitudes / `Solicitud`, ver [`FRONT_SOLICITUDES.md`](./FRONT_SOLICITUDES.md)).
 
 ---
 

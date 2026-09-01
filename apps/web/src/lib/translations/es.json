@@ -79,10 +79,17 @@
     "contactTitle": "¿Querés ClubApp en tu club?",
     "contactSubtitle": "Dejanos tus datos y te contactamos. Este sitio es solo para conocer el producto: el acceso de cada club llega por mail.",
     "contactName": "Nombre",
+    "contactLastName": "Apellido",
     "contactClub": "Nombre del club",
     "contactEmail": "Email",
+    "contactPhone": "Teléfono",
+    "contactMembers": "Cantidad de miembros",
+    "contactSocios": "Cantidad de socios",
     "contactMessage": "Mensaje",
-    "contactSend": "Enviar consulta",
+    "contactSend": "Enviar solicitud",
+    "contactSending": "Enviando…",
+    "contactSuccess": "Solicitud enviada. Te vamos a contactar a la brevedad.",
+    "contactError": "No se pudo enviar la solicitud. Probá de nuevo.",
     "contactHint": "O escribinos a hola@clubapp.com.ar"
   },
   "login": {
@@ -146,6 +153,7 @@
     "totalAdmins": "Total de Administradores",
     "activeUsers": "Usuarios Activos",
     "systemHealth": "Salud del Sistema",
+    "resolve": "Resolver",
     "allServices": "Todos los servicios operativos",
     "userManagement": "Gestión de Usuarios",
     "name": "Nombre",
@@ -164,6 +172,21 @@
     "goalPercentage": "85% de la meta",
     "exampleClub1": "Metro City FC",
     "exampleClub2": "Northside Athletics"
+  },
+  "solicitudes": {
+    "title": "Solicitudes",
+    "subtitle": "Pedidos de alta que llegan desde la landing",
+    "all": "Todas",
+    "empty": "No hay solicitudes en este filtro",
+    "confirmDelete": "¿Marcar esta solicitud como borrada?",
+    "fechaEstado": "Fecha",
+    "estado": {
+      "pendiente": "Pendiente",
+      "trial": "Trial",
+      "aprobada": "Aprobada",
+      "cancelada": "Cancelada",
+      "borradas": "Borrada"
+    }
   },
   "newClub": {
     "title": "Nueva Institución",

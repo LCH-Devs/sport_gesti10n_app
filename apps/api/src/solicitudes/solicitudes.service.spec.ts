@@ -1,0 +1,145 @@
+import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { SolicitudesService } from './solicitudes.service';
+import { PrismaService } from '../prisma/prisma.service';
+
+const row = {
+  id: 1,
+  nombre: 'Ana',
+  apellido: 'Pérez',
+  nombre_club: 'Club Sur',
+  email: 'ana@club.com',
+  telefono: '1144556677',
+  cantidad_miembros: 8,
+  cantidad_socios: 120,
+  eliminado: false,
+  estado: 'pendiente',
+  created_at: new Date('2026-09-01'),
+  updated_at: new Date('2026-09-01'),
+};
+
+const dto = {
+  nombre: ' Ana ',
+  apellido: ' Pérez ',
+  nombre_club: ' Club Sur ',
+  email: 'Ana@Club.com',
+  telefono: '1144556677',
+  cantidad_miembros: 8,
+};
+
+describe('SolicitudesService', () => {
+  const prisma = {
+    solicitud: {
+      create: jest.fn(),
+      findMany: jest.fn(),
+      findFirst: jest.fn(),
+      count: jest.fn(),
+      update: jest.fn(),
+    },
+    $executeRaw: jest.fn(),
+  };
+  let service: SolicitudesService;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    service = new SolicitudesService(prisma as unknown as PrismaService);
+  });
+
+  it('alta siempre pendiente y completa fecha_solicitud', async () => {
+    prisma.solicitud.create.mockResolvedValue({ id: 1, estado: 'pendiente' });
+    prisma.$executeRaw.mockResolvedValue(1);
+    const created = await service.create(dto);
+    expect(created.id).toBe(1);
+    expect(created.estado).toBe('pendiente');
+    expect(created.fecha_solicitud).toEqual(expect.any(Date));
+    expect(prisma.solicitud.create).toHaveBeenCalledWith({
+      data: {
+        nombre: 'Ana',
+        apellido: 'Pérez',
+        nombre_club: 'Club Sur',
+        email: 'ana@club.com',
+        telefono: '1144556677',
+        cantidad_miembros: 8,
+        cantidad_socios: 0,
+        estado: 'pendiente',
+      },
+      select: { id: true, estado: true },
+    });
+    expect(prisma.$executeRaw).toHaveBeenCalled();
+  });
+
+  it('countPendientes solo pendientes no eliminadas', async () => {
+    prisma.solicitud.count.mockResolvedValue(4);
+    await expect(service.countPendientes()).resolves.toEqual({ count: 4 });
+    expect(prisma.solicitud.count).toHaveBeenCalledWith({
+      where: { estado: 'pendiente', eliminado: false },
+    });
+  });
+
+  it('list filtra eliminado y opcionalmente estado', async () => {
+    prisma.solicitud.findMany.mockResolvedValue([row]);
+    await service.list('pendiente');
+    expect(prisma.solicitud.findMany).toHaveBeenCalledWith({
+      where: { eliminado: false, estado: 'pendiente' },
+      orderBy: { created_at: 'desc' },
+    });
+  });
+
+  it('update a trial cambia estado', async () => {
+    prisma.solicitud.findFirst.mockResolvedValue(row);
+    prisma.solicitud.update.mockResolvedValue({ ...row, estado: 'trial' });
+    await service.update(1, { estado: 'trial' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { estado: 'trial', fecha_trial: expect.any(Date) },
+    });
+  });
+
+  it('update a aprobada y cancelada stamp fecha', async () => {
+    prisma.solicitud.findFirst.mockResolvedValue(row);
+    prisma.solicitud.update.mockResolvedValue({ ...row, estado: 'aprobada' });
+    await service.update(1, { estado: 'aprobada' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { estado: 'aprobada', fecha_aprobada: expect.any(Date) },
+    });
+
+    prisma.solicitud.findFirst.mockResolvedValue(row);
+    await service.update(1, { estado: 'cancelada' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { estado: 'cancelada', fecha_cancelada: expect.any(Date) },
+    });
+  });
+
+  it('update a borradas marca eliminado', async () => {
+    prisma.solicitud.findFirst.mockResolvedValue(row);
+    prisma.solicitud.update.mockResolvedValue({
+      ...row,
+      estado: 'borradas',
+      eliminado: true,
+    });
+    await service.update(1, { estado: 'borradas' });
+    expect(prisma.solicitud.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: {
+        estado: 'borradas',
+        eliminado: true,
+        fecha_eliminada: expect.any(Date),
+      },
+    });
+  });
+
+  it('update sin estado 400', async () => {
+    await expect(service.update(1, {})).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(prisma.solicitud.update).not.toHaveBeenCalled();
+  });
+
+  it('update de una eliminada 404', async () => {
+    prisma.solicitud.findFirst.mockResolvedValue(null);
+    await expect(service.update(9, { estado: 'trial' })).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+});

@@ -17,7 +17,8 @@ mi_club_online/
 │   ├── API.md              # contratos HTTP (source of truth)
 │   ├── FRONT.md            # este archivo
 │   ├── FRONT_SESION.md     # JWT 8 h, 401, 429, campos extra, CORS
-│   └── FRONT_SOCIAL.md     # feed Social entre clubes (API lista; UI pendiente)
+│   ├── FRONT_SOCIAL.md     # feed Social entre clubes (API lista; UI pendiente)
+│   └── FRONT_SOLICITUDES.md # leads de la landing (form + panel)
 ├── apps/
 │   ├── api/                # BACK — NestJS + Prisma (puerto 3001)
 │   └── web/                # FRONT — Next.js 14 (puerto 3000)
@@ -43,7 +44,7 @@ Estado actual del milestone **Fase 1 + 1b (web comisión)**. La app móvil Expo 
 | Área | Estado | Notas |
 |------|--------|--------|
 | Multi-tenant por club | Listo | JWT `club_id` + header `X-Club-Slug` |
-| Superadmin plataforma | Listo | `/platform` — alta de clubes + admin inicial |
+| Superadmin plataforma | Listo | `/supercalifragilisticoespiralidoso/panel` — alta de clubes + solicitudes de landing |
 | Login admin (comisión / entrada) | Listo | Seed: `admin@clubprueba.com` |
 | Branding + config del club | Listo | Cuota, color, logo, reglas moroso/reservas |
 | Socios CRUD + import CSV | Listo | También `fecha_nacimiento` |
@@ -106,6 +107,7 @@ apps/api/
 │   │   └── admin-role.guard.ts    # solo rol admin (no entrada)
 │   ├── auth/                  # POST /auth/admin/login, /auth/platform/login
 │   ├── platform/              # Superadmin: ABM clubes + admin inicial
+│   ├── solicitudes/           # POST público landing + GET/PATCH platform
 │   ├── clubs/                 # buscar, me, PATCH config
 │   ├── socios/                # CRUD + import CSV
 │   ├── admins/                # CRUD usuarios del club
@@ -128,7 +130,8 @@ apps/api/
 | Carpeta | Prefijo / rutas principales |
 |---------|-------------------------------|
 | `auth/` | `POST /auth/admin/login`, `POST /auth/platform/login` |
-| `platform/` | `GET\|POST /platform/clubs`, `PATCH /platform/clubs/:id`, admins |
+| `platform/` | `GET\|POST /platform/clubs`, admins, `GET\|PATCH /platform/solicitudes` |
+| `solicitudes/` | `POST /solicitudes` (público, landing) |
 | `clubs/` | `GET /clubs/buscar`, `GET /clubs/slug/:slug`, `GET\|PATCH /clubs/me` |
 | `socios/` | `GET\|POST /socios`, `POST /socios/import-csv`, `PATCH\|DELETE /socios/:id` |
 | `admins/` | `GET\|POST /admins`, `PATCH\|DELETE /admins/:id` |
@@ -201,6 +204,9 @@ apps/web/
 | `/login/{slug}` | `app/login/[slug]/page.tsx` | `POST /auth/admin/login` + branding |
 | `/platform/login` | `app/platform/login/page.tsx` | `POST /auth/platform/login` |
 | `/platform` | `app/platform/page.tsx` | `/platform/clubs` |
+| `/supercalifragilisticoespiralidoso/panel` | `app/supercalifragilisticoespiralidoso/panel/page.tsx` | `/platform/admins`, `/platform/solicitudes/pendientes/count` |
+| `/supercalifragilisticoespiralidoso/panel/solicitudes` | `.../panel/solicitudes/page.tsx` | `GET\|PATCH /platform/solicitudes` |
+| `/` y `/landing` | `app/page.tsx`, `app/landing/page.tsx` | `POST /solicitudes` (público) |
 | `/platform/usuarios` | `app/platform/usuarios/page.tsx` | `/platform/admins` |
 | `/admin` | `app/admin/page.tsx` | `GET /reportes/hoy` |
 | `/admin/socios` | `admin/socios/page.tsx` | `/socios`, `/socios/import-csv` |
@@ -464,7 +470,7 @@ npx prisma migrate deploy
 npx prisma generate
 ```
 
-Eso también hay que correrlo **después de cada pull** que traiga migraciones Prisma (por ejemplo Social / `PublicacionSocial`). Ver [`FRONT_SOCIAL.md`](./FRONT_SOCIAL.md).
+Eso también hay que correrlo **después de cada pull** que traiga migraciones Prisma (Social / `PublicacionSocial`, Solicitudes / `Solicitud`). Ver [`FRONT_SOCIAL.md`](./FRONT_SOCIAL.md) y [`FRONT_SOLICITUDES.md`](./FRONT_SOLICITUDES.md).
 
 ### ¿Qué hago si el puerto 5432 está ocupado?
 
