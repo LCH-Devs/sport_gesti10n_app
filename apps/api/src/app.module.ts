@@ -16,6 +16,7 @@ import { ActividadesModule } from './actividades/actividades.module';
 import { LiquidacionesModule } from './liquidaciones/liquidaciones.module';
 import { TorneosModule } from './torneos/torneos.module';
 import { PlatformModule } from './platform/platform.module';
+import { SocialModule } from './social/social.module';
 import { HealthController } from './health.controller';
 import { TenantMiddleware } from './common/tenant.middleware';
 import { RequestLoggerMiddleware } from './common/request-logger.middleware';
@@ -39,6 +40,7 @@ import { RequestLoggerMiddleware } from './common/request-logger.middleware';
     LiquidacionesModule,
     TorneosModule,
     PlatformModule,
+    SocialModule,
   ],
   controllers: [HealthController],
   providers: [TenantMiddleware, RequestLoggerMiddleware],

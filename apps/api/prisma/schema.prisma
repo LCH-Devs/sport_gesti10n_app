@@ -44,6 +44,7 @@ model Club {
   reservas          Reserva[]
   horarios          Horario[]
   noticias          Noticia[]
+  publicaciones_sociales PublicacionSocial[]
   grupos_familiares GrupoFamiliar[]
   actividades       Actividad[]
   cobros_profe      CobroProfe[]
@@ -276,6 +277,27 @@ model Noticia {
   eliminado  Boolean  @default(false)
 
   @@index([club_id, fecha])
+  @@index([club_id, eliminado])
+}
+
+/// Feed entre clubes (torneos abiertos, eventos interclub). No es Noticia del tenant.
+model PublicacionSocial {
+  id           Int      @id @default(autoincrement())
+  club_id      Int?
+  club         Club?    @relation(fields: [club_id], references: [id])
+  autor_tipo   String // admin | platform
+  autor_id     Int // membresia.id (admin) o platformAdmin.id (platform)
+  titulo       String
+  cuerpo       String
+  imagen_url   String?
+  fecha_evento DateTime?
+  lugar        String?
+  visible      Boolean  @default(true)
+  eliminado    Boolean  @default(false)
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+
+  @@index([eliminado, visible, created_at])
   @@index([club_id, eliminado])
 }
 

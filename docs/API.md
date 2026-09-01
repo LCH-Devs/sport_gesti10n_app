@@ -32,7 +32,7 @@ Body con campos que el DTO no declara → **400**. Login público (`/auth/login`
 - `GET /clubs/buscar?q=`
 - `GET /clubs/slug/:slug` — branding público para login white-label
 - `GET /clubs/me` — Bearer (incluye config + onboarding)
-- `PATCH /clubs/me` — config: cuota, logo, color, reglas
+- `PATCH /clubs/me` — config: cuota, logo, color, reglas, nombre (el nombre no puede coincidir con otro club vivo)
 - `POST /clubs/me/logo` — multipart `file` (JPG/PNG/WEBP/GIF, máx. 2 MB).  
   Con `IMAGEKIT_PRIVATE_KEY` sube a ImageKit (CDN) y guarda esa URL en `logo_url`. Sin ImageKit (dev), guarda en disco `uploads/logos/` y `logo_url` queda `/uploads/logos/...`.
 - `PATCH /clubs/me/onboarding` — primer acceso (titular, CUIT/CUIL, branding, nueva pass)
@@ -44,9 +44,14 @@ JWT con `role: platform` (sin `club_id`).
 - `GET /platform/clubs` — listado + counts
 - `GET /platform/clubs/:id`
 - `POST /platform/clubs` — alta `{ nombre, admin_email, admin_nombre?, precio_usd_mes }`  
-  Genera slug + password aleatoria. Respuesta incluye `credentials_once` (email, password, login_url) **solo en el create** y `mail.sent` (true si SMTP está configurado).
-- `PATCH /platform/clubs/:id` — branding, plan, `precio_usd_mes`, `activo` (suspender: el mail del admin **sigue ocupado**)
-- `DELETE /platform/clubs/:id` — baja lógica: `activo=false`, `eliminado=true`, membresías `eliminado=true`. El club queda en DB, no entra, y el mail del admin **se libera**. No borra filas.
+  Siempre genera **contraseña temporal nueva** (también si el email ya existía por un club dado de baja).  
+  El **nombre** no puede repetirse si hay otro club vivo (activo o suspendido); un club dado de baja sí libera el nombre.  
+  `credentials_once`: `{ email, password, login_url }` — `login_url` es `{WEB_APP_URL}/login` (sin slug/subdominio).  
+  Mail de bienvenida (SMTP) con las mismas credenciales.
+- `PATCH /platform/clubs/:id` — branding, plan, `precio_usd_mes`, `activo`, `nombre` (mismo criterio de unicidad)  
+  - `activo: false` (suspender): el mail del admin **sigue ocupado**. Mail de aviso de suspensión.  
+  - `activo: true` (rehabilitar): pass temporal **nueva**, `must_change_password` en el admin, onboarding **no** se resetea. Mail de rehabilitación. Respuesta puede incluir `credentials_once`.
+- `DELETE /platform/clubs/:id` — baja lógica: `activo=false`, `eliminado=true`, membresías `eliminado=true`. El club queda en DB, no entra, y el mail del admin **se libera**. Mail de aviso de eliminación. Un alta posterior con ese mail es un club **nuevo** (pass nueva + onboarding).
 - `POST /platform/clubs/:id/admins` — agregar admin/entrada al club
 - `GET /platform/admins` — superusuarios ClubApp
 - `POST /platform/admins` — `{ email, nombre, password }` (mín. 8)
@@ -84,6 +89,16 @@ JWT con `role: platform` (sin `club_id`).
 
 - `GET|POST /horarios` · `PATCH|DELETE /horarios/:id`
 - `GET|POST /noticias?es_evento=` · `PATCH|DELETE /noticias/:id`
+
+## Social (feed entre clubes)
+
+No es la solapa de eventos del club (`/noticias`). JWT de **cualquier** rol (o plataforma). Ver [`FRONT_SOCIAL.md`](./FRONT_SOCIAL.md).
+
+- `GET /social/posts` — feed (`take`, `skip`, `club_id?`). Solo visibles, club vivo o post ClubApp
+- `GET /social/posts/:id`
+- `GET /social/mis-publicaciones` — admin: las de su club (incluye ocultas) · platform: todas · socio/entrada: 403
+- `POST /social/posts` — solo `admin` o `platform`. Body `{ titulo, cuerpo, imagen_url?, fecha_evento?, lugar?, visible?, club_id? }` (`club_id` solo lo usa platform)
+- `PATCH /social/posts/:id` · `DELETE /social/posts/:id` — autor-club admin o platform
 
 ## Familias / Actividades
 

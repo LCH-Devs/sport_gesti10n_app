@@ -16,7 +16,8 @@ mi_club_online/
 ├── docs/
 │   ├── API.md              # contratos HTTP (source of truth)
 │   ├── FRONT.md            # este archivo
-│   └── FRONT_SESION.md     # JWT 8 h, 401, 429, campos extra, CORS
+│   ├── FRONT_SESION.md     # JWT 8 h, 401, 429, campos extra, CORS
+│   └── FRONT_SOCIAL.md     # feed Social entre clubes (API lista; UI pendiente)
 ├── apps/
 │   ├── api/                # BACK — NestJS + Prisma (puerto 3001)
 │   └── web/                # FRONT — Next.js 14 (puerto 3000)
@@ -383,6 +384,8 @@ Helper: `apps/web/src/lib/api.ts`
 
 **Sesión JWT (8 h, 401, 429, campos extra):** [`FRONT_SESION.md`](./FRONT_SESION.md) — leer antes de tocar login / `apiFetch`.
 
+**Solapa Social (feed entre clubes):** [`FRONT_SOCIAL.md`](./FRONT_SOCIAL.md) — API lista, UI pendiente. No uses `/noticias`.
+
 1. Login → `POST /auth/admin/login` con `{ club_slug, email, password }`
 2. Guardás en `localStorage` el `ClubSession` (`access_token`, `admin`, `club`)
 3. En cada request autenticado:
@@ -422,6 +425,7 @@ Si el back agrega un endpoint, se documenta en `docs/API.md`.
 ## Reglas de negocio que el UI debe respetar
 
 - **Multi-tenant:** nunca mezclar datos entre clubes; siempre token + slug del club logueado.
+- **Login comisión:** `{WEB_APP_URL}/login` (sin slug). Alta nueva → onboarding. Rehabilitación → `/gestion/cambiar-clave` (`must_change_password`). Detalle: [`FRONT_SESION.md`](./FRONT_SESION.md).
 - **ClubApp no cobra ni custodia plata:** solo genera links de MercadoPago de la cuenta del club. En local, sin token MP, los links son mock (sirven para UI).
 - **Push FCM:** todavía stub en back (`push_enviados: 0`). No armes UX de WhatsApp/SMS pagos como canal de cobro.
 - **Moroso / reservas:** la API valida; el front puede mostrar el error del `message` del body.
@@ -452,6 +456,15 @@ Desde la raíz del monorepo:
 pnpm db:sync      # actualiza schema (conserva datos)
 pnpm db:reset     # borra datos, re-migra y seed
 ```
+
+Si `db:sync` falla porque el contenedor `clubapp_db` ya existe, con la API **parada** y desde `apps/api`:
+
+```bash
+npx prisma migrate deploy
+npx prisma generate
+```
+
+Eso también hay que correrlo **después de cada pull** que traiga migraciones Prisma (por ejemplo Social / `PublicacionSocial`). Ver [`FRONT_SOCIAL.md`](./FRONT_SOCIAL.md).
 
 ### ¿Qué hago si el puerto 5432 está ocupado?
 

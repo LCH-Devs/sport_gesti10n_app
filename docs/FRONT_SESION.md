@@ -101,3 +101,18 @@ Requests sin header `Origin` (Postman, server-to-server) siguen ok.
 - Sigue `Authorization: Bearer`; no hay cookie.
 - `credentials: true` en CORS ya estaba; no hace falta mandar cookies.
 - Contratos de negocio (socios, reservas, etc.) iguales, salvo el 400 por campos extra.
+
+---
+
+## 5. Alta / baja / suspensión (mails y `must_change_password`)
+
+El login de comisión es `http://localhost:3000/login` (sin slug).
+
+| Situación | Qué hace la API | Qué hace el panel |
+|-----------|-----------------|-------------------|
+| Alta de club (aunque el mail ya existiera por un club **eliminado**) | Pass temporal **nueva** + mail de bienvenida + onboarding | `/gestion/onboarding` |
+| Suspender (`activo: false`) | Mail de suspensión. El mail **sigue ocupado**. Pass igual. | No entra hasta rehabilitar |
+| Rehabilitar (`activo: true`) | Pass temporal **nueva**, `must_change_password: true`. Onboarding **no** se toca | `/gestion/cambiar-clave` |
+| Baja (`DELETE`) | Libera el mail **y el nombre**. Mail de eliminación. No es rehabilitación | Un alta posterior es club nuevo |
+
+`PATCH /admins/me` con `{ newPassword }` (sin `currentPassword`) solo vale si `must_change_password` es true. Después el flag queda en false.

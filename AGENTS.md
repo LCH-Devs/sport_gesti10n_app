@@ -85,6 +85,7 @@ DNI único **por club**, no global. Email único en `Usuario`. Si el email ya ex
 5. Si hay header `X-Club-Slug` o Origin de otro club → `403`. Hay tests en `tenant.guard.spec.ts` y `tenant-isolation.spec.ts`: no romperlos.
 6. Plataforma (`role: platform`) **no** usa endpoints de club. Club **no** usa `/platform/*`.
 7. Nunca listados ni updates cross-tenant. Al tocar un recurso por `:id`, el `where` incluye `club_id`.
+   **Excepción:** `GET /social/posts` (feed entre clubes). Mutaciones de Social: admin de su club o `platform`. Ver `docs/FRONT_SOCIAL.md`.
 8. Config (moroso, reservas, cuota, branding) vive en `Club`. Cero reglas globales hardcodeadas salvo defaults al crear el club.
 
 Índices nuevos: compuestos con `club_id`. Plan básico: tope ~100 socios activos al crear (ya validado en `SociosService`).
