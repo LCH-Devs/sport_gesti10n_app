@@ -1,16 +1,27 @@
 'use client';
 
-import { FormEvent, useState } from 'react';
-import { notFound, useRouter } from 'next/navigation';
+import { FormEvent, useEffect, useState } from 'react';
+import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import { Header, Card, Button } from '@/components/common';
 import { apiFetch, getPlatformSession } from '@/lib/api';
 import { useTranslation } from '@/lib/useTranslation';
 
+type SolicitudPrefill = {
+  id: number;
+  nombre: string;
+  apellido: string;
+  nombre_club: string;
+  email: string;
+};
+
 export default function NewClubPage() {
   const router = useRouter();
+  const params = useSearchParams();
+  const solicitudId = params.get('solicitud_id');
   const { t } = useTranslation();
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [fromSolicitud, setFromSolicitud] = useState(false);
   const [form, setForm] = useState({
     nombre: '',
     admin_email: '',
@@ -29,6 +40,30 @@ export default function NewClubPage() {
     form.cantidad_miembros && cantidadMiembrosNum > 0
       ? precioPorCantidadMiembros(cantidadMiembrosNum)
       : null;
+
+  useEffect(() => {
+    if (!solicitudId) return;
+    const session = getPlatformSession();
+    if (!session) {
+      notFound();
+      return;
+    }
+    void apiFetch<SolicitudPrefill>(`/platform/solicitudes/${solicitudId}`, {
+      token: session.access_token,
+    })
+      .then((s) => {
+        setFromSolicitud(true);
+        setForm({
+          nombre: s.nombre_club,
+          admin_email: s.email,
+          admin_nombre: `${s.nombre} ${s.apellido}`.trim(),
+          precio_usd_mes: '',
+        });
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : t('messages.errorLoading'));
+      });
+  }, [solicitudId, t]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -50,7 +85,18 @@ export default function NewClubPage() {
           precio_usd_mes: precioPorCantidadMiembros(cantidadMiembrosNum),
         }),
       });
-      router.push('/supercalifragilisticoespiralidoso/panel');
+      if (solicitudId) {
+        await apiFetch(`/platform/solicitudes/${solicitudId}`, {
+          method: 'PATCH',
+          token: session.access_token,
+          body: JSON.stringify({ estado: 'trial' }),
+        });
+      }
+      router.push(
+        fromSolicitud
+          ? '/supercalifragilisticoespiralidoso/panel/solicitudes'
+          : '/supercalifragilisticoespiralidoso/panel',
+      );
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
@@ -58,11 +104,15 @@ export default function NewClubPage() {
     }
   }
 
+  const cancelHref = fromSolicitud
+    ? '/supercalifragilisticoespiralidoso/panel/solicitudes'
+    : '/supercalifragilisticoespiralidoso/panel';
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header
         title={t('newClub.title')}
-        subtitle={t('newClub.subtitle')}
+        subtitle={fromSolicitud ? t('newClub.fromSolicitud') : t('newClub.subtitle')}
       />
 
       <div className="p-6">
@@ -124,7 +174,7 @@ export default function NewClubPage() {
               <Button
                 variant="secondary"
                 size="md"
-                onClick={() => router.push('/supercalifragilisticoespiralidoso/panel')}
+                onClick={() => router.push(cancelHref)}
               >
                 {t('newClub.cancel')}
               </Button>

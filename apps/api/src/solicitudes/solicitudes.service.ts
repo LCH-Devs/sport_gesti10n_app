@@ -9,9 +9,11 @@ import {
   CreateSolicitudDto,
   UpdateSolicitudDto,
 } from './dto/solicitudes.dto';
+import { MailService } from '../mail/mail.service';
 import {
   ESTADO_SOLICITUD_DEFAULT,
   EstadoSolicitud,
+  debeAvisarTrial10d,
 } from './solicitudes.constants';
 
 export function dataPorCambioEstado(
@@ -35,7 +37,10 @@ export function dataPorCambioEstado(
 
 @Injectable()
 export class SolicitudesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mail: MailService,
+  ) {}
 
   async create(dto: CreateSolicitudDto) {
     const fecha_solicitud = new Date();
@@ -92,9 +97,54 @@ export class SolicitudesService {
       throw new BadRequestException('Indicá el estado');
     }
     await this.getOne(id);
-    return this.prisma.solicitud.update({
+    const updated = await this.prisma.solicitud.update({
       where: { id },
       data: dataPorCambioEstado(dto.estado),
     });
+    if (dto.estado === 'trial') {
+      await this.prisma.$executeRaw`
+        UPDATE "Solicitud"
+        SET "mail_aviso_trial_enviado" = false
+        WHERE "id" = ${id}
+      `;
+    }
+    return updated;
+  }
+
+  async avisarTrialsPorVencer(now = new Date()) {
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        id: number;
+        email: string;
+        nombre: string;
+        nombre_club: string;
+        fecha_trial: Date;
+      }>
+    >`
+      SELECT id, email, nombre, nombre_club, fecha_trial
+      FROM "Solicitud"
+      WHERE estado = 'trial'
+        AND eliminado = false
+        AND mail_aviso_trial_enviado = false
+        AND fecha_trial IS NOT NULL
+    `;
+    let enviados = 0;
+    for (const row of rows) {
+      if (!debeAvisarTrial10d(new Date(row.fecha_trial), now)) {
+        continue;
+      }
+      await this.mail.sendTrialQuedan10d({
+        to: row.email,
+        nombre: row.nombre,
+        clubNombre: row.nombre_club,
+      });
+      await this.prisma.$executeRaw`
+        UPDATE "Solicitud"
+        SET "mail_aviso_trial_enviado" = true
+        WHERE "id" = ${row.id}
+      `;
+      enviados += 1;
+    }
+    return { revisadas: rows.length, enviados };
   }
 }

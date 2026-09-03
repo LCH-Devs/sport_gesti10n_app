@@ -59,7 +59,7 @@ JWT con `role: platform` (sin `club_id`).
 - `GET /platform/solicitudes?estado=` — leads de la landing (`pendiente` | `trial` | `aprobada` | `cancelada`). Sin `eliminado`.
 - `GET /platform/solicitudes/pendientes/count` — `{ count }` para Salud del Sistema
 - `GET /platform/solicitudes/:id`
-- `PATCH /platform/solicitudes/:id` — `{ estado }` (`pendiente` | `trial` | `aprobada` | `cancelada` | `borradas`). `borradas` pone `eliminado=true` y `fecha_eliminada`. `trial` / `aprobada` / `cancelada` setean `fecha_trial` / `fecha_aprobada` / `fecha_cancelada`.
+- `PATCH /platform/solicitudes/:id` — `{ estado }`. `trial` setea `fecha_trial` (prueba 30 días) y resetea `mail_aviso_trial_enviado`. A los 20 días el back manda un mail de “quedan 10 días” (SMTP). `aprobada` / `cancelada` / `borradas` setean su fecha. `borradas` pone `eliminado=true`.
 
 ## Solicitudes (landing, público)
 

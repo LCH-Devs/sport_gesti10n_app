@@ -195,6 +195,8 @@
     "empty": "No requests in this filter",
     "confirmDelete": "Mark this request as deleted?",
     "fechaEstado": "Date",
+    "trialRestante": "Trial left",
+    "trialVencido": "Expired",
     "estado": {
       "pendiente": "Pending",
       "trial": "Trial",
@@ -226,6 +228,7 @@
     "create": "Create club",
     "saving": "Creating…",
     "cancel": "Cancel",
+    "fromSolicitud": "Data from the request. Fill in the price and confirm the signup.",
     "link": "Link",
     "password": "Password"
   },

@@ -1,6 +1,12 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SolicitudesService } from './solicitudes.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
+import {
+  TRIAL_AVISO_MS,
+  TRIAL_MS,
+  debeAvisarTrial10d,
+} from './solicitudes.constants';
 
 const row = {
   id: 1,
@@ -36,12 +42,17 @@ describe('SolicitudesService', () => {
       update: jest.fn(),
     },
     $executeRaw: jest.fn(),
+    $queryRaw: jest.fn(),
   };
+  const mail = { sendTrialQuedan10d: jest.fn() };
   let service: SolicitudesService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new SolicitudesService(prisma as unknown as PrismaService);
+    service = new SolicitudesService(
+      prisma as unknown as PrismaService,
+      mail as unknown as MailService,
+    );
   });
 
   it('alta siempre pendiente y completa fecha_solicitud', async () => {
@@ -92,6 +103,7 @@ describe('SolicitudesService', () => {
       where: { id: 1 },
       data: { estado: 'trial', fecha_trial: expect.any(Date) },
     });
+    expect(prisma.$executeRaw).toHaveBeenCalled();
   });
 
   it('update a aprobada y cancelada stamp fecha', async () => {
@@ -141,5 +153,42 @@ describe('SolicitudesService', () => {
     await expect(service.update(9, { estado: 'trial' })).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('aviso 10d solo dentro de la ventana', () => {
+    const now = new Date('2026-09-30T12:00:00Z');
+    expect(debeAvisarTrial10d(new Date(now.getTime() - 20 * 86400000), now)).toBe(
+      true,
+    );
+    expect(debeAvisarTrial10d(new Date(now.getTime() - 5 * 86400000), now)).toBe(
+      false,
+    );
+    expect(
+      debeAvisarTrial10d(new Date(now.getTime() - TRIAL_MS - 1000), now),
+    ).toBe(false);
+    expect(TRIAL_AVISO_MS).toBe(10 * 86400000);
+  });
+
+  it('avisarTrialsPorVencer manda mail una vez', async () => {
+    const now = new Date();
+    const fechaTrial = new Date(now.getTime() - 20 * 86400000);
+    prisma.$queryRaw.mockResolvedValue([
+      {
+        id: 1,
+        email: 'ana@club.com',
+        nombre: 'Ana',
+        nombre_club: 'Club Sur',
+        fecha_trial: fechaTrial,
+      },
+    ]);
+    mail.sendTrialQuedan10d.mockResolvedValue({ sent: true });
+    prisma.$executeRaw.mockResolvedValue(1);
+    const result = await service.avisarTrialsPorVencer(now);
+    expect(result.enviados).toBe(1);
+    expect(mail.sendTrialQuedan10d).toHaveBeenCalledWith({
+      to: 'ana@club.com',
+      nombre: 'Ana',
+      clubNombre: 'Club Sur',
+    });
   });
 });
