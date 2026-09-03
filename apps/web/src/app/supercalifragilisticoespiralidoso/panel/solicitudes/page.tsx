@@ -6,6 +6,8 @@ import { Header, Badge, Button, DataTable, type Column } from "@/components/comm
 import { apiFetch, getPlatformSession } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 
+type TabId =  "" | "pendiente" | "trial" | "aprobada" | "cancelada";
+
 type EstadoSolicitud =
   | "pendiente"
   | "trial"
@@ -35,6 +37,7 @@ const ESTADOS: EstadoSolicitud[] = [
   "aprobada",
   "cancelada",
 ];
+
 
 const TABS: TabId[] = ["", "pendiente", "trial", "aprobada", "cancelada"];
 const TRIAL_MS = 30 * 24 * 60 * 60 * 1000;

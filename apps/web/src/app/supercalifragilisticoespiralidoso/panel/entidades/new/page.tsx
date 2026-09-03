@@ -57,7 +57,7 @@ export default function NewClubPage() {
           nombre: s.nombre_club,
           admin_email: s.email,
           admin_nombre: `${s.nombre} ${s.apellido}`.trim(),
-          precio_usd_mes: '',
+          cantidad_miembros: '',
         });
       })
       .catch((err) => {
