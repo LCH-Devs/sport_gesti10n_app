@@ -364,6 +364,7 @@ model Solicitud {
   fecha_aprobada    DateTime?
   fecha_cancelada   DateTime?
   fecha_eliminada   DateTime?
+  mail_aviso_trial_enviado Boolean @default(false)
   created_at        DateTime  @default(now())
   updated_at        DateTime  @updatedAt
 

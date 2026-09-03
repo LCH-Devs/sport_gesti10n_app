@@ -180,6 +180,8 @@
     "empty": "No hay solicitudes en este filtro",
     "confirmDelete": "¿Marcar esta solicitud como borrada?",
     "fechaEstado": "Fecha",
+    "trialRestante": "Trial restante",
+    "trialVencido": "Vencido",
     "estado": {
       "pendiente": "Pendiente",
       "trial": "Trial",
@@ -198,6 +200,7 @@
     "create": "Crear club",
     "saving": "Creando…",
     "cancel": "Cancelar",
+    "fromSolicitud": "Datos de la solicitud. Completá el precio y confirmá el alta.",
     "link": "Link",
     "password": "Contraseña"
   },

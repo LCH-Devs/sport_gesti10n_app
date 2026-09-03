@@ -67,6 +67,8 @@ Estados: `pendiente` | `trial` | `aprobada` | `cancelada` | `borradas`.
 
 `PATCH` `{ estado }` pisa el estado y la fecha de ese paso (`fecha_trial`, `fecha_aprobada`, `fecha_cancelada`, `fecha_eliminada`). No borra las fechas anteriores. `fecha_solicitud` se setea al crear (landing) y no cambia. `borradas` también pone `eliminado=true`.
 
+`trial` dura **30 días** desde `fecha_trial`. A los 20 días (quedan 10) el back manda un mail al email de la solicitud (una vez; `mail_aviso_trial_enviado`). El panel muestra el contador. Elegir trial **no** cambia el estado: abre el alta de club precargada. Si cancelás, sigue `pendiente`. Si confirmás el alta, ahí sí pasa a `trial`.
+
 ---
 
 ## Front

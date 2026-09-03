@@ -17,6 +17,12 @@ export type ClubStatusMail = {
 
 export type ClubReactivatedMail = ClubWelcomeMail;
 
+export type Trial10dMail = {
+  to: string;
+  nombre: string;
+  clubNombre: string;
+};
+
 export type MailResult = {
   sent: boolean;
   stub: boolean;
@@ -195,6 +201,31 @@ export function buildClubDeletedHtml(p: ClubStatusMail) {
   );
 }
 
+export function buildTrial10dText(p: Trial10dMail) {
+  return [
+    `Hola ${p.nombre},`,
+    ``,
+    `Tu periodo de prueba de ClubApp para ${p.clubNombre} vence en 10 días.`,
+    ``,
+    `Cuando termine la prueba, el servicio pasa a ser pago. Si querés seguir usando ClubApp, coordiná la contratación con nosotros.`,
+    ``,
+    `— Equipo ClubApp`,
+  ].join('\n');
+}
+
+export function buildTrial10dHtml(p: Trial10dMail) {
+  const club = escapeHtml(p.clubNombre);
+  const nombre = escapeHtml(p.nombre);
+  return wrapHtml(
+    `Quedan 10 días de prueba — ${p.clubNombre}`,
+    `
+      <p style="margin:0 0 12px;font-size:16px;">Hola ${nombre},</p>
+      <p style="margin:0 0 16px;line-height:1.55;">Tu periodo de prueba de ClubApp para <strong>${club}</strong> vence en <strong>10 días</strong>.</p>
+      <p style="margin:0;line-height:1.55;">Cuando termine la prueba, el servicio pasa a ser pago. Si querés seguir usando ClubApp, coordiná la contratación con nosotros.</p>
+    `,
+  );
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
@@ -236,6 +267,15 @@ export class MailService {
       text: buildClubReactivatedText(payload),
       html: buildClubReactivatedHtml(payload),
       loginUrl: payload.loginUrl,
+    });
+  }
+
+  sendTrialQuedan10d(payload: Trial10dMail) {
+    return this.deliver({
+      to: payload.to,
+      subject: `Quedan 10 días de prueba de ClubApp — ${payload.clubNombre}`,
+      text: buildTrial10dText(payload),
+      html: buildTrial10dHtml(payload),
     });
   }
 

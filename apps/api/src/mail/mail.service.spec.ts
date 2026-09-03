@@ -3,6 +3,7 @@ import {
   buildClubReactivatedText,
   buildClubSuspendedText,
   buildClubWelcomeText,
+  buildTrial10dText,
 } from './mail.service';
 
 const welcome = {
@@ -48,5 +49,16 @@ describe('mails de club', () => {
     expect(body).toContain('http://localhost:3000/login');
     expect(body).toContain('configuración del club');
     expect(body).not.toContain('CUIT');
+  });
+
+  it('trial 10d: avisa vencimiento y paso a pago', () => {
+    const body = buildTrial10dText({
+      to: 'ana@club.com',
+      nombre: 'Ana',
+      clubNombre: 'Club Sur',
+    });
+    expect(body).toContain('10 días');
+    expect(body).toContain('Club Sur');
+    expect(body).toContain('pago');
   });
 });
