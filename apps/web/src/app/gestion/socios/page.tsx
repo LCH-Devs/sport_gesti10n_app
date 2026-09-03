@@ -1,9 +1,11 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { apiFetch, requireSession } from '@/lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
-import { DataTable, type Column } from '@/components/common';
+import { DataTable, type Column, FloatingActionButton } from '@/components/common';
+import { SociosFamiliasTabs } from '../_components/SociosFamiliasTabs';
 
 type Socio = {
   id: number;
@@ -16,24 +18,15 @@ type Socio = {
   rol: string;
 };
 
-const EMPTY_FORM = {
-  dni: '',
-  nombre: '',
-  apellido: '',
-  email: '',
-  telefono: '',
-};
-
 export default function SociosPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [socios, setSocios] = useState<Socio[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [editingId, setEditingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setLoading(true);
     setError('');
@@ -54,52 +47,8 @@ export default function SociosPage() {
     void load();
   }, [load]);
 
-  function onStartEdit(socio: Socio) {
-    setEditingId(socio.id);
-    setForm({
-      dni: socio.dni,
-      nombre: socio.nombre,
-      apellido: socio.apellido,
-      email: socio.email,
-      telefono: socio.telefono,
-    });
-  }
-
-  function onCancelEdit() {
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-  }
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    const session = getSession();
-    if (!session) return;
-    try {
-      if (editingId) {
-        await apiFetch(`/socios/${editingId}`, {
-          method: 'PATCH',
-          token: session.access_token,
-          clubSlug: session.club.slug,
-          body: JSON.stringify(form),
-        });
-      } else {
-        await apiFetch('/socios', {
-          method: 'POST',
-          token: session.access_token,
-          clubSlug: session.club.slug,
-          body: JSON.stringify(form),
-        });
-      }
-      setForm(EMPTY_FORM);
-      setEditingId(null);
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar');
-    }
-  }
-
   async function onDelete(socio: Socio) {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     try {
       await apiFetch(`/socios/${socio.id}`, {
@@ -127,59 +76,17 @@ export default function SociosPage() {
   ];
 
   return (
-    <div>
+    <div className="relative">
       <h2 className="text-2xl font-bold">{t('admin.socios.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
         {t('admin.socios.subtitle')}
       </p>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      <div className="mt-6">
+        <SociosFamiliasTabs />
+      </div>
 
-      <form
-        onSubmit={onSubmit}
-        className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
-      >
-        <h3 className="sm:col-span-2 font-semibold">
-          {editingId ? t('admin.socios.editSocio', 'Editar socio') : t('admin.socios.quickCreate')}
-        </h3>
-        {(
-          [
-            ['dni', t('admin.socios.dni')],
-            ['nombre', t('admin.socios.nombre')],
-            ['apellido', t('admin.socios.apellido')],
-            ['email', t('admin.socios.email')],
-            ['telefono', t('admin.socios.telefono')],
-          ] as const
-        ).map(([key, label]) => (
-          <label key={key} className="text-sm">
-            {label}
-            <input
-              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-              value={form[key]}
-              onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
-              required={key !== 'telefono'}
-              type={key === 'email' ? 'email' : 'text'}
-            />
-          </label>
-        ))}
-        <div className="sm:col-span-2 flex gap-2">
-          <button
-            type="submit"
-            className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
-          >
-            {editingId ? t('common.save', 'Guardar') : t('admin.socios.createSocio')}
-          </button>
-          {editingId && (
-            <button
-              type="button"
-              onClick={onCancelEdit}
-              className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700"
-            >
-              {t('newClub.cancel', 'Cancelar')}
-            </button>
-          )}
-        </div>
-      </form>
+      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 rounded-xl border bg-white p-4">
         <h3 className="font-semibold">{t('admin.socios.importCsv')}</h3>
@@ -193,7 +100,7 @@ export default function SociosPage() {
           onChange={async (e) => {
             const file = e.target.files?.[0];
             if (!file) return;
-            const session = getSession();
+            const session = requireSession();
             if (!session) return;
             const text = await file.text();
             try {
@@ -232,11 +139,17 @@ export default function SociosPage() {
           data={socios}
           getRowId={(s) => s.id}
           loading={loading}
-          onEdit={onStartEdit}
+          onEdit={(s) => router.push(`/gestion/socios/nuevo?id=${s.id}`)}
           onDelete={onDelete}
           deleteConfirmMessage={(s) => `${t('admin.socios.eliminar')} ${s.nombre} ${s.apellido}?`}
         />
       </div>
+
+      <FloatingActionButton
+        onClick={() => router.push('/gestion/socios/nuevo')}
+        aria-label={t('admin.socios.createSocio')}
+        title={t('admin.socios.createSocio')}
+      />
     </div>
   );
 }

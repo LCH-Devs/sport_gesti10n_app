@@ -31,6 +31,11 @@
     "preferences": "Preferencias",
     "searchPlaceholder": "Buscar..."
   },
+  "notifications": {
+    "title": "Notificaciones",
+    "empty": "No tenés notificaciones",
+    "markAllRead": "Marcar todas como leídas"
+  },
   "nav": {
     "home": "Inicio",
     "socios": "Socios",
@@ -48,7 +53,7 @@
     "fuga": "Fuga"
   },
   "landing": {
-    "title": "AthlletiCorp - Gestión de Clubes Deportivos",
+    "title": "Kanri - Gestión de Clubes Deportivos",
     "subtitle": "Gestiona tus clubes deportivos como un profesional",
     "description": "Simplifica la gestión de equipos, controla eventos, administra miembros y haz crecer tu organización deportiva eficientemente",
     "startTrial": "Comenzar Prueba Gratis",
@@ -72,11 +77,13 @@
     "clubsWorldwide": "Clubes en Todo el Mundo",
     "connectClubs": "Conecta con organizaciones deportivas alrededor del mundo",
     "ready": "¿Listo para gestionar tus clubes deportivos?",
-    "joinHundreds": "Únete a cientos de organizaciones deportivas usando AthlletiCorp",
+    "joinHundreds": "Únete a cientos de organizaciones deportivas usando Kanri",
     "getStarted": "Solicitar demo",
     "requestDemo": "Solicitar demo",
     "signIn": "Iniciar sesión",
-    "contactTitle": "¿Querés ClubApp en tu club?",
+    "contactTabQuery": "¿Querés consultar algo?",
+    "contactTabJoin": "¿Querés sumarte?",
+    "contactTitle": "¿Querés Kanri en tu club?",
     "contactSubtitle": "Dejanos tus datos y te contactamos. Este sitio es solo para conocer el producto: el acceso de cada club llega por mail.",
     "contactName": "Nombre",
     "contactLastName": "Apellido",
@@ -86,11 +93,19 @@
     "contactMembers": "Cantidad de miembros",
     "contactSocios": "Cantidad de socios",
     "contactMessage": "Mensaje",
-    "contactSend": "Enviar solicitud",
+    "contactSend": "Enviar consulta",
+    "contactHint": "O escribinos a hola@clubapp.com.ar",
+    "joinTitle": "Sumá tu club a Kanri",
+    "joinSubtitle": "Contanos sobre tu club y te contactamos para darte de alta.",
+    "joinAdminName": "Nombre del administrador",
+    "joinClubName": "Nombre del club",
+    "joinEmail": "Email",
+    "joinPhone": "Teléfono de contacto",
+    "joinMembers": "Cantidad de miembros",
+    "joinSend": "Enviar solicitud",
     "contactSending": "Enviando…",
     "contactSuccess": "Solicitud enviada. Te vamos a contactar a la brevedad.",
-    "contactError": "No se pudo enviar la solicitud. Probá de nuevo.",
-    "contactHint": "O escribinos a hola@clubapp.com.ar"
+    "contactError": "No se pudo enviar la solicitud. Probá de nuevo."
   },
   "login": {
     "title": "Iniciar Sesión",
@@ -186,7 +201,19 @@
       "aprobada": "Aprobada",
       "cancelada": "Cancelada",
       "borradas": "Borrada"
-    }
+    },
+    "titleII": "Solicitudes Pendientes",
+    "subtitleII": "Revisá y resolvé las solicitudes de todas las instituciones",
+    "resolver": "Resolver",
+    "back": "Volver",
+    "institucion": "Institución",
+    "solicitante": "Solicitante",
+    "tipo": "Tipo",
+    "fecha": "Fecha",
+    "pendientes": "pendientes",
+    "aprobar": "Aprobar",
+    "rechazar": "Rechazar",
+    "noSolicitudes": "Sin solicitudes registradas"
   },
   "newClub": {
     "title": "Nueva Institución",
@@ -194,7 +221,8 @@
     "clubName": "Nombre del club",
     "adminEmail": "Email del administrador",
     "adminName": "Nombre del administrador",
-    "monthlyPrice": "Precio mensual (USD)",
+    "memberCount": "Cantidad de socios",
+    "memberCountHelp": "Precio aproximado a cobrar: {price} USD/mes",
     "create": "Crear club",
     "saving": "Creando…",
     "cancel": "Cancelar",
@@ -471,7 +499,7 @@
     "generalNews": "Noticias Generales",
     "featuredImage": "Imagen Destacada",
     "loadMore": "Cargar Más Noticias",
-    "featuredTitle": "AthlletiCorp Anuncia Reestructuración Mayor de Ligas Europeas",
+    "featuredTitle": "Kanri Anuncia Reestructuración Mayor de Ligas Europeas",
     "featuredDescription": "En un movimiento integral dirigido a aumentar la paridad competitiva, el órgano rector ha revelado un nuevo marco integral que afectará a todas las instituciones de primer nivel a partir de la próxima temporada.",
     "article1Title": "City United Asegura Victoria Histórica en Últimos Minutos",
     "article1Date": "Hace 2 horas",

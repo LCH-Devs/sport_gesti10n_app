@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { apiFetch, mediaUrl } from "@/lib/api";
+import { useTranslation } from "@/lib/useTranslation";
 
 type LandingClub = {
   id: number;
@@ -14,6 +15,7 @@ type LandingClub = {
 
 export function HeroSection() {
   const [clubs, setClubs] = useState<LandingClub[]>([]);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let cancelled = false;
@@ -39,27 +41,27 @@ export function HeroSection() {
   }, []);
 
   return (
-    <section className="max-w-7xl mx-auto px-6 py-20 md:py-32">
+    <section className="max-w-7xl mx-auto px-6 py-12 md:py-16">
       <div className="grid gap-10 lg:grid-cols-[minmax(0,1.1fr)_380px] lg:items-start">
         <div className="text-center lg:text-left">
           <h1 className="mb-6 text-5xl font-bold leading-tight text-slate-900 md:text-6xl">
-            Manage Your Sports Clubs Like a Pro
+            {t("landing.subtitle")}
           </h1>
           <p className="mb-8 max-w-3xl text-xl text-slate-600 md:text-2xl lg:mx-0 mx-auto">
-            Streamline team management, track events, manage members, and grow your sports organization efficiently.
+            {t("landing.description")}
           </p>
           <div className="flex flex-col justify-center gap-4 sm:flex-row lg:justify-start">
             <a
               href="#contacto"
               className="rounded-md bg-blue-600 px-8 py-3 text-center text-lg font-medium text-white transition-colors hover:bg-blue-700"
             >
-              Start Free Trial
+              {t("landing.startTrial")}
             </a>
             <a
               href="#contacto"
               className="rounded-md border-2 border-slate-300 bg-white px-8 py-3 text-center text-lg font-medium text-slate-900 transition-colors hover:bg-slate-50"
             >
-              Watch Demo
+              {t("landing.watchDemo")}
             </a>
           </div>
         </div>
@@ -118,15 +120,15 @@ export function HeroSection() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 pt-20 border-t border-slate-200">
         <div className="text-center">
           <div className="text-4xl font-bold text-blue-600 mb-2">500+</div>
-          <p className="text-slate-600">Sports Organizations</p>
+          <p className="text-slate-600">{t("landing.sportsOrgs")}</p>
         </div>
         <div className="text-center">
           <div className="text-4xl font-bold text-blue-600 mb-2">50K+</div>
-          <p className="text-slate-600">Active Members</p>
+          <p className="text-slate-600">{t("landing.activeMembers")}</p>
         </div>
         <div className="text-center">
           <div className="text-4xl font-bold text-blue-600 mb-2">1M+</div>
-          <p className="text-slate-600">Events Managed</p>
+          <p className="text-slate-600">{t("landing.eventsManaged")}</p>
         </div>
       </div>
     </section>

@@ -48,9 +48,9 @@ export default function LoginPage() {
     <main className="relative flex min-h-screen items-center justify-center bg-gradient-to-b from-sky-700 to-gray-600 px-4">
       <Link href="/" className="absolute left-6 top-6 flex items-center gap-2">
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-          <span className="text-sm font-bold text-white">A</span>
+          <span className="text-sm font-bold text-white">K</span>
         </div>
-        <span className="text-lg font-bold text-slate-900">AthlletiCorp</span>
+        <span className="text-lg font-bold text-slate-900">Kanri</span>
       </Link>
 
       <form
@@ -163,7 +163,7 @@ export default function LoginPage() {
  *         onSubmit={onSubmit}
  *         className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg"
  *       >
- *         <p className="text-sm font-medium text-slate-500">ClubApp Arg</p>
+ *         <p className="text-sm font-medium text-slate-500">Kanri</p>
  *         <h1 className="mt-1 text-2xl font-bold text-slate-900">
  *           Ingreso al club
  *         </h1>

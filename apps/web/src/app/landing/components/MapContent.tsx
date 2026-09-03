@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import L from 'leaflet';
+import { useTranslation } from '@/lib/useTranslation';
 
 // Mock club data - in production this would come from an API
 const mockClubs = [
@@ -15,6 +16,7 @@ const mockClubs = [
 export default function MapContent() {
   const [mapContainer, setMapContainer] = useState<HTMLDivElement | null>(null);
   const [isLocked, setIsLocked] = useState(true);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (!mapContainer) return;
@@ -36,7 +38,7 @@ export default function MapContent() {
           <h3 class="font-bold text-slate-900">${club.name}</h3>
           <p class="text-sm text-slate-600">${club.country}</p>
           <button class="mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-            View Club
+            Ver club
           </button>
         </div>
       `);
@@ -65,7 +67,7 @@ export default function MapContent() {
           aria-label="Activar mapa"
         >
           <span className="rounded-full bg-white/95 px-5 py-3 text-sm font-medium text-slate-900 shadow-lg">
-            Click para activar el mapa
+            Hacé clic para activar el mapa
           </span>
         </button>
       )}

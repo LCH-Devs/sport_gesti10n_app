@@ -18,9 +18,9 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
+              <span className="text-white font-bold text-sm">K</span>
             </div>
-            <h1 className="text-lg font-bold text-slate-900">AthlletiCorp</h1>
+            <h1 className="text-lg font-bold text-slate-900">Kanri</h1>
           </div>
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
@@ -68,7 +68,7 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
               <div>
-                <h3 className="font-bold mb-4">AthlletiCorp</h3>
+                <h3 className="font-bold mb-4">Kanri</h3>
                 <p className="text-slate-400 text-sm">{t("landing.title")}</p>
               </div>
               <div>
@@ -133,7 +133,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-400 text-sm">
-              <p>&copy; 2024 AthlletiCorp. All rights reserved.</p>
+              <p>&copy; 2026 Kanri. Todos los derechos reservados.</p>
             </div>
           </div>
         </footer>

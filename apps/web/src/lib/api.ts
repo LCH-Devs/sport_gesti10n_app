@@ -171,6 +171,15 @@ export function clearSession() {
   localStorage.removeItem(SESSION_KEY);
 }
 
+/** Sesión de staff, redirigiendo a /login si no existe (evita quedar trabado en "Cargando…"). */
+export function requireSession(): ClubSession | null {
+  const session = getSession();
+  if (!session && typeof window !== 'undefined') {
+    window.location.href = '/login';
+  }
+  return session;
+}
+
 export function savePlatformSession(session: PlatformSession) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(PLATFORM_SESSION_KEY, JSON.stringify(session));
@@ -244,6 +253,9 @@ export async function apiUpload<T>(
     },
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      handleExpiredSession(options.token);
+    }
     const data = await res.json().catch(() => ({}));
     const msg = Array.isArray(data.message)
       ? data.message.join(', ')
@@ -251,6 +263,33 @@ export async function apiUpload<T>(
     throw new Error(msg);
   }
   return res.json() as Promise<T>;
+}
+
+function loginPathFor(kind: 'admin' | 'socio' | 'platform'): string {
+  if (kind === 'platform') return '/supercalifragilisticoespiralidoso/acceso';
+  if (kind === 'socio') return '/';
+  return '/login';
+}
+
+/** Sesión vencida o revocada (401 en un request autenticado): la limpia y manda al login del canal. */
+function handleExpiredSession(token: string | undefined) {
+  if (typeof window === 'undefined' || !token) return;
+  let kind: 'admin' | 'socio' | 'platform' | null = null;
+  if (getSession()?.access_token === token) {
+    clearSession();
+    kind = 'admin';
+  } else if (getSocioSession()?.access_token === token) {
+    clearSocioSession();
+    kind = 'socio';
+  } else if (getPlatformSession()?.access_token === token) {
+    clearPlatformSession();
+    kind = 'platform';
+  }
+  if (!kind) return;
+  const path = loginPathFor(kind);
+  if (window.location.pathname !== path) {
+    window.location.href = path;
+  }
 }
 
 export async function apiFetch<T>(
@@ -269,6 +308,9 @@ export async function apiFetch<T>(
     },
   });
   if (!res.ok) {
+    if (res.status === 401) {
+      handleExpiredSession(token);
+    }
     const body = await res.json().catch(() => ({}));
     const msg = Array.isArray(body.message)
       ? body.message.join(', ')

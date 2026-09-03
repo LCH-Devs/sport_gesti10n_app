@@ -1,6 +1,7 @@
 interface FloatingActionButtonProps {
   onClick: () => void;
   'aria-label': string;
+  title?: string;
   className?: string;
 }
 
@@ -13,7 +14,8 @@ export function FloatingActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`fixed bottom-8 right-8 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg hover:bg-blue-700 transition flex items-center justify-center group ${className}`}
+      style={{ backgroundColor: 'var(--club-primary, #2563eb)' }}
+      className={`fixed bottom-8 right-8 w-14 h-14 text-white rounded-full shadow-lg transition hover:brightness-110 flex items-center justify-center group ${className}`}
       {...rest}
     >
       <svg

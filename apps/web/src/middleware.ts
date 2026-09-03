@@ -4,7 +4,7 @@ export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const privatePrefix = '/supercalifragilisticoespiralidoso';
   const adminPrefix = `${privatePrefix}/gestion`;
-  const publicAdminRoutes = ['/dashboard', '/actividades', '/espacios', '/socios', '/noticias', '/cobros', '/usuarios', '/liquidaciones'];
+  const publicAdminRoutes = ['/dashboard', '/actividades', '/horarios', '/espacios', '/reservas', '/socios', '/familias', '/noticias', '/torneos', '/cobros', '/usuarios', '/liquidaciones', '/config'];
   if (pathname === adminPrefix || pathname.startsWith(`${adminPrefix}/`)) {
     const url = request.nextUrl.clone();
     url.pathname = `/dashboard${pathname.slice(adminPrefix.length)}`;

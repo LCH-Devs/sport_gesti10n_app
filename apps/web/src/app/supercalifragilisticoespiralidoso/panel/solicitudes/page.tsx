@@ -10,8 +10,7 @@ type EstadoSolicitud =
   | "pendiente"
   | "trial"
   | "aprobada"
-  | "cancelada"
-  | "borradas";
+  | "cancelada";
 
 type Solicitud = {
   id: number;
@@ -34,7 +33,6 @@ const ESTADOS: EstadoSolicitud[] = [
   "trial",
   "aprobada",
   "cancelada",
-  "borradas",
 ];
 
 function fechaDeEstado(row: Solicitud): string {
@@ -45,8 +43,6 @@ function fechaDeEstado(row: Solicitud): string {
         ? row.fecha_aprobada
         : row.estado === "cancelada"
           ? row.fecha_cancelada
-          : row.estado === "borradas"
-            ? row.fecha_eliminada
             : row.fecha_solicitud;
   if (!iso) return "—";
   return new Date(iso).toLocaleString("es-AR", {
@@ -61,7 +57,6 @@ function badgeVariant(
   if (estado === "aprobada") return "success";
   if (estado === "trial") return "info";
   if (estado === "cancelada") return "warning";
-  if (estado === "borradas") return "error";
   return "pending";
 }
 
@@ -102,9 +97,6 @@ export default function SolicitudesPage() {
     if (next === row.estado) return;
     const session = getPlatformSession();
     if (!session) return;
-    if (next === "borradas" && !window.confirm(t("solicitudes.confirmDelete"))) {
-      return;
-    }
     setSavingId(row.id);
     setError("");
     try {
@@ -165,14 +157,9 @@ export default function SolicitudesPage() {
           <select
             value={estado}
             onChange={(e) => setEstado(e.target.value as EstadoSolicitud | "")}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="select-field"
           >
             <option value="">{t("solicitudes.all")}</option>
-            {ESTADOS.filter((s) => s !== "borradas").map((s) => (
-              <option key={s} value={s}>
-                {t(`solicitudes.estado.${s}`)}
-              </option>
-            ))}
           </select>
           <Button size="md" variant="secondary" onClick={() => void load()}>
             {t("common.refresh")}
@@ -195,7 +182,7 @@ export default function SolicitudesPage() {
               onChange={(e) =>
                 void changeEstado(r, e.target.value as EstadoSolicitud)
               }
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="select-field-sm"
             >
               {ESTADOS.map((s) => (
                 <option key={s} value={s}>

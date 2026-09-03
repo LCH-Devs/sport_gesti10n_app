@@ -1,6 +1,6 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
+import { apiFetch, requireSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
 
@@ -29,7 +29,7 @@ export default function LiquidacionesPage() {
   const [form, setForm] = useState({ mes: mesDefault(), profe_id: '' });
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setLoading(true);
     setError('');
@@ -59,7 +59,7 @@ export default function LiquidacionesPage() {
 
   async function onCerrarMes(e: FormEvent) {
     e.preventDefault();
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setMsg('');
     try {
@@ -80,7 +80,7 @@ export default function LiquidacionesPage() {
   }
 
   async function marcarPagada(id: number) {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     try {
       await apiFetch(`/liquidaciones-profe/${id}/marcar-pagada`, {
@@ -126,7 +126,7 @@ export default function LiquidacionesPage() {
         <label className="text-sm">
           {t('admin.liquidaciones.profesor')}
           <select
-            className="mt-1 block min-w-[200px] rounded-lg border px-3 py-2"
+            className="select-field mt-1 block min-w-[200px]"
             value={form.profe_id}
             onChange={(e) =>
               setForm((f) => ({ ...f, profe_id: e.target.value }))

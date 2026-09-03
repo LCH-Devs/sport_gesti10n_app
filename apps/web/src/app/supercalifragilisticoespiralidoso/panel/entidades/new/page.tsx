@@ -15,8 +15,20 @@ export default function NewClubPage() {
     nombre: '',
     admin_email: '',
     admin_nombre: '',
-    precio_usd_mes: '',
+    cantidad_miembros: '',
   });
+
+  function precioPorCantidadMiembros(cantidad: number): number {
+    if (cantidad <= 50) return 15;
+    if (cantidad <= 100) return 30;
+    return 45;
+  }
+
+  const cantidadMiembrosNum = Number(form.cantidad_miembros);
+  const precioEstimado =
+    form.cantidad_miembros && cantidadMiembrosNum > 0
+      ? precioPorCantidadMiembros(cantidadMiembrosNum)
+      : null;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -35,7 +47,7 @@ export default function NewClubPage() {
           nombre: form.nombre,
           admin_email: form.admin_email,
           admin_nombre: form.admin_nombre || undefined,
-          precio_usd_mes: Number(form.precio_usd_mes),
+          precio_usd_mes: precioPorCantidadMiembros(cantidadMiembrosNum),
         }),
       });
       router.push('/supercalifragilisticoespiralidoso/panel');
@@ -88,16 +100,21 @@ export default function NewClubPage() {
               />
             </label>
             <label className="text-sm sm:col-span-2">
-              {t('newClub.monthlyPrice')}
+              {t('newClub.memberCount')}
               <input
                 type="number"
-                min={0}
-                step="0.01"
+                min={1}
+                step="1"
                 className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={form.precio_usd_mes}
-                onChange={(e) => setForm({ ...form, precio_usd_mes: e.target.value })}
+                value={form.cantidad_miembros}
+                onChange={(e) => setForm({ ...form, cantidad_miembros: e.target.value })}
                 required
               />
+              {precioEstimado !== null && (
+                <p className="mt-1 text-xs text-slate-500">
+                  {t('newClub.memberCountHelp').replace('{price}', String(precioEstimado))}
+                </p>
+              )}
             </label>
 
             <div className="sm:col-span-2 flex gap-3 mt-2">

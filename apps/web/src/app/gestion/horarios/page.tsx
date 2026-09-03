@@ -1,8 +1,11 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { apiFetch, requireSession } from '@/lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
+import { ActividadesHorariosTabs } from '../_components/ActividadesHorariosTabs';
+import { FloatingActionButton } from '@/components/common';
 
 type Horario = {
   id: number;
@@ -16,18 +19,13 @@ type Horario = {
 
 export default function HorariosPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [items, setItems] = useState<Horario[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    titulo: '',
-    dias: 'lun,mie,vie',
-    hora_inicio: '18:00',
-    hora_fin: '19:30',
-  });
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setLoading(true);
     setError('');
@@ -48,31 +46,8 @@ export default function HorariosPage() {
     void load();
   }, [load]);
 
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    const session = getSession();
-    if (!session) return;
-    try {
-      await apiFetch('/horarios', {
-        method: 'POST',
-        token: session.access_token,
-        clubSlug: session.club.slug,
-        body: JSON.stringify(form),
-      });
-      setForm({
-        titulo: '',
-        dias: 'lun,mie,vie',
-        hora_inicio: '18:00',
-        hora_fin: '19:30',
-      });
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
-    }
-  }
-
   async function onDelete(id: number) {
-    const session = getSession();
+    const session = requireSession();
     if (!session || !confirm('¿Eliminar horario?')) return;
     try {
       await apiFetch(`/horarios/${id}`, {
@@ -87,67 +62,19 @@ export default function HorariosPage() {
   }
 
   return (
-    <div>
+    <div className="relative">
       <h2 className="text-2xl font-bold">{t('admin.horarios.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
         {t('admin.horarios.subtitle')}
       </p>
+
+      <div className="mt-6">
+        <ActividadesHorariosTabs />
+      </div>
+
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <form
-        onSubmit={onCreate}
-        className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
-      >
-        <h3 className="sm:col-span-2 font-semibold">{t('admin.socios.quickCreate')}</h3>
-        <label className="text-sm sm:col-span-2">
-          {t('admin.horarios.titulo')}
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-            value={form.titulo}
-            onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))}
-            required
-          />
-        </label>
-        <label className="text-sm">
-          {t('admin.horarios.dias')}
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-            value={form.dias}
-            onChange={(e) => setForm((f) => ({ ...f, dias: e.target.value }))}
-            required
-          />
-        </label>
-        <label className="text-sm">
-          {t('admin.horarios.horaInicio')}
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-            value={form.hora_inicio}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, hora_inicio: e.target.value }))
-            }
-            required
-          />
-        </label>
-        <label className="text-sm">
-          {t('admin.horarios.horaFin')}
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-            value={form.hora_fin}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, hora_fin: e.target.value }))
-            }
-            required
-          />
-        </label>
-        <button
-          type="submit"
-          className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
-        >
-          {t('admin.horarios.createHorario')}
-        </button>
-      </form>
-
-      <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
           <p className="p-4 text-slate-500">{t('common.loading')}</p>
         ) : (
@@ -192,6 +119,12 @@ export default function HorariosPage() {
           </table>
         )}
       </div>
+
+      <FloatingActionButton
+        onClick={() => router.push('/horarios/nuevo')}
+        aria-label={t('admin.horarios.createHorario')}
+        title={t('admin.horarios.createHorario')}
+      />
     </div>
   );
 }

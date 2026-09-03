@@ -30,6 +30,7 @@ export function persistLogin(
   paths?: { staff?: string; member?: string; onboarding?: string; changePassword?: string },
 ) {
   const memberHome = paths?.member || '/socio';
+  const onboarding = paths?.onboarding || '/gestion/onboarding';
   if (isStaffRole(data.role) && data.admin) {
     const session: ClubSession = {
       access_token: data.access_token,
@@ -69,8 +70,6 @@ export function enterAfterLogin(
   routerPush: (href: string) => void,
   paths?: { staff?: string; member?: string; onboarding?: string; changePassword?: string },
 ) {
-  const { kind, session, next } = persistLogin(data, paths);
-  if (!handoffSessionToClub(data.club.slug, next, kind, session)) {
-    routerPush(next);
-  }
+  const { next } = persistLogin(data, paths);
+  routerPush(next);
 }
