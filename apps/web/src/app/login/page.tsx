@@ -3,7 +3,8 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiFetch, isStaffRole, LoginResult, saveSession } from "@/lib/api";
+import { apiFetch, isStaffRole, LoginResult } from "@/lib/api";
+import { enterAfterLogin } from "@/lib/apply-login";
 import { useTranslation } from "@/lib/useTranslation";
 
 export default function LoginPage() {
@@ -28,16 +29,6 @@ export default function LoginPage() {
       if (!isStaffRole(data.role) || !data.admin) {
         throw new Error("Este acceso es solo para la comisión del club.");
       }
-      saveSession({
-        access_token: data.access_token,
-        role: data.role,
-        cuentas: data.cuentas,
-        must_complete_onboarding: data.must_complete_onboarding,
-        must_change_password: data.must_change_password,
-        impersonated_by_platform: data.impersonated_by_platform,
-        admin: data.admin,
-        club: data.club,
-      });
       window.dispatchEvent(new Event("club-session-changed"));
       const next = data.must_complete_onboarding
         ? "/gestion/onboarding"
@@ -45,6 +36,7 @@ export default function LoginPage() {
           ? "/gestion/cambiar-clave"
           : "/dashboard";
       router.push(next);
+      enterAfterLogin(data, (href) => router.push(href));
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t("messages.errorCreating"),
@@ -61,9 +53,9 @@ export default function LoginPage() {
         className="absolute left-6 top-6 flex items-center gap-2"
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600">
-          <span className="text-sm font-bold text-white">A</span>
+          <span className="text-sm font-bold text-white">K</span>
         </div>
-        <span className="text-lg font-bold text-slate-900">AthlletiCorp</span>
+        <span className="text-lg font-bold text-slate-900">Kanri</span>
       </Link>
 
       <form
@@ -176,7 +168,7 @@ export default function LoginPage() {
  *         onSubmit={onSubmit}
  *         className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg"
  *       >
- *         <p className="text-sm font-medium text-slate-500">ClubApp Arg</p>
+ *         <p className="text-sm font-medium text-slate-500">Kanri</p>
  *         <h1 className="mt-1 text-2xl font-bold text-slate-900">
  *           Ingreso al club
  *         </h1>

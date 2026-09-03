@@ -6,8 +6,12 @@ import {
   UserGroupIcon,
   DocumentTextIcon,
   ExclamationTriangleIcon,
+  PauseCircleIcon,
+  PlayCircleIcon,
+  TrashIcon,
+  LinkIcon,
 } from "@heroicons/react/24/outline";
-import { Header, Card, Button } from "@/components/common";
+import { Header, Card, Badge, Button } from "@/components/common";
 import { apiFetch, getPlatformSession } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -18,11 +22,21 @@ type AdminUser = {
   activo: boolean;
 };
 
+type ClubRow = {
+  id: number;
+  nombre: string;
+  activo: boolean;
+  precio_usd_mes: number;
+  ciudad: string | null;
+  provincia: string | null;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const { t } = useTranslation();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [clubs, setClubs] = useState<ClubRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -35,16 +49,20 @@ export default function DashboardPage() {
     setLoading(true);
     setError("");
     try {
-      const [admins, pendientes] = await Promise.all([
+      const [admins, pendientes, clubsData] = await Promise.all([
         apiFetch<AdminUser[]>("/platform/admins", {
           token: session.access_token,
         }),
         apiFetch<{ count: number }>("/platform/solicitudes/pendientes/count", {
           token: session.access_token,
         }),
+        apiFetch<ClubRow[]>("/platform/clubs", {
+          token: session.access_token,
+        }),
       ]);
       setUsers(admins);
       setPendingCount(pendientes.count);
+      setClubs(clubsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("messages.errorLoading"));
     } finally {
@@ -55,6 +73,34 @@ export default function DashboardPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function clubAction(club: ClubRow, action: "suspend" | "delete") {
+    const session = getPlatformSession();
+    if (!session) return;
+    if (action === "delete") {
+      if (
+        !window.confirm(
+          `¿Dar de baja ${club.nombre}? El club se suspende y deja de operar. Los datos se conservan y el email del admin queda libre para otro club.`,
+        )
+      )
+        return;
+      await apiFetch(`/platform/clubs/${club.id}`, {
+        method: "DELETE",
+        token: session.access_token,
+      });
+    } else {
+      await apiFetch(`/platform/clubs/${club.id}`, {
+        method: "PATCH",
+        token: session.access_token,
+        body: JSON.stringify({ activo: club.activo === false }),
+      });
+    }
+    await load();
+  }
+
+  function generarLinkPago(_club: ClubRow) {
+    window.alert("Función en desarrollo");
+  }
 
   const metrics = [
     {
@@ -89,7 +135,9 @@ export default function DashboardPage() {
             variant="secondary"
             size="md"
             onClick={() =>
-              router.push("/supercalifragilisticoespiralidoso/panel/entidades/new")
+              router.push(
+                "/supercalifragilisticoespiralidoso/panel/entidades/new",
+              )
             }
           >
             {t("dashboard.addInstitution")}
@@ -98,9 +146,7 @@ export default function DashboardPage() {
       </Header>
 
       <div className="p-6">
-        {error && (
-          <p className="mb-4 text-sm text-red-600">{error}</p>
-        )}
+        {error && <p className="mb-4 text-sm text-red-600">{error}</p>}
         {loading && (
           <p className="mb-4 text-sm text-slate-500">{t("common.loading")}</p>
         )}
@@ -132,18 +178,19 @@ export default function DashboardPage() {
                     />
                   </div>
                 </div>
-                {metric.change === "solicitudes" ? (
+
+                {metric.change === "solicitudes" && (
                   <Button
-                    size="sm"
                     onClick={() =>
                       router.push(
                         "/supercalifragilisticoespiralidoso/panel/solicitudes",
                       )
                     }
                   >
-                    {t("dashboard.resolve")}
+                    {t("solicitudes.resolver")}
                   </Button>
-                ) : (
+                )}
+                {metric.change !== "solicitudes" && (
                   <p className="text-sm text-slate-600">{metric.change}</p>
                 )}
               </Card>
@@ -151,37 +198,100 @@ export default function DashboardPage() {
           })}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">
-              {t("dashboard.monthlyQuotas")}
-            </h3>
-            <p className="text-4xl font-bold text-blue-600 mb-2">$1.2M</p>
-            <p className="text-sm text-slate-600">
-              {t("dashboard.goalPercentage")}
-            </p>
-          </Card>
-
-          <Card>
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">
-              {t("dashboard.pendingPayments")}
-            </h3>
-            <p className="text-4xl font-bold text-slate-900 mb-4">$345K</p>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>{t("dashboard.exampleClub1")}</span>
-                <span className="text-red-600">$12,000</span>
-              </div>
-              <div className="flex justify-between">
-                <span>{t("dashboard.exampleClub2")}</span>
-                <span className="text-red-600">$8,500</span>
-              </div>
+        <Card className="mt-6">
+          <h3 className="text-lg font-semibold text-slate-900 mb-4">
+            {t("clubs.title")}
+          </h3>
+          {clubs.length === 0 && !loading ? (
+            <p className="text-sm text-slate-500">{t("messages.noData")}</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                    <th className="py-2 pr-4">Nombre</th>
+                    <th className="py-2 pr-4">Ubicación</th>
+                    <th className="py-2 pr-4">Estado</th>
+                    <th className="py-2 pr-4">Cuota</th>
+                    <th className="py-2 pr-4">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clubs.map((club) => (
+                    <tr key={club.id} className="border-b border-slate-100">
+                      <td className="py-2 pr-4 font-medium text-slate-900">
+                        {club.nombre}
+                      </td>
+                      <td className="py-2 pr-4 text-slate-600">
+                        {[club.ciudad, club.provincia]
+                          .filter(Boolean)
+                          .join(", ") || "-"}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <Badge
+                          label={club.activo ? t("clubs.active") : t("clubs.inactive")}
+                          variant={club.activo ? "success" : "error"}
+                        />
+                      </td>
+                      <td className="py-2 pr-4 text-slate-600">
+                        USD {club.precio_usd_mes}
+                      </td>
+                      <td className="py-2 pr-4">
+                        <div className="flex gap-1">
+                          <button
+                            type="button"
+                            title={club.activo ? "Suspender" : "Reactivar"}
+                            aria-label={club.activo ? "Suspender" : "Reactivar"}
+                            onClick={() => void clubAction(club, "suspend")}
+                            className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-amber-600"
+                          >
+                            {club.activo ? (
+                              <PauseCircleIcon className="w-5 h-5" />
+                            ) : (
+                              <PlayCircleIcon className="w-5 h-5" />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            title="Eliminar"
+                            aria-label="Eliminar"
+                            onClick={() => void clubAction(club, "delete")}
+                            className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-red-600"
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Generar link de pago"
+                            aria-label="Generar link de pago"
+                            onClick={() => generarLinkPago(club)}
+                            className="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+                          >
+                            <LinkIcon className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-slate-200 font-semibold text-slate-900">
+                    <td className="py-2 pr-4" colSpan={3}>
+                      Total
+                    </td>
+                    <td className="py-2 pr-4">
+                      USD{" "}
+                      {clubs
+                        .reduce((sum, club) => sum + club.precio_usd_mes, 0)
+                        .toLocaleString("es-AR")}
+                    </td>
+                    <td className="py-2 pr-4" />
+                  </tr>
+                </tfoot>
+              </table>
             </div>
-            <button className="text-blue-600 text-sm font-medium mt-4">
-              {t("dashboard.viewAll")}
-            </button>
-          </Card>
-        </div>
+          )}
+        </Card>
       </div>
     </div>
   );

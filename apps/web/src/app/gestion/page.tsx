@@ -1,6 +1,6 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
+import { apiFetch, requireSession } from '@/lib/api';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -42,7 +42,7 @@ export default function AdminHomePage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setLoading(true);
     setError('');

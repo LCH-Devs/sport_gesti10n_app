@@ -6,14 +6,14 @@ import { Header, Badge, Button, DataTable, type Column } from "@/components/comm
 import { apiFetch, getPlatformSession } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 
+type TabId =  "" | "pendiente" | "trial" | "aprobada" | "cancelada";
+
 type EstadoSolicitud =
   | "pendiente"
   | "trial"
   | "aprobada"
   | "cancelada"
   | "borradas";
-
-type TabId = "" | Exclude<EstadoSolicitud, "borradas">;
 
 type Solicitud = {
   id: number;
@@ -38,6 +38,7 @@ const ESTADOS: EstadoSolicitud[] = [
   "cancelada",
 ];
 
+
 const TABS: TabId[] = ["", "pendiente", "trial", "aprobada", "cancelada"];
 const TRIAL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -49,8 +50,6 @@ function fechaDeEstado(row: Solicitud): string {
         ? row.fecha_aprobada
         : row.estado === "cancelada"
           ? row.fecha_cancelada
-          : row.estado === "borradas"
-            ? row.fecha_eliminada
             : row.fecha_solicitud;
   if (!iso) return "—";
   return new Date(iso).toLocaleString("es-AR", {
@@ -78,7 +77,6 @@ function badgeVariant(
   if (estado === "aprobada") return "success";
   if (estado === "trial") return "info";
   if (estado === "cancelada") return "warning";
-  if (estado === "borradas") return "error";
   return "pending";
 }
 
@@ -257,7 +255,7 @@ export default function SolicitudesPage() {
               onChange={(e) =>
                 void changeEstado(r, e.target.value as EstadoSolicitud)
               }
-              className="rounded-md border border-slate-300 px-2 py-1 text-sm"
+              className="select-field-sm"
             >
               {ESTADOS.map((s) => (
                 <option key={s} value={s}>

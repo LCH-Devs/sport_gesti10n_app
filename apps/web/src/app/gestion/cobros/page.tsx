@@ -1,6 +1,6 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
+import { apiFetch, requireSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
 
@@ -44,7 +44,7 @@ export default function CobrosPage() {
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     try {
       const data = await apiFetch<Resumen>(
@@ -64,7 +64,7 @@ export default function CobrosPage() {
 
   async function onGenerar(e: FormEvent) {
     e.preventDefault();
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setLoading(true);
     setMsg('');
@@ -92,7 +92,7 @@ export default function CobrosPage() {
   }
 
   async function marcarPagado(id: number) {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     try {
       await apiFetch(`/pagos/${id}/marcar-manual`, {

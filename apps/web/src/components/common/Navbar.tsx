@@ -4,6 +4,7 @@ import {
   Bars3Icon,
   BellIcon,
   ChevronDownIcon,
+  Cog6ToothIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
 import React from "react";
@@ -25,16 +26,59 @@ interface NavbarProps {
   onMenuClick?: () => void;
 }
 
+interface NotificationItem {
+  id: string;
+  title: string;
+  description: string;
+  timeAgo: string;
+  read: boolean;
+}
+
+const MOCK_NOTIFICATIONS: NotificationItem[] = [
+  {
+    id: "1",
+    title: "Nueva reserva confirmada",
+    description: "Se confirmó una reserva de cancha para hoy a las 18:00.",
+    timeAgo: "hace 13 horas",
+    read: false,
+  },
+  {
+    id: "2",
+    title: "Pago recibido",
+    description: "Un socio abonó la cuota mensual correspondiente a este mes.",
+    timeAgo: "hace 16 horas",
+    read: false,
+  },
+  {
+    id: "3",
+    title: "Nueva actividad creada",
+    description: "Se agregó una nueva actividad al calendario del club.",
+    timeAgo: "hace 1 día",
+    read: false,
+  },
+  {
+    id: "4",
+    title: "Solicitud de socio pendiente",
+    description: "Hay una nueva solicitud de alta esperando aprobación.",
+    timeAgo: "hace 4 días",
+    read: true,
+  },
+];
+
 export function Navbar({ onMenuClick }: NavbarProps) {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
-  const [clubName, setClubName] = React.useState("ClubApp Arg");
+  const [showNotifications, setShowNotifications] = React.useState(false);
+  const [notifications, setNotifications] =
+    React.useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
+  const notificationsRef = React.useRef<HTMLDivElement>(null);
+  const [clubName, setClubName] = React.useState("Kanri");
   const [clubLogoUrl, setClubLogoUrl] = React.useState<string | null>(null);
   const [userName, setUserName] = React.useState("User");
   const [profileHref, setProfileHref] = React.useState(
-    "/gestion/perfil",
+    "/gestion/config?tab=perfil",
   );
   const [preferencesHref, setPreferencesHref] = React.useState(
-    "/gestion/preferencias",
+    "/gestion/config?tab=preferencias",
   );
   const router = useRouter();
   const pathname = usePathname();
@@ -50,7 +94,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
       );
 
       if (isPlatformRoute) {
-        setClubName("ClubApp Arg");
+        setClubName("Kanri");
         setClubLogoUrl(null);
         setUserName(platformSession?.platform_admin.nombre || "SuperAdmin");
         setProfileHref("/supercalifragilisticoespiralidoso/panel/perfil");
@@ -58,11 +102,11 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           "/supercalifragilisticoespiralidoso/panel/preferencias",
         );
       } else {
-        setClubName(session?.club.nombre || "ClubApp Arg");
+        setClubName(session?.club.nombre || "Kanri");
         setClubLogoUrl(session?.club.logo_url || null);
         setUserName(session?.admin.nombre || socioSession?.socio.nombre || "User");
-        setProfileHref("/gestion/perfil");
-        setPreferencesHref("/gestion/preferencias");
+        setProfileHref("/gestion/config?tab=perfil");
+        setPreferencesHref("/gestion/config?tab=preferencias");
       }
     }
 
@@ -71,6 +115,25 @@ export function Navbar({ onMenuClick }: NavbarProps) {
     return () =>
       window.removeEventListener("club-session-changed", syncSession);
   }, [pathname]);
+
+  React.useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  function markAllRead() {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  }
 
   const userInitial = userName.charAt(0).toUpperCase() || "U";
 
@@ -139,10 +202,73 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           </button>
 
           {/* Notifications */}
-          <button className="relative p-2 hover:bg-slate-100 rounded-md transition-colors">
-            <BellIcon className="w-5 h-5 text-slate-700" />
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-          </button>
+          <div className="relative" ref={notificationsRef}>
+            <button
+              onClick={() => setShowNotifications((v) => !v)}
+              className="relative p-2 hover:bg-slate-100 rounded-md transition-colors"
+              aria-label={t("notifications.title")}
+            >
+              <BellIcon className="w-5 h-5 text-slate-700" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              )}
+            </button>
+
+            {showNotifications && (
+              <div className="absolute right-0 mt-2 w-80 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden z-50">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+                  <h2 className="text-sm font-semibold text-white">
+                    {t("notifications.title")}
+                  </h2>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={markAllRead}
+                      className="p-1.5 hover:bg-slate-700 rounded-md transition-colors"
+                      aria-label={t("notifications.markAllRead")}
+                      title={t("notifications.markAllRead")}
+                    >
+                      <Cog6ToothIcon className="w-4 h-4 text-slate-300" />
+                    </button>
+                    <div className="p-1.5 bg-red-500 rounded-full">
+                      <BellIcon className="w-3.5 h-3.5 text-white" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <p className="px-4 py-6 text-sm text-slate-400 text-center">
+                      {t("notifications.empty")}
+                    </p>
+                  ) : (
+                    notifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className="flex gap-3 px-4 py-3 border-b border-slate-700/60 last:border-b-0 hover:bg-slate-700/40 transition-colors"
+                      >
+                        <span
+                          className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                            notification.read ? "bg-transparent" : "bg-blue-400"
+                          }`}
+                        ></span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white truncate">
+                            {notification.title}
+                          </p>
+                          <p className="text-sm text-slate-300 mt-0.5 line-clamp-2">
+                            {notification.description}
+                          </p>
+                          <p className="text-xs text-slate-500 mt-1">
+                            {notification.timeAgo}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* User Profile Dropdown */}
           <div className="relative">

@@ -1,6 +1,7 @@
-/** TTL del JWT de club y plataforma. El front guarda el token en localStorage. */
-export const JWT_EXPIRES_IN = '8h';
-export const JWT_EXPIRES_SECONDS = 8 * 60 * 60;
+/** TTL del JWT de club y plataforma. El front guarda el token en localStorage.
+ *  Se usa un TTL largo para que la sesión se mantenga activa salvo cierre de sesión explícito. */
+export const JWT_EXPIRES_IN = '30d';
+export const JWT_EXPIRES_SECONDS = 30 * 24 * 60 * 60;
 
 export const LOGIN_MAX_ATTEMPTS = 5;
 export const LOGIN_LOCK_MS = 15 * 60 * 1000;

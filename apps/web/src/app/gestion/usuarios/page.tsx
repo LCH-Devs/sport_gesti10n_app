@@ -1,8 +1,10 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { apiFetch, requireSession } from '@/lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
+import { FloatingActionButton } from '@/components/common';
 
 type AdminUser = {
   id: number;
@@ -13,17 +15,12 @@ type AdminUser = {
 
 export default function UsuariosPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    email: '',
-    nombre: '',
-    password: '',
-    rol: 'admin',
-  });
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     try {
       const data = await apiFetch<AdminUser[]>('/admins', {
@@ -41,26 +38,8 @@ export default function UsuariosPage() {
     void load();
   }, [load]);
 
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    const session = getSession();
-    if (!session) return;
-    try {
-      await apiFetch('/admins', {
-        method: 'POST',
-        token: session.access_token,
-        clubSlug: session.club.slug,
-        body: JSON.stringify(form),
-      });
-      setForm({ email: '', nombre: '', password: '', rol: 'admin' });
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
-    }
-  }
-
   async function onDelete(id: number) {
-    const session = getSession();
+    const session = requireSession();
     if (!session || !confirm('¿Eliminar usuario?')) return;
     try {
       await apiFetch(`/admins/${id}`, {
@@ -75,68 +54,12 @@ export default function UsuariosPage() {
   }
 
   return (
-    <div>
+    <div className="relative">
       <h2 className="text-2xl font-bold">{t('admin.usuarios.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
         {t('admin.usuarios.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
-      <form
-        onSubmit={onCreate}
-        className="mt-6 grid gap-3 rounded-xl border bg-white p-4 sm:grid-cols-2"
-      >
-        <h3 className="sm:col-span-2 font-semibold">{t('admin.usuarios.alta')}</h3>
-        <label className="text-sm">
-          {t('admin.usuarios.nombre')}
-          <input
-            className="mt-1 w-full rounded-lg border px-3 py-2"
-            value={form.nombre}
-            onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-            required
-          />
-        </label>
-        <label className="text-sm">
-          {t('admin.usuarios.email')}
-          <input
-            type="email"
-            className="mt-1 w-full rounded-lg border px-3 py-2"
-            value={form.email}
-            onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-            required
-          />
-        </label>
-        <label className="text-sm">
-          {t('admin.usuarios.password')}
-          <input
-            type="password"
-            className="mt-1 w-full rounded-lg border px-3 py-2"
-            value={form.password}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, password: e.target.value }))
-            }
-            required
-            minLength={4}
-          />
-        </label>
-        <label className="text-sm">
-          {t('admin.usuarios.rol')}
-          <select
-            className="mt-1 w-full rounded-lg border px-3 py-2"
-            value={form.rol}
-            onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}
-          >
-            <option value="admin">{t('dashboard.admin')}</option>
-            <option value="entrada">{t('dashboard.entrada')}</option>
-          </select>
-        </label>
-        <button
-          type="submit"
-          className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
-        >
-          {t('admin.usuarios.createUsuario')}
-        </button>
-      </form>
 
       <div className="mt-8 overflow-x-auto rounded-xl border bg-white">
         <table className="min-w-full text-left text-sm">
@@ -168,6 +91,12 @@ export default function UsuariosPage() {
           </tbody>
         </table>
       </div>
+
+      <FloatingActionButton
+        onClick={() => router.push('/gestion/usuarios/nuevo')}
+        aria-label={t('admin.usuarios.createUsuario')}
+        title={t('admin.usuarios.createUsuario')}
+      />
     </div>
   );
 }

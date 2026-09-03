@@ -1,6 +1,6 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
+import { apiFetch, requireSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
 
@@ -49,7 +49,7 @@ export default function TorneosPage() {
   });
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setLoading(true);
     setError('');
@@ -67,7 +67,7 @@ export default function TorneosPage() {
   }, []);
 
   const loadDetalle = useCallback(async (id: number) => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     try {
       const [ps, tb] = await Promise.all([
@@ -97,7 +97,7 @@ export default function TorneosPage() {
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     try {
       await apiFetch('/torneos', {
@@ -115,7 +115,7 @@ export default function TorneosPage() {
 
   async function onCreatePartido(e: FormEvent) {
     e.preventDefault();
-    const session = getSession();
+    const session = requireSession();
     if (!session || selectedId == null) return;
     try {
       await apiFetch(`/torneos/${selectedId}/partidos`, {

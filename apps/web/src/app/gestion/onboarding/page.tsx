@@ -6,6 +6,7 @@ import {
   apiFetch,
   applyClubTheme,
   getSession,
+  requireSession,
   saveSession,
 } from '@/lib/api';
 import { ClubColorFields } from '@/components/ClubColorFields';
@@ -27,7 +28,6 @@ export default function OnboardingPage() {
     cuit_cuil: '',
     provincia: '',
     ciudad: '',
-    direccion: '',
     telefono_club: '',
     logo_url: '',
     color_primario: '#2563eb',
@@ -42,6 +42,8 @@ export default function OnboardingPage() {
     localidad?: { id: string; nombre: string };
     calle?: { id: string; nombre: string };
   } | null>(null);
+  const [calleNombre, setCalleNombre] = useState('');
+  const [altura, setAltura] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -52,7 +54,7 @@ export default function OnboardingPage() {
       return;
     }
     if (!s.must_complete_onboarding) {
-      router.replace('/gestion');
+      router.replace('/dashboard');
       return;
     }
     setForm((f) => ({
@@ -85,7 +87,7 @@ export default function OnboardingPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
 
     setError('');
@@ -122,6 +124,8 @@ export default function OnboardingPage() {
       return;
     }
 
+    const direccionCompleta = `${calleNombre}${altura ? ' ' + altura : ''}`.trim();
+
     setSaving(true);
     try {
       const updated = await apiFetch<typeof session.club>('/clubs/me/onboarding', {
@@ -134,7 +138,7 @@ export default function OnboardingPage() {
           cuit_cuil: cuitCuilDigits,
           provincia: form.provincia,
           ciudad: form.ciudad,
-          direccion: form.direccion || undefined,
+          direccion: direccionCompleta || undefined,
           telefono_club: form.telefono_club || undefined,
           logo_url: form.logo_url || undefined,
           color_primario: form.color_primario,
@@ -155,7 +159,7 @@ export default function OnboardingPage() {
         },
       });
       applyClubTheme(updated);
-      router.replace('/gestion');
+      router.replace('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al guardar');
     } finally {
@@ -188,6 +192,7 @@ export default function OnboardingPage() {
                 setForm({ ...form, titular_nombre: val });
               }
             }}
+            placeholder="Ej: Juan"
             required
           />
         </label>
@@ -203,6 +208,7 @@ export default function OnboardingPage() {
                 setForm({ ...form, titular_apellido: val });
               }
             }}
+            placeholder="Ej: Pérez"
             required
           />
         </label>
@@ -237,6 +243,7 @@ export default function OnboardingPage() {
             className="mt-1 w-full rounded-lg border px-3 py-2"
             value={form.cuota_monto}
             onChange={(e) => setForm({ ...form, cuota_monto: e.target.value })}
+            placeholder="Ej: 5000"
             required
           />
         </label>
@@ -268,9 +275,9 @@ export default function OnboardingPage() {
           placeholder="Escribí el nombre de la ciudad..."
         />
         <PlaceAutocomplete<GeoRefCalle>
-          label="Dirección/Calle"
-          value={form.direccion}
-          onChange={(val) => setForm({ ...form, direccion: val })}
+          label="Calle"
+          value={calleNombre}
+          onChange={setCalleNombre}
           onSelect={(calle) => {
             setUbicacion((prev) => ({
               ...prev,
@@ -279,6 +286,7 @@ export default function OnboardingPage() {
                 nombre: calle.nombre,
               },
             }));
+            setCalleNombre(calle.nombre);
           }}
           fetchUrl={(query) => {
             const params = new URLSearchParams({
@@ -298,6 +306,16 @@ export default function OnboardingPage() {
           placeholder="Escribí el nombre de la calle..."
         />
         <label className="text-sm">
+          Altura (número)
+          <input
+            className="mt-1 w-full rounded-lg border px-3 py-2"
+            value={altura}
+            onChange={(e) => setAltura(e.target.value.replace(/\D/g, ''))}
+            placeholder="Ej: 1234"
+            inputMode="numeric"
+          />
+        </label>
+        <label className="text-sm">
           Teléfono del club
           <input
             className="mt-1 w-full rounded-lg border px-3 py-2"
@@ -305,6 +323,7 @@ export default function OnboardingPage() {
             onChange={(e) =>
               setForm({ ...form, telefono_club: e.target.value })
             }
+            placeholder="Ej: 11 2345-6789"
           />
         </label>
         <ClubLogoField
@@ -337,6 +356,7 @@ export default function OnboardingPage() {
                 setForm({ ...form, nueva_password: e.target.value });
                 setPasswordError('');
               }}
+              placeholder="Mínimo 8 caracteres"
               required
               autoComplete="new-password"
             />
@@ -368,6 +388,7 @@ export default function OnboardingPage() {
               onChange={(e) =>
                 setForm({ ...form, confirmar_password: e.target.value })
               }
+              placeholder="Repetí la contraseña"
               required
               autoComplete="new-password"
             />

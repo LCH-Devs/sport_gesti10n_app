@@ -70,10 +70,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
-        <title>Sports Management System</title>
-        <meta name="description" content="Multi-institutional sports club management platform" />
+        <title>Kanri</title>
+        <meta name="description" content="Plataforma de gestión de clubes deportivos multi-institucional" />
       </head>
       <body className="bg-slate-50">
         <LanguageProvider>

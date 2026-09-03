@@ -1,6 +1,6 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
+import { apiFetch, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 
 type Alerta = {
@@ -25,7 +25,7 @@ export default function FugaPage() {
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setLoading(true);
     setError('');

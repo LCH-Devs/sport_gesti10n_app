@@ -1,8 +1,10 @@
 'use client';
 
-import { apiFetch, getSession } from '@/lib/api';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { apiFetch, requireSession } from '@/lib/api';
+import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
+import { FloatingActionButton } from '@/components/common';
 
 type Noticia = {
   id: number;
@@ -15,17 +17,13 @@ type Noticia = {
 
 export default function NoticiasPage() {
   const { t } = useTranslation();
+  const router = useRouter();
   const [items, setItems] = useState<Noticia[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({
-    titulo: '',
-    cuerpo: '',
-    es_evento: false,
-  });
 
   const load = useCallback(async () => {
-    const session = getSession();
+    const session = requireSession();
     if (!session) return;
     setLoading(true);
     setError('');
@@ -46,73 +44,13 @@ export default function NoticiasPage() {
     void load();
   }, [load]);
 
-  async function onCreate(e: FormEvent) {
-    e.preventDefault();
-    const session = getSession();
-    if (!session) return;
-    try {
-      await apiFetch('/noticias', {
-        method: 'POST',
-        token: session.access_token,
-        clubSlug: session.club.slug,
-        body: JSON.stringify(form),
-      });
-      setForm({ titulo: '', cuerpo: '', es_evento: false });
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
-    }
-  }
-
   return (
-    <div>
+    <div className="relative">
       <h2 className="text-2xl font-bold">{t('admin.noticias.title')}</h2>
       <p className="mt-1 text-sm text-slate-600">
         {t('admin.noticias.subtitle')}
       </p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
-      <form
-        onSubmit={onCreate}
-        className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4"
-      >
-        <h3 className="font-semibold">{t('admin.noticias.nueva')}</h3>
-        <label className="text-sm">
-          {t('admin.noticias.titulo')}
-          <input
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-            value={form.titulo}
-            onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))}
-            required
-          />
-        </label>
-        <label className="text-sm">
-          {t('admin.noticias.cuerpo')}
-          <textarea
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
-            rows={4}
-            value={form.cuerpo}
-            onChange={(e) => setForm((f) => ({ ...f, cuerpo: e.target.value }))}
-            required
-          />
-        </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.es_evento}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, es_evento: e.target.checked }))
-            }
-          />
-          {t('admin.noticias.esEvento')}
-        </label>
-        <button
-          type="submit"
-          className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
-        >
-          {t('admin.noticias.publicar')}
-        </button>
-      </form>
 
       <div className="mt-8 space-y-3">
         {loading ? (
@@ -143,6 +81,12 @@ export default function NoticiasPage() {
           ))
         )}
       </div>
+
+      <FloatingActionButton
+        onClick={() => router.push('/noticias/nuevo')}
+        aria-label={t('admin.noticias.publicar')}
+        title={t('admin.noticias.publicar')}
+      />
     </div>
   );
 }
