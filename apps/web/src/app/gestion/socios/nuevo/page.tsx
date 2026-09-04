@@ -13,6 +13,9 @@ type Socio = {
   apellido: string;
   email: string;
   telefono: string;
+  rol: string;
+  estado: string;
+  fecha_nacimiento: string | null;
 };
 
 const EMPTY_FORM = {
@@ -21,6 +24,10 @@ const EMPTY_FORM = {
   apellido: '',
   email: '',
   telefono: '',
+  fecha_nacimiento: '',
+  rol: 'socio',
+  estado: 'activo',
+  password: '',
 };
 
 function NuevoSocioForm() {
@@ -49,6 +56,12 @@ function NuevoSocioForm() {
           apellido: socio.apellido,
           email: socio.email,
           telefono: socio.telefono,
+          fecha_nacimiento: socio.fecha_nacimiento
+            ? socio.fecha_nacimiento.slice(0, 10)
+            : '',
+          rol: socio.rol,
+          estado: socio.estado,
+          password: '',
         }),
       )
       .catch((err) => setError(err instanceof Error ? err.message : 'Error al cargar'))
@@ -65,14 +78,31 @@ function NuevoSocioForm() {
           method: 'PATCH',
           token: session.access_token,
           clubSlug: session.club.slug,
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            nombre: form.nombre,
+            apellido: form.apellido,
+            email: form.email,
+            telefono: form.telefono || undefined,
+            fecha_nacimiento: form.fecha_nacimiento || undefined,
+            rol: form.rol,
+            estado: form.estado,
+          }),
         });
       } else {
         await apiFetch('/socios', {
           method: 'POST',
           token: session.access_token,
           clubSlug: session.club.slug,
-          body: JSON.stringify(form),
+          body: JSON.stringify({
+            dni: form.dni,
+            nombre: form.nombre,
+            apellido: form.apellido,
+            email: form.email,
+            telefono: form.telefono || undefined,
+            fecha_nacimiento: form.fecha_nacimiento || undefined,
+            rol: form.rol,
+            password: form.password || undefined,
+          }),
         });
       }
       router.push('/gestion/socios');
@@ -96,24 +126,73 @@ function NuevoSocioForm() {
           onSubmit={onSubmit}
           className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
         >
-          {(
-            [
-              ['dni', t('admin.socios.dni')],
-              ['nombre', t('admin.socios.nombre')],
-              ['apellido', t('admin.socios.apellido')],
-              ['email', t('admin.socios.email')],
-              ['telefono', t('admin.socios.telefono')],
-            ] as const
-          ).map(([key, label]) => (
+          <FormField
+            label={t('admin.socios.dni')}
+            value={form.dni}
+            onChange={(dni) => setForm((f) => ({ ...f, dni }))}
+            required
+            disabled={Boolean(editingId)}
+          />
+          <FormField
+            label={t('admin.socios.nombre')}
+            value={form.nombre}
+            onChange={(nombre) => setForm((f) => ({ ...f, nombre }))}
+            required
+          />
+          <FormField
+            label={t('admin.socios.apellido')}
+            value={form.apellido}
+            onChange={(apellido) => setForm((f) => ({ ...f, apellido }))}
+            required
+          />
+          <FormField
+            type="email"
+            label={t('admin.socios.email')}
+            value={form.email}
+            onChange={(email) => setForm((f) => ({ ...f, email }))}
+            required
+          />
+          <FormField
+            label={t('admin.socios.telefono')}
+            value={form.telefono}
+            onChange={(telefono) => setForm((f) => ({ ...f, telefono }))}
+          />
+          <FormField
+            type="date"
+            label={t('admin.socios.fechaNacimiento', 'Fecha de nacimiento')}
+            value={form.fecha_nacimiento}
+            onChange={(fecha_nacimiento) => setForm((f) => ({ ...f, fecha_nacimiento }))}
+          />
+          <FormField
+            as="select"
+            label={t('admin.socios.rol', 'Rol')}
+            value={form.rol}
+            onChange={(rol) => setForm((f) => ({ ...f, rol }))}
+          >
+            <option value="socio">{t('admin.socios.rolSocio', 'Socio')}</option>
+            <option value="profe">{t('admin.socios.rolProfe', 'Profe')}</option>
+          </FormField>
+          {editingId && (
             <FormField
-              key={key}
-              label={label}
-              value={form[key]}
-              onChange={(value) => setForm((f) => ({ ...f, [key]: value }))}
-              required={key !== 'telefono'}
-              type={key === 'email' ? 'email' : 'text'}
+              as="select"
+              label={t('admin.socios.estado', 'Estado')}
+              value={form.estado}
+              onChange={(estado) => setForm((f) => ({ ...f, estado }))}
+            >
+              <option value="activo">{t('admin.socios.estadoActivo', 'Activo')}</option>
+              <option value="moroso">{t('admin.socios.estadoMoroso', 'Moroso')}</option>
+              <option value="suspendido">{t('admin.socios.estadoSuspendido', 'Suspendido')}</option>
+            </FormField>
+          )}
+          {!editingId && (
+            <FormField
+              type="password"
+              label={t('admin.socios.passwordOpcional', 'Contraseña inicial (opcional)')}
+              value={form.password}
+              onChange={(password) => setForm((f) => ({ ...f, password }))}
+              minLength={4}
             />
-          ))}
+          )}
           <div className="sm:col-span-2 flex gap-2">
             <button
               type="submit"

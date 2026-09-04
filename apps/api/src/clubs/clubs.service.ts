@@ -199,6 +199,13 @@ export class ClubsService {
             color_terciario: dto.color_terciario || null,
           }),
           ...(dto.cuota_monto !== undefined && { cuota_monto: dto.cuota_monto }),
+          ...(dto.deportes !== undefined && { deportes: dto.deportes }),
+          ...(dto.bloquear_entrada !== undefined && {
+            bloquear_entrada: dto.bloquear_entrada,
+          }),
+          ...(dto.descuento_familiar_pct !== undefined && {
+            descuento_familiar_pct: dto.descuento_familiar_pct,
+          }),
           ...(dto.bloquear_entrada !== undefined && {
             bloquear_entrada: dto.bloquear_entrada,
           }),

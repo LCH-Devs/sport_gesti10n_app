@@ -20,13 +20,13 @@ import {
 
 export class CompleteOnboardingDto {
   @IsPersonName()
-  titular_nombre: string;
+  titular_nombre!: string;
 
   @IsPersonName()
-  titular_apellido: string;
+  titular_apellido!: string;
 
   @IsCuitCuil()
-  cuit_cuil: string;
+  cuit_cuil!: string;
 
   @IsOptional()
   @IsString()
@@ -73,7 +73,7 @@ export class CompleteOnboardingDto {
   cuota_monto?: number;
 
   @IsStrongPassword()
-  nueva_password: string;
+  nueva_password!: string;
 
   @IsOptional()
   @IsBoolean()

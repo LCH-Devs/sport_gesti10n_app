@@ -1,21 +1,43 @@
 'use client';
 
 import { apiFetch, requireSession } from '@/lib/api';
-import { FormEvent, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
+
+type Profe = { id: number; nombre: string; apellido: string; rol: string };
 
 export default function NuevoHorarioPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [error, setError] = useState('');
+  const [profes, setProfes] = useState<Profe[]>([]);
   const [form, setForm] = useState({
     titulo: '',
     dias: 'lun,mie,vie',
     hora_inicio: '18:00',
     hora_fin: '19:30',
+    profe_id: '',
   });
+
+  const load = useCallback(async () => {
+    const session = requireSession();
+    if (!session) return;
+    try {
+      const socios = await apiFetch<Profe[]>('/socios', {
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+      setProfes(socios.filter((s) => s.rol === 'profe'));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar');
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
@@ -26,7 +48,13 @@ export default function NuevoHorarioPage() {
         method: 'POST',
         token: session.access_token,
         clubSlug: session.club.slug,
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          titulo: form.titulo,
+          dias: form.dias,
+          hora_inicio: form.hora_inicio,
+          hora_fin: form.hora_fin,
+          profe_id: form.profe_id ? Number(form.profe_id) : undefined,
+        }),
       });
       router.push('/horarios');
     } catch (err) {
@@ -69,6 +97,20 @@ export default function NuevoHorarioPage() {
           onChange={(hora_fin) => setForm((f) => ({ ...f, hora_fin }))}
           required
         />
+        <FormField
+          as="select"
+          colSpan
+          label={t('admin.horarios.profe', 'Profe a cargo (opcional)')}
+          value={form.profe_id}
+          onChange={(profe_id) => setForm((f) => ({ ...f, profe_id }))}
+        >
+          <option value="">Sin asignar</option>
+          {profes.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.apellido}, {p.nombre}
+            </option>
+          ))}
+        </FormField>
         <div className="sm:col-span-2 flex gap-2">
           <button
             type="submit"

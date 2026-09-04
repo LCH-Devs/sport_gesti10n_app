@@ -64,12 +64,21 @@ export default function NuevoEspacioPage() {
           required
         />
         <FormField
+          as="select"
           label={t('admin.espacios.tipo')}
           value={form.tipo}
           onChange={(tipo) => setForm((f) => ({ ...f, tipo }))}
           required
-          placeholder="padel, futbol, quincho…"
-        />
+        >
+          <option value="cancha">{t('admin.espacios.tipoCancha', 'Cancha')}</option>
+          <option value="padel">{t('admin.espacios.tipoPadel', 'Pádel')}</option>
+          <option value="futbol">{t('admin.espacios.tipoFutbol', 'Fútbol')}</option>
+          <option value="basquet">{t('admin.espacios.tipoBasquet', 'Básquet')}</option>
+          <option value="tenis">{t('admin.espacios.tipoTenis', 'Tenis')}</option>
+          <option value="quincho">{t('admin.espacios.tipoQuincho', 'Quincho')}</option>
+          <option value="salon">{t('admin.espacios.tipoSalon', 'Salón')}</option>
+          <option value="otro">{t('admin.espacios.tipoOtro', 'Otro')}</option>
+        </FormField>
         <FormField
           colSpan
           label={t('admin.espacios.descripcion')}

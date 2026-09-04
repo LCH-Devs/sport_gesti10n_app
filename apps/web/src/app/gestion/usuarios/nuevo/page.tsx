@@ -14,11 +14,16 @@ export default function NuevoUsuarioPage() {
     email: '',
     nombre: '',
     password: '',
+    passwordConfirm: '',
     rol: 'admin',
   });
 
   async function onCreate(e: FormEvent) {
     e.preventDefault();
+    if (form.password !== form.passwordConfirm) {
+      setError(t('admin.usuarios.passwordNoCoincide', 'Las contraseñas no coinciden'));
+      return;
+    }
     const session = requireSession();
     if (!session) return;
     try {
@@ -26,7 +31,12 @@ export default function NuevoUsuarioPage() {
         method: 'POST',
         token: session.access_token,
         clubSlug: session.club.slug,
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          email: form.email,
+          nombre: form.nombre,
+          password: form.password,
+          rol: form.rol,
+        }),
       });
       router.push('/gestion/usuarios');
     } catch (err) {
@@ -62,6 +72,14 @@ export default function NuevoUsuarioPage() {
           label={t('admin.usuarios.password')}
           value={form.password}
           onChange={(password) => setForm((f) => ({ ...f, password }))}
+          required
+          minLength={4}
+        />
+        <FormField
+          type="password"
+          label={t('admin.usuarios.passwordConfirm', 'Confirmar contraseña')}
+          value={form.passwordConfirm}
+          onChange={(passwordConfirm) => setForm((f) => ({ ...f, passwordConfirm }))}
           required
           minLength={4}
         />

@@ -13,7 +13,10 @@ export default function NuevaNoticiaPage() {
   const [form, setForm] = useState({
     titulo: '',
     cuerpo: '',
+    imagen_url: '',
     es_evento: false,
+    fecha: '',
+    published: true,
   });
 
   async function onCreate(e: FormEvent) {
@@ -25,7 +28,14 @@ export default function NuevaNoticiaPage() {
         method: 'POST',
         token: session.access_token,
         clubSlug: session.club.slug,
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          titulo: form.titulo,
+          cuerpo: form.cuerpo,
+          imagen_url: form.imagen_url || undefined,
+          es_evento: form.es_evento,
+          fecha: form.es_evento && form.fecha ? new Date(form.fecha).toISOString() : undefined,
+          published: form.published,
+        }),
       });
       router.push('/noticias');
     } catch (err) {
@@ -58,10 +68,31 @@ export default function NuevaNoticiaPage() {
           required
         />
         <FormField
+          label={t('admin.noticias.imagenUrl', 'Imagen (URL, opcional)')}
+          value={form.imagen_url}
+          onChange={(imagen_url) => setForm((f) => ({ ...f, imagen_url }))}
+          placeholder="https://…"
+        />
+        <FormField
           as="checkbox"
           label={t('admin.noticias.esEvento')}
           checked={form.es_evento}
           onChange={(es_evento) => setForm((f) => ({ ...f, es_evento }))}
+        />
+        {form.es_evento && (
+          <FormField
+            type="datetime-local"
+            label={t('admin.noticias.fechaEvento', 'Fecha del evento')}
+            value={form.fecha}
+            onChange={(fecha) => setForm((f) => ({ ...f, fecha }))}
+            required
+          />
+        )}
+        <FormField
+          as="checkbox"
+          label={t('admin.noticias.publicada', 'Publicada (visible ya)')}
+          checked={form.published}
+          onChange={(published) => setForm((f) => ({ ...f, published }))}
         />
         <div className="flex gap-2">
           <button

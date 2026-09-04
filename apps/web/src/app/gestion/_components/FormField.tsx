@@ -13,6 +13,7 @@ type InputProps = BaseProps & {
   value: string;
   onChange: (value: string) => void;
   required?: boolean;
+  disabled?: boolean;
   placeholder?: string;
   min?: number;
   minLength?: number;
@@ -100,6 +101,7 @@ export function FormField(props: FormFieldProps) {
         value={props.value}
         onChange={(e) => props.onChange(e.target.value)}
         required={props.required}
+        disabled={props.disabled}
         placeholder={props.placeholder}
         min={props.min}
         minLength={props.minLength}
