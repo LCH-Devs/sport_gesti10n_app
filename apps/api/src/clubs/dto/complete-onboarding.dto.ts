@@ -1,7 +1,6 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
-  ArrayUnique,
   IsArray,
   IsBoolean,
   IsNumber,
@@ -77,16 +76,15 @@ export class CompleteOnboardingDto {
   nueva_password: string;
 
   @IsOptional()
+  @IsBoolean()
+  bloquear_entrada?: boolean;
+
+  @IsOptional()
   @IsArray()
-  @ArrayUnique()
-  @ArrayMaxSize(20)
+  @ArrayMaxSize(30)
   @IsString({ each: true })
   @MaxLength(60, { each: true })
   deportes?: string[];
-
-  @IsOptional()
-  @IsBoolean()
-  bloquear_entrada?: boolean;
 
   @IsOptional()
   @Type(() => Number)

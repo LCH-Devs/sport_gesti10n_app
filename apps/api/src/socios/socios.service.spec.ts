@@ -38,4 +38,25 @@ describe('SociosService aislamiento por club', () => {
       }),
     );
   });
+
+  it('no devuelve un socio de otro club en getOne', async () => {
+    const prisma = {
+      membresia: {
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+    };
+    const service = new SociosService(prisma as unknown as PrismaService);
+
+    await expect(service.getOne(1, 99)).rejects.toBeInstanceOf(NotFoundException);
+
+    expect(prisma.membresia.findFirst).toHaveBeenCalledWith({
+      where: {
+        id: 99,
+        club_id: 1,
+        rol: { in: ['socio', 'profe'] },
+        eliminado: false,
+      },
+      include: expect.anything(),
+    });
+  });
 });

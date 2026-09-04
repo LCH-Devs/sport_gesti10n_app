@@ -2,6 +2,8 @@
 
 Base URL: `http://localhost:3001`
 
+Bodies de cada **POST** (campos, validación, ejemplos): [`API_POST.md`](./API_POST.md).
+
 Headers tipicos (rutas autenticadas):
 
 - `Authorization: Bearer <token>`
@@ -31,11 +33,11 @@ Body con campos que el DTO no declara → **400**. Login público (`/auth/login`
 - `POST /auth/platform/login` — `{ email, password }` (superadmin ClubApp). También `expires_in` y 429.
 - `GET /clubs/buscar?q=`
 - `GET /clubs/slug/:slug` — branding público para login white-label
-- `GET /clubs/me` — Bearer (incluye config + onboarding)
-- `PATCH /clubs/me` — config: cuota, logo, color, reglas, nombre (el nombre no puede coincidir con otro club vivo)
+- `GET /clubs/me` — Bearer (incluye config + onboarding, `deportes`, `descuento_familiar_pct`)
+- `PATCH /clubs/me` — config: cuota, logo, color, reglas, nombre, `deportes?`, `descuento_familiar_pct?` (0–100). El nombre no puede coincidir con otro club vivo
 - `POST /clubs/me/logo` — multipart `file` (JPG/PNG/WEBP/GIF, máx. 2 MB).  
   Con `IMAGEKIT_PRIVATE_KEY` sube a ImageKit (CDN) y guarda esa URL en `logo_url`. Sin ImageKit (dev), guarda en disco `uploads/logos/` y `logo_url` queda `/uploads/logos/...`.
-- `PATCH /clubs/me/onboarding` — primer acceso (titular, CUIT/CUIL, branding, nueva pass)
+- `PATCH /clubs/me/onboarding` — primer acceso. Body: titular, CUIT/CUIL, branding, `nueva_password` (fuerte), y opcional `bloquear_entrada`, `deportes` (`string[]`, ej. `["padel","futbol"]`), `descuento_familiar_pct` (0–100). Los espacios se crean aparte con `POST /espacios`. El % familiar se **guarda**; todavía no se aplica en cobros.
 
 ## Plataforma (superadmin)
 
@@ -67,7 +69,7 @@ JWT con `role: platform` (sin `club_id`).
 
 ## Socios / Admins
 
-- `GET|POST /socios` · `PATCH|DELETE /socios/:id`
+- `GET|POST /socios` · `GET|PATCH|DELETE /socios/:id`
 - `POST /socios/import-csv` — `{ csv }` o multipart
 - `GET|POST /admins` · `PATCH|DELETE /admins/:id` (rol admin)
 

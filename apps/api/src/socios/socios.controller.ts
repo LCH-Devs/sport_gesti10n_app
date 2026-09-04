@@ -29,6 +29,11 @@ export class SociosController {
     return this.socios.list(clubId);
   }
 
+  @Get(':id')
+  getOne(@ClubId() clubId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.socios.getOne(clubId, id);
+  }
+
   @Post()
   @UseGuards(AdminRoleGuard)
   create(@ClubId() clubId: number, @Body() dto: CreateSocioDto) {

@@ -49,6 +49,9 @@ export type ClubSession = {
     logo_url: string | null;
     cuota_monto: number;
     onboarding_completo?: boolean;
+    deportes?: string[];
+    descuento_familiar_pct?: number;
+    bloquear_entrada?: boolean;
   };
 };
 
