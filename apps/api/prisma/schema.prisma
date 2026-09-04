@@ -37,6 +37,10 @@ model Club {
   ubicacion_json        Json?
   telefono_club         String?
   email_contacto        String?
+  /// Deportes que el club declara en onboarding (no crea espacios).
+  deportes              String[] @default([])
+  /// % de descuento familiar (0–100). Se persiste; aún no se aplica en cobros.
+  descuento_familiar_pct Float   @default(0)
 
   membresias        Membresia[]
   pagos             Pago[]

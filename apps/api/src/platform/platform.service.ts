@@ -17,6 +17,7 @@ import {
   UpdateSelfPlatformAdminDto,
 } from './dto/platform.dto';
 import { NOT_DELETED, adminEmailInUseWhere, clubNombreInUseWhere, CLUB_NOMBRE_TAKEN } from '../common/club-users';
+import { normalizeDeportes } from '../common/club-deportes';
 import {
   isReservedTenantSlug,
   staffPanelLoginUrl,
@@ -251,6 +252,12 @@ export class PlatformService {
         }),
         ...(dto.cancelar_reserva_horas !== undefined && {
           cancelar_reserva_horas: dto.cancelar_reserva_horas,
+        }),
+        ...(dto.deportes !== undefined && {
+          deportes: normalizeDeportes(dto.deportes),
+        }),
+        ...(dto.descuento_familiar_pct !== undefined && {
+          descuento_familiar_pct: dto.descuento_familiar_pct,
         }),
       },
     });

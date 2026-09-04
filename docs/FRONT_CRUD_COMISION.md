@@ -67,6 +67,7 @@ El rol de comisión/portería/socio/profe vive en `Membresia.rol`, no en `Usuari
 | Método | Ruta | Body |
 |--------|------|------|
 | `GET` | `/socios` | — |
+| `GET` | `/socios/:id` | — (id = membresía; 404 si es de otro club) |
 | `POST` | `/socios` | `{ dni, nombre, apellido, email, telefono?, password?, rol?, fecha_nacimiento? }` |
 | `PATCH` | `/socios/:id` | `{ nombre?, apellido?, email?, telefono?, estado?, rol?, fecha_nacimiento? }` |
 | `DELETE` | `/socios/:id` | — |
@@ -246,7 +247,9 @@ El back valida solape, socio suspendido, moroso (`bloquear_reservas`) y máximo 
   "bloquear_entrada": false,
   "cumples_auto": true,
   "max_reservas_activas": 2,
-  "cancelar_reserva_horas": 2
+  "cancelar_reserva_horas": 2,
+  "deportes": ["padel", "futbol"],
+  "descuento_familiar_pct": 10
 }
 ```
 

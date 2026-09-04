@@ -6,6 +6,7 @@ import { MediaService } from '../media/media.service';
 import { UpdateClubConfigDto } from './dto/update-club-config.dto';
 import { CompleteOnboardingDto } from './dto/complete-onboarding.dto';
 import { clubNombreInUseWhere, CLUB_NOMBRE_TAKEN } from '../common/club-users';
+import { normalizeDeportes } from '../common/club-deportes';
 
 const CLUB_PUBLIC_SELECT = {
   id: true,
@@ -29,6 +30,8 @@ const CLUB_PUBLIC_SELECT = {
   ubicacion_json: true,
   telefono_club: true,
   email_contacto: true,
+  deportes: true,
+  descuento_familiar_pct: true,
   regla_moroso_cuotas: true,
   bloquear_reservas: true,
   bloquear_entrada: true,
@@ -144,6 +147,12 @@ export class ClubsService {
         ...(dto.cancelar_reserva_horas !== undefined && {
           cancelar_reserva_horas: dto.cancelar_reserva_horas,
         }),
+        ...(dto.deportes !== undefined && {
+          deportes: normalizeDeportes(dto.deportes),
+        }),
+        ...(dto.descuento_familiar_pct !== undefined && {
+          descuento_familiar_pct: dto.descuento_familiar_pct,
+        }),
       },
       select: CLUB_PUBLIC_SELECT,
     });
@@ -190,6 +199,15 @@ export class ClubsService {
             color_terciario: dto.color_terciario || null,
           }),
           ...(dto.cuota_monto !== undefined && { cuota_monto: dto.cuota_monto }),
+          ...(dto.bloquear_entrada !== undefined && {
+            bloquear_entrada: dto.bloquear_entrada,
+          }),
+          ...(dto.deportes !== undefined && {
+            deportes: normalizeDeportes(dto.deportes),
+          }),
+          ...(dto.descuento_familiar_pct !== undefined && {
+            descuento_familiar_pct: dto.descuento_familiar_pct,
+          }),
         },
       }),
       this.prisma.membresia.update({

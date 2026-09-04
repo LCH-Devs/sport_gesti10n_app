@@ -34,6 +34,17 @@ export class SociosService {
     return rows.map(flattenPerson);
   }
 
+  async getOne(clubId: number, id: number) {
+    const membresia = await this.prisma.membresia.findFirst({
+      where: { id, ...socioWhere(clubId), ...NOT_DELETED },
+      include: personInclude,
+    });
+    if (!membresia) {
+      throw new NotFoundException('Socio no encontrado en este club');
+    }
+    return flattenPerson(membresia);
+  }
+
   async create(clubId: number, dto: CreateSocioDto) {
     const count = await this.prisma.membresia.count({
       where: { ...socioWhere(clubId), ...NOT_DELETED },
