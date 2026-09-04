@@ -9,6 +9,7 @@ import {
   requireSession,
   saveSession,
 } from '@/lib/api';
+import { useChrome } from '@/lib/ChromeContext';
 import { ClubColorFields } from '@/components/ClubColorFields';
 import { ClubLogoField } from '@/components/ClubLogoField';
 import {
@@ -23,6 +24,7 @@ const STEPS = [
   { id: 3, label: 'Deportes y espacios' },
   { id: 4, label: 'Seguridad' },
   { id: 5, label: 'Suscripción' },
+  { id: 6, label: 'Verificación' },
 ] as const;
 
 const NAME_REGEX = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]*$/;
@@ -84,12 +86,23 @@ export default function OnboardingPage() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [deportesSeleccionados, setDeportesSeleccionados] = useState<string[]>([]);
   const [deporteOtro, setDeporteOtro] = useState('');
-  const [bloquearEntrada, setBloquearEntrada] = useState(false);
-  const [descuentoFamiliar, setDescuentoFamiliar] = useState('');
   const [espacios, setEspacios] = useState<EspacioBorrador[]>([]);
   const [espacioNombre, setEspacioNombre] = useState('');
   const [espacioTipo, setEspacioTipo] = useState<string>(ESPACIO_TIPOS[0].value);
   const [espaciosWarning, setEspaciosWarning] = useState('');
+  const [tarjeta, setTarjeta] = useState({
+    titular: '',
+    numero: '',
+    vencimiento: '',
+    cvv: '',
+  });
+
+  const { setHideChrome } = useChrome();
+
+  useEffect(() => {
+    setHideChrome(true);
+    return () => setHideChrome(false);
+  }, [setHideChrome]);
 
   useEffect(() => {
     const s = getSession();
@@ -228,8 +241,6 @@ export default function OnboardingPage() {
           nueva_password: form.nueva_password,
           ubicacion_json: ubicacion || undefined,
           deportes: deportes.length ? deportes : undefined,
-          bloquear_entrada: bloquearEntrada,
-          descuento_familiar_pct: descuentoFamiliar ? Number(descuentoFamiliar) : undefined,
         }),
       });
 
@@ -540,34 +551,6 @@ export default function OnboardingPage() {
               </label>
             </div>
 
-            <label className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2.5 text-sm sm:col-span-2">
-              <span>
-                <span className="font-medium">Portería</span>
-                <span className="block text-xs text-slate-500">
-                  Bloquear el ingreso a socios/as que deban cuotas
-                </span>
-              </span>
-              <input
-                type="checkbox"
-                className="h-5 w-5"
-                checked={bloquearEntrada}
-                onChange={(e) => setBloquearEntrada(e.target.checked)}
-              />
-            </label>
-
-            <label className="text-sm sm:col-span-2">
-              Promoción por grupo familiar (% de descuento sobre la cuota)
-              <input
-                type="number"
-                min={0}
-                max={100}
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={descuentoFamiliar}
-                onChange={(e) => setDescuentoFamiliar(e.target.value)}
-                placeholder="Ej: 10"
-              />
-            </label>
-
             <div className="sm:col-span-2">
               <p className="text-sm font-medium">Espacios para reserva (opcional)</p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -698,23 +681,127 @@ export default function OnboardingPage() {
         )}
 
         {step === 5 && (
-          <div className="sm:col-span-2">
-            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-5">
+          <>
+            <div className="sm:col-span-2">
               <p className="font-semibold text-slate-700">
                 Medio de pago de la suscripción
               </p>
               <p className="mt-1 text-sm text-slate-500">
-                Todavía no habilitamos la carga de tarjeta desde acá. Vas a poder
-                completarla más adelante sin que esto interrumpa el uso del club.
+                Estos datos son solo de referencia por ahora: todavía no
+                procesamos el pago desde este formulario. Vas a poder
+                completarlo más adelante sin que esto interrumpa el uso del
+                club.
               </p>
-              <button
-                type="button"
-                disabled
-                className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-400"
-                title="Próximamente"
-              >
-                Agregar tarjeta (próximamente)
-              </button>
+            </div>
+            <label className="text-sm sm:col-span-2">
+              Nombre del titular de la tarjeta
+              <input
+                className="mt-1 w-full rounded-lg border px-3 py-2"
+                value={tarjeta.titular}
+                onChange={(e) => setTarjeta({ ...tarjeta, titular: e.target.value })}
+                placeholder="Como figura en la tarjeta"
+                autoComplete="cc-name"
+              />
+            </label>
+            <label className="text-sm sm:col-span-2">
+              Número de tarjeta
+              <input
+                className="mt-1 w-full rounded-lg border px-3 py-2"
+                value={tarjeta.numero}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 16);
+                  const grouped = digits.replace(/(.{4})/g, '$1 ').trim();
+                  setTarjeta({ ...tarjeta, numero: grouped });
+                }}
+                placeholder="•••• •••• •••• ••••"
+                inputMode="numeric"
+                autoComplete="cc-number"
+              />
+            </label>
+            <label className="text-sm">
+              Vencimiento (MM/AA)
+              <input
+                className="mt-1 w-full rounded-lg border px-3 py-2"
+                value={tarjeta.vencimiento}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
+                  const formatted =
+                    digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
+                  setTarjeta({ ...tarjeta, vencimiento: formatted });
+                }}
+                placeholder="MM/AA"
+                inputMode="numeric"
+                autoComplete="cc-exp"
+              />
+            </label>
+            <label className="text-sm">
+              CVV
+              <input
+                className="mt-1 w-full rounded-lg border px-3 py-2"
+                value={tarjeta.cvv}
+                onChange={(e) =>
+                  setTarjeta({ ...tarjeta, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) })
+                }
+                placeholder="•••"
+                inputMode="numeric"
+                autoComplete="cc-csc"
+              />
+            </label>
+          </>
+        )}
+
+        {step === 6 && (
+          <div className="sm:col-span-2 space-y-4">
+            <p className="text-sm text-slate-600">
+              Revisá los datos antes de finalizar. Podés volver atrás para
+              corregir cualquier paso.
+            </p>
+
+            <div className="rounded-lg border border-slate-200 p-4">
+              <p className="text-sm font-semibold text-slate-700">Titular</p>
+              <dl className="mt-2 grid grid-cols-2 gap-y-1 text-sm">
+                <dt className="text-slate-500">Nombre</dt>
+                <dd>{form.titular_nombre} {form.titular_apellido}</dd>
+                <dt className="text-slate-500">CUIT/CUIL</dt>
+                <dd>{form.cuit_cuil || '—'}</dd>
+                <dt className="text-slate-500">Teléfono</dt>
+                <dd>{form.telefono_club || '—'}</dd>
+              </dl>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 p-4">
+              <p className="text-sm font-semibold text-slate-700">Club</p>
+              <dl className="mt-2 grid grid-cols-2 gap-y-1 text-sm">
+                <dt className="text-slate-500">Cuota base</dt>
+                <dd>${form.cuota_monto || '—'}</dd>
+                <dt className="text-slate-500">Ciudad</dt>
+                <dd>{form.ciudad || '—'}</dd>
+                <dt className="text-slate-500">Dirección</dt>
+                <dd>
+                  {calleNombre ? `${calleNombre}${altura ? ' ' + altura : ''}` : '—'}
+                </dd>
+              </dl>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 p-4">
+              <p className="text-sm font-semibold text-slate-700">Deportes y espacios</p>
+              <dl className="mt-2 grid grid-cols-2 gap-y-1 text-sm">
+                <dt className="text-slate-500">Deportes</dt>
+                <dd>
+                  {[...deportesSeleccionados, ...deporteOtro.split(',').map((d) => d.trim()).filter(Boolean)].join(', ') || '—'}
+                </dd>
+                <dt className="text-slate-500">Espacios</dt>
+                <dd>{espacios.length ? `${espacios.length} cargado(s)` : '—'}</dd>
+              </dl>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 p-4">
+              <p className="text-sm font-semibold text-slate-700">Medio de pago</p>
+              <p className="mt-2 text-sm text-slate-600">
+                {tarjeta.numero
+                  ? `Tarjeta terminada en ${tarjeta.numero.replace(/\s/g, '').slice(-4)}`
+                  : 'No se cargó una tarjeta (podés hacerlo más adelante)'}
+              </p>
             </div>
           </div>
         )}
@@ -741,7 +828,7 @@ export default function OnboardingPage() {
               disabled={saving}
               className="rounded-lg bg-[var(--club-primary)] px-4 py-2.5 font-semibold text-white disabled:opacity-60"
             >
-              {saving ? 'Guardando…' : 'Omitir por ahora y finalizar'}
+              {saving ? 'Guardando…' : 'Confirmar y finalizar'}
             </button>
           )}
         </div>
