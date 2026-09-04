@@ -1,9 +1,14 @@
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsBoolean,
   IsNumber,
   IsObject,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -70,4 +75,23 @@ export class CompleteOnboardingDto {
 
   @IsStrongPassword()
   nueva_password: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @ArrayMaxSize(20)
+  @IsString({ each: true })
+  @MaxLength(60, { each: true })
+  deportes?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  bloquear_entrada?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  descuento_familiar_pct?: number;
 }

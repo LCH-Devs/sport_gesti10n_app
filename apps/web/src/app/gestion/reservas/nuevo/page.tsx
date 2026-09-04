@@ -20,6 +20,7 @@ export default function NuevaReservaPage() {
     socio_id: '',
     inicio: '',
     fin: '',
+    nota: '',
   });
 
   const load = useCallback(async () => {
@@ -61,6 +62,7 @@ export default function NuevaReservaPage() {
           socio_id: Number(form.socio_id),
           inicio: new Date(form.inicio).toISOString(),
           fin: new Date(form.fin).toISOString(),
+          nota: form.nota || undefined,
         }),
       });
       router.push('/reservas');
@@ -120,6 +122,14 @@ export default function NuevaReservaPage() {
           value={form.fin}
           onChange={(fin) => setForm((f) => ({ ...f, fin }))}
           required
+        />
+        <FormField
+          as="textarea"
+          colSpan
+          rows={2}
+          label={t('admin.reservas.nota', 'Nota (opcional)')}
+          value={form.nota}
+          onChange={(nota) => setForm((f) => ({ ...f, nota }))}
         />
         <div className="sm:col-span-2 flex gap-2">
           <button

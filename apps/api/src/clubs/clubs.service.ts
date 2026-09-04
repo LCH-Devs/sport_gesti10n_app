@@ -29,6 +29,8 @@ const CLUB_PUBLIC_SELECT = {
   ubicacion_json: true,
   telefono_club: true,
   email_contacto: true,
+  deportes: true,
+  descuento_familiar_pct: true,
   regla_moroso_cuotas: true,
   bloquear_reservas: true,
   bloquear_entrada: true,
@@ -190,6 +192,13 @@ export class ClubsService {
             color_terciario: dto.color_terciario || null,
           }),
           ...(dto.cuota_monto !== undefined && { cuota_monto: dto.cuota_monto }),
+          ...(dto.deportes !== undefined && { deportes: dto.deportes }),
+          ...(dto.bloquear_entrada !== undefined && {
+            bloquear_entrada: dto.bloquear_entrada,
+          }),
+          ...(dto.descuento_familiar_pct !== undefined && {
+            descuento_familiar_pct: dto.descuento_familiar_pct,
+          }),
         },
       }),
       this.prisma.membresia.update({

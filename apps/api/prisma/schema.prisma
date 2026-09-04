@@ -37,6 +37,8 @@ model Club {
   ubicacion_json        Json?
   telefono_club         String?
   email_contacto        String?
+  deportes              String[] @default([])
+  descuento_familiar_pct Float?  @default(0)
 
   membresias        Membresia[]
   pagos             Pago[]
