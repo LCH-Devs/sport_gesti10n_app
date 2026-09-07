@@ -16,8 +16,19 @@ model Club {
   color_primario        String   @default("#2563eb")
   color_secundario      String?  // null = usar fallback en UI
   color_terciario       String?  // null = usar fallback en UI
-  plan                  String   @default("basico")
+  plan                  String   @default("Hasta 50 socios")
   precio_usd_mes        Float    @default(0) // lo que el club paga a ClubApp
+  /// Tope de socios (socio/profe) del plan que están pagando.
+  plan_hasta            Int      @default(50)
+  /// Hasta dónde ya aceptaron agregar socios (anti-remodal por umbral).
+  plan_consentido_hasta Int      @default(50)
+  plan_pendiente_precio Float?
+  plan_pendiente_hasta  Int?
+  plan_pendiente_en_at  DateTime?
+  plan_pendiente_mail_enviado_at DateTime?
+  plan_pendiente_confirmado_at DateTime?
+  plan_pendiente_aplica_desde DateTime?
+  plan_pendiente_token_hash String?
   cuota_monto           Float    @default(5000)
   regla_moroso_cuotas   Int      @default(2)
   bloquear_reservas     Boolean  @default(true)
@@ -42,8 +53,10 @@ model Club {
   /// % de descuento familiar (0–100). Se persiste; aún no se aplica en cobros.
   descuento_familiar_pct Float   @default(0)
 
+  categorias_cuota  CategoriaCuota[]
   membresias        Membresia[]
   pagos             Pago[]
+  bonificaciones_cuota BonificacionCuota[]
   espacios          Espacio[]
   reservas          Reserva[]
   horarios          Horario[]
@@ -58,6 +71,19 @@ model Club {
   asistencias       Asistencia[]
 
   @@index([eliminado])
+  @@index([plan_pendiente_confirmado_at])
+}
+
+/// Tramos de precio SaaS (plataforma, no por club). Superadmin los edita.
+model PlanTramo {
+  id         Int     @id @default(autoincrement())
+  nombre     String
+  desde      Int
+  hasta      Int?
+  precio_usd Float
+  orden      Int
+
+  @@index([orden])
 }
 
 /// Superadmin de la plataforma ClubApp (crea clubes, no pertenece a un tenant)
@@ -98,8 +124,11 @@ model Membresia {
   grupo_familiar_id    Int?
   grupo_familiar       GrupoFamiliar? @relation("MiembrosGrupo", fields: [grupo_familiar_id], references: [id])
   grupos_titular       GrupoFamiliar[] @relation("TitularGrupo")
+  categoria_id         Int?
+  categoria            CategoriaCuota? @relation(fields: [categoria_id], references: [id])
 
   pagos             Pago[]
+  bonificaciones_cuota BonificacionCuota[]
   reservas          Reserva[]
   asistencias       Asistencia[]
   actividades       SocioActividad[]
@@ -114,6 +143,24 @@ model Membresia {
   @@index([club_id, rol])
   @@index([club_id, eliminado])
   @@index([grupo_familiar_id])
+  @@index([categoria_id])
+}
+
+/// Tipo de cuota del club (pleno, deportivo, menor…). El default es “Socio pleno”.
+model CategoriaCuota {
+  id         Int         @id @default(autoincrement())
+  club_id    Int
+  club       Club        @relation(fields: [club_id], references: [id])
+  nombre     String
+  slug       String
+  monto      Float
+  es_default Boolean     @default(false)
+  eliminado  Boolean     @default(false)
+  membresias Membresia[]
+
+  @@unique([club_id, slug])
+  @@index([club_id])
+  @@index([club_id, eliminado])
 }
 
 model GrupoFamiliar {
@@ -124,6 +171,7 @@ model GrupoFamiliar {
   titular_id Int
   titular    Membresia   @relation("TitularGrupo", fields: [titular_id], references: [id])
   socios     Membresia[] @relation("MiembrosGrupo")
+  pagos      Pago[]
   eliminado  Boolean     @default(false)
 
   @@index([club_id])
@@ -202,6 +250,11 @@ model Pago {
   club             Club      @relation(fields: [club_id], references: [id])
   socio_id         Int
   socio            Membresia @relation(fields: [socio_id], references: [id])
+  grupo_familiar_id Int?
+  grupo_familiar   GrupoFamiliar? @relation(fields: [grupo_familiar_id], references: [id])
+  /// cuota | inscripcion
+  tipo             String    @default("cuota")
+  concepto         String?
   mes              String
   monto            Float
   estado           String    @default("pendiente") // pendiente | pagado
@@ -209,9 +262,23 @@ model Pago {
   mp_init_point    String?
   fecha_pago       DateTime?
 
-  @@unique([socio_id, mes])
+  @@unique([socio_id, mes, tipo])
   @@index([club_id, mes])
   @@index([club_id, estado])
+  @@index([grupo_familiar_id])
+}
+
+/// Meses de cuota mensual que no se generan al cobrar.
+model BonificacionCuota {
+  id         Int       @id @default(autoincrement())
+  club_id    Int
+  club       Club      @relation(fields: [club_id], references: [id])
+  socio_id   Int
+  socio      Membresia @relation(fields: [socio_id], references: [id], onDelete: Cascade)
+  mes        String
+
+  @@unique([socio_id, mes])
+  @@index([club_id, mes])
 }
 
 model Espacio {

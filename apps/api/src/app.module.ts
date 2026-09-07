@@ -12,12 +12,14 @@ import { ReservasModule } from './reservas/reservas.module';
 import { HorariosModule } from './horarios/horarios.module';
 import { NoticiasModule } from './noticias/noticias.module';
 import { FamiliasModule } from './familias/familias.module';
+import { CategoriasCuotaModule } from './categorias-cuota/categorias-cuota.module';
 import { ActividadesModule } from './actividades/actividades.module';
 import { LiquidacionesModule } from './liquidaciones/liquidaciones.module';
 import { TorneosModule } from './torneos/torneos.module';
 import { PlatformModule } from './platform/platform.module';
 import { SocialModule } from './social/social.module';
 import { SolicitudesModule } from './solicitudes/solicitudes.module';
+import { PlanSaaSModule } from './plan-saas/plan-saas.module';
 import { HealthController } from './health.controller';
 import { TenantMiddleware } from './common/tenant.middleware';
 import { RequestLoggerMiddleware } from './common/request-logger.middleware';
@@ -37,12 +39,14 @@ import { RequestLoggerMiddleware } from './common/request-logger.middleware';
     HorariosModule,
     NoticiasModule,
     FamiliasModule,
+    CategoriasCuotaModule,
     ActividadesModule,
     LiquidacionesModule,
     TorneosModule,
     PlatformModule,
     SocialModule,
     SolicitudesModule,
+    PlanSaaSModule,
   ],
   controllers: [HealthController],
   providers: [TenantMiddleware, RequestLoggerMiddleware],

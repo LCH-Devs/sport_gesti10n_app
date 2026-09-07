@@ -19,10 +19,22 @@ async function main() {
     },
   });
 
+  await prisma.planTramo.deleteMany();
+  await prisma.planTramo.createMany({
+    data: [
+      { nombre: 'Hasta 50 socios', desde: 1, hasta: 50, precio_usd: 15, orden: 1 },
+      { nombre: 'Hasta 100 socios', desde: 51, hasta: 100, precio_usd: 30, orden: 2 },
+      { nombre: 'Más de 100 socios', desde: 101, hasta: null, precio_usd: 45, orden: 3 },
+    ],
+  });
+
   const club = await prisma.club.upsert({
     where: { slug: 'club-prueba' },
     update: {
-      precio_usd_mes: 49,
+      plan: 'Hasta 50 socios',
+      precio_usd_mes: 15,
+      plan_hasta: 50,
+      plan_consentido_hasta: 50,
       cuota_monto: 5000,
       regla_moroso_cuotas: 2,
       bloquear_reservas: true,
@@ -42,8 +54,10 @@ async function main() {
       color_primario: '#2563eb',
       color_secundario: '#0f172a',
       color_terciario: '#f59e0b',
-      plan: 'basico',
-      precio_usd_mes: 49,
+      plan: 'Hasta 50 socios',
+      precio_usd_mes: 15,
+      plan_hasta: 50,
+      plan_consentido_hasta: 50,
       cuota_monto: 5000,
       logo_url: null,
       regla_moroso_cuotas: 2,
@@ -54,6 +68,25 @@ async function main() {
       onboarding_completo: true,
       cancelar_reserva_horas: 2,
       activo: true,
+    },
+  });
+
+  const categoriaPleno = await prisma.categoriaCuota.upsert({
+    where: {
+      club_id_slug: { club_id: club.id, slug: 'socio-pleno' },
+    },
+    update: {
+      nombre: 'Socio pleno',
+      monto: club.cuota_monto,
+      es_default: true,
+      eliminado: false,
+    },
+    create: {
+      club_id: club.id,
+      nombre: 'Socio pleno',
+      slug: 'socio-pleno',
+      monto: club.cuota_monto,
+      es_default: true,
     },
   });
 
@@ -137,17 +170,18 @@ async function main() {
       where: { email: s.email },
     });
     await prisma.membresia.upsert({
-      where: {
-        usuario_id_club_id: { usuario_id: user.id, club_id: club.id },
-      },
-      update: { rol: s.rol, estado: 'activo' },
-      create: {
-        usuario_id: user.id,
-        club_id: club.id,
-        rol: s.rol,
-        estado: 'activo',
-      },
-    });
+    where: {
+      usuario_id_club_id: { usuario_id: user.id, club_id: club.id },
+    },
+    update: { rol: s.rol, estado: 'activo', categoria_id: categoriaPleno.id },
+    create: {
+      usuario_id: user.id,
+      club_id: club.id,
+      rol: s.rol,
+      estado: 'activo',
+      categoria_id: categoriaPleno.id,
+    },
+  });
   }
 
   const juanUser = await prisma.usuario.findUnique({
@@ -182,8 +216,14 @@ async function main() {
     : null;
 
   if (juan) {
-    await prisma.pago.upsert({
-      where: { socio_id_mes: { socio_id: juan.id, mes: '2026-08' } },
+    await (prisma.pago as { upsert: (args: unknown) => Promise<unknown> }).upsert({
+      where: {
+        socio_id_mes_tipo: {
+          socio_id: juan.id,
+          mes: '2026-08',
+          tipo: 'cuota',
+        },
+      },
       update: {},
       create: {
         club_id: club.id,
@@ -197,8 +237,14 @@ async function main() {
   }
 
   if (ana) {
-    await prisma.pago.upsert({
-      where: { socio_id_mes: { socio_id: ana.id, mes: '2026-08' } },
+    await (prisma.pago as { upsert: (args: unknown) => Promise<unknown> }).upsert({
+      where: {
+        socio_id_mes_tipo: {
+          socio_id: ana.id,
+          mes: '2026-08',
+          tipo: 'cuota',
+        },
+      },
       update: {},
       create: {
         club_id: club.id,
@@ -209,8 +255,14 @@ async function main() {
       },
     });
     // 2da cuota pendiente → dispara alerta fuga por deuda
-    await prisma.pago.upsert({
-      where: { socio_id_mes: { socio_id: ana.id, mes: '2026-07' } },
+    await (prisma.pago as { upsert: (args: unknown) => Promise<unknown> }).upsert({
+      where: {
+        socio_id_mes_tipo: {
+          socio_id: ana.id,
+          mes: '2026-07',
+          tipo: 'cuota',
+        },
+      },
       update: {},
       create: {
         club_id: club.id,

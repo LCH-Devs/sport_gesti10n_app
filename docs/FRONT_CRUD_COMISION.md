@@ -68,15 +68,17 @@ El rol de comisión/portería/socio/profe vive en `Membresia.rol`, no en `Usuari
 |--------|------|------|
 | `GET` | `/socios` | — |
 | `GET` | `/socios/:id` | — (id = membresía; 404 si es de otro club) |
-| `POST` | `/socios` | `{ dni, nombre, apellido, email, telefono?, password?, rol?, fecha_nacimiento? }` |
-| `PATCH` | `/socios/:id` | `{ nombre?, apellido?, email?, telefono?, estado?, rol?, fecha_nacimiento? }` |
+| `POST` | `/socios` | `{ dni, nombre, apellido, email, fecha_nacimiento, rol, telefono?, password?, categoria_id? }` — sin password: `socio` + DNI; sin categoría: Socio pleno |
+| `PATCH` | `/socios/:id` | `{ nombre?, apellido?, email?, telefono?, estado?, rol?, fecha_nacimiento?, categoria_id? }` |
 | `DELETE` | `/socios/:id` | — |
-| `POST` | `/socios/import-csv` | `{ csv }` o multipart |
+| `POST` | `/socios/import-csv` | `{ csv }` o multipart `file` (CSV / Excel) |
+| `GET` | `/socios/import-template` | plantilla `.xlsx` con columnas y una fila de ejemplo |
 
 `DELETE` = `eliminado: true` (deja de listarse y de loguear en ese club). Los pagos se conservan. Re-alta del mismo email **restaura** la membresía.
 
-`rol`: `socio` (default) o `profe`.  
-`estado`: `activo` | `moroso` | `suspendido`.  
+`rol`: `socio` o `profe` (**obligatorio** en alta e importación).
+`estado`: `activo` | `moroso` | `suspendido`.
+Alta e importación: `fecha_nacimiento` **obligatoria**.
 Si el email ya existe como usuario, se **vincula** al club (misma password).
 
 ### Respuesta item
@@ -92,7 +94,9 @@ Si el email ya existe como usuario, se **vincula** al club (misma password).
   "estado": "activo",
   "rol": "socio",
   "fecha_nacimiento": "1990-08-14T00:00:00.000Z",
-  "grupo_familiar_id": null
+  "grupo_familiar_id": null,
+  "categoria_id": 1,
+  "categoria": { "id": 1, "nombre": "Socio pleno", "slug": "socio-pleno", "monto": 5000 }
 }
 ```
 
@@ -117,7 +121,23 @@ No es un padrón: son cuotas del mes.
 `estado` del pago: `pendiente` | `pagado`.  
 Sin `MP_ACCESS_TOKEN` el link es mock.
 
-**UI hoy:** listar mes, generar cobros, marcar pagado. No hay alta/baja de un pago suelto a mano (salvo marcar pagado).
+**UI hoy:** listar mes, generar cobros, marcar pagado. También alta/edición de **categorías de cuota** (`/categorias-cuota`). Sin `monto` en cobrar-mes, cada socio paga el monto de su categoría. `monto` opcional pisa a todos.
+
+---
+
+## 2b. Categorías de cuota
+
+**Tabla:** `CategoriaCuota`  
+**Relaciones:** `club_id`; `Membresia.categoria_id`
+
+| Método | Ruta | Body |
+|--------|------|------|
+| `GET` | `/categorias-cuota` | — |
+| `POST` | `/categorias-cuota` | `{ nombre, monto }` |
+| `PATCH` | `/categorias-cuota/:id` | `{ nombre?, monto? }` |
+| `DELETE` | `/categorias-cuota/:id` | — |
+
+Al crear el club (y en onboarding) se crea **Socio pleno** con `Club.cuota_monto`. No se puede borrar. Máx. 20 por club. Borrar una categoría mueve a esos socios a Socio pleno.
 
 ---
 
@@ -302,14 +322,16 @@ Relacionado: `GET /reportes/hoy` (dashboard inicio).
 | Método | Ruta | Body |
 |--------|------|------|
 | `GET` | `/familias` | — |
-| `POST` | `/familias` | `{ nombre, titular_id, socio_ids? }` |
-| `PATCH` | `/familias/:id` | `{ nombre?, titular_id?, socio_ids? }` |
+| `GET` | `/familias/:id` | — |
+| `POST` | `/familias` | `{ nombre, titular_id? , titular?, socio_ids?, socios_nuevos? }` (`titular_id` **o** `titular`) |
+| `PATCH` | `/familias/:id` | mismos campos, opcionales |
 | `DELETE` | `/familias/:id` | — |
 
 `titular_id` y `socio_ids` son ids de **membresía** (`GET /socios`).  
+`titular` / `socios_nuevos` usan la misma forma que `POST /socios`.  
 `DELETE` = `eliminado: true`.
 
-**UI hoy:** crear. **Falta en UI:** editar miembros, borrar.
+**UI hoy:** crear (existentes + altas nuevas), editar, borrar.
 
 ---
 

@@ -7,7 +7,7 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import { ChromeProvider, useChrome } from '@/lib/ChromeContext';
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { getSession } from '@/lib/api';
+import { applyClubTheme, getSession } from '@/lib/api';
 
 function RootLayoutContent({
   children,
@@ -23,7 +23,8 @@ function RootLayoutContent({
     pathname === '/' ||
     pathname === '/landing' ||
     pathname.startsWith('/login') ||
-    pathname === '/supercalifragilisticoespiralidoso/acceso';
+    pathname === '/supercalifragilisticoespiralidoso/acceso' ||
+    pathname.startsWith('/supercalifragilisticoespiralidoso/plan/confirmar');
   const isPrefixedRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/');
   const showNavbarSidebar = !isPublicPage && !hideChrome;
 
@@ -31,6 +32,7 @@ function RootLayoutContent({
     if (isPublicPage || isPrefixedRoute) return;
     const s = getSession();
     if (!s) return;
+    applyClubTheme(s.club);
     if (s.must_complete_onboarding && !pathname.startsWith('/gestion/onboarding')) {
       router.replace('/gestion/onboarding');
       return;

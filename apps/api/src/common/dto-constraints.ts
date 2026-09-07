@@ -1,6 +1,7 @@
 import { applyDecorators } from '@nestjs/common';
 import {
   IsEmail,
+  isEmail,
   IsString,
   Matches,
   MaxLength,
@@ -130,10 +131,34 @@ export function IsTelefono() {
   );
 }
 
+export function normalizeDni(dni: string) {
+  return dni.replace(/\D/g, '');
+}
+
+/** Contraseña inicial si no mandan una: `socio` + DNI (solo dígitos). */
+export function defaultSocioPassword(dni: string) {
+  return `socio${normalizeDni(dni)}`;
+}
+
 export function isValidDni(dni: string) {
   return DNI_REGEX.test(dni);
 }
 
 export function isValidPersonName(name: string) {
-  return PERSON_NAME_REGEX.test(name) && name.trim().length >= 2;
+  const trimmed = name.trim();
+  return (
+    trimmed.length >= 2 &&
+    trimmed.length <= 80 &&
+    PERSON_NAME_REGEX.test(trimmed)
+  );
+}
+
+export function isValidEmail(email: string) {
+  return email.length <= 254 && isEmail(email);
+}
+
+export function isValidTelefono(telefono: string) {
+  const trimmed = telefono.trim();
+  if (!trimmed) return true;
+  return trimmed.length <= 30 && TELEFONO_REGEX.test(trimmed);
 }

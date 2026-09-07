@@ -11,6 +11,12 @@ import {
 } from '@/lib/api';
 import { ClubColorFields } from '@/components/ClubColorFields';
 import { ClubLogoField } from '@/components/ClubLogoField';
+import { DeportesPicker } from '@/components/DeportesPicker';
+import {
+  deporteKey,
+  mergeDeportes,
+  splitDeportes,
+} from '@/lib/deportes-catalogo';
 import { useLanguageContext } from '@/lib/LanguageContext';
 import { FormEvent, Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -47,6 +53,7 @@ type ClubConfig = {
   cumples_auto: boolean;
   max_reservas_activas: number;
   cancelar_reserva_horas: number;
+  deportes?: string[];
 };
 
 const NOTIF_KEY = 'clubapp_notif_prefs';
@@ -367,6 +374,7 @@ function ClubSection() {
           cumples_auto: form.cumples_auto,
           max_reservas_activas: Number(form.max_reservas_activas),
           cancelar_reserva_horas: Number(form.cancelar_reserva_horas),
+          deportes: form.deportes ?? [],
         }),
       });
       setForm(updated);
@@ -381,6 +389,7 @@ function ClubSection() {
           color_terciario: updated.color_terciario,
           logo_url: updated.logo_url,
           cuota_monto: updated.cuota_monto,
+          deportes: updated.deportes,
         },
       });
       setMsg('Configuración guardada.');
@@ -398,6 +407,8 @@ function ClubSection() {
       <p className="text-slate-500">Cargando…</p>
     );
   }
+
+  const deportesSplit = splitDeportes(form.deportes || []);
 
   return (
     <div>
@@ -444,6 +455,49 @@ function ClubSection() {
           onChange={(logo_url) => setForm((f) => f && { ...f, logo_url })}
           onError={setError}
         />
+        <div className="sm:col-span-2">
+          <DeportesPicker
+            seleccionados={deportesSplit.catalogo}
+            extras={deportesSplit.extras}
+            onToggle={(deporte) =>
+              setForm((f) => {
+                if (!f) return f;
+                const actual = splitDeportes(f.deportes || []);
+                const catalogo = actual.catalogo.includes(deporte)
+                  ? actual.catalogo.filter((d) => d !== deporte)
+                  : [...actual.catalogo, deporte];
+                return { ...f, deportes: mergeDeportes(catalogo, actual.extras) };
+              })
+            }
+            onAddExtra={(deporte) =>
+              setForm((f) => {
+                if (!f) return f;
+                const actual = splitDeportes(f.deportes || []);
+                const key = deporteKey(deporte);
+                if (actual.extras.some((d) => deporteKey(d) === key)) return f;
+                return {
+                  ...f,
+                  deportes: mergeDeportes(actual.catalogo, [...actual.extras, deporte]),
+                };
+              })
+            }
+            onRemoveExtra={(deporte) =>
+              setForm((f) => {
+                if (!f) return f;
+                const actual = splitDeportes(f.deportes || []);
+                const key = deporteKey(deporte);
+                return {
+                  ...f,
+                  deportes: mergeDeportes(
+                    actual.catalogo,
+                    actual.extras.filter((d) => deporteKey(d) !== key),
+                  ),
+                };
+              })
+            }
+            hint="Los espacios se cargan aparte, en Espacios."
+          />
+        </div>
         <label className="text-sm">
           Cuota monto
           <input

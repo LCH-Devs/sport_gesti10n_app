@@ -2,6 +2,42 @@ import { parseTenantHost } from './tenant-host';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
+export const PLAN_UPGRADE_REQUIRED = 'PLAN_UPGRADE_REQUIRED';
+
+export type PlanUpgradeBody = {
+  code: typeof PLAN_UPGRADE_REQUIRED;
+  message?: string;
+  socios_actuales: number;
+  extras?: number;
+  plan_hasta: number;
+  plan_nombre: string;
+  precio_actual: number;
+  precio_proximo: number;
+  hasta_proximo: number | null;
+  plan_proximo_nombre: string;
+  aplica_desde: string;
+};
+
+export class ApiError extends Error {
+  status: number;
+  body: Record<string, unknown>;
+
+  constructor(message: string, status: number, body: Record<string, unknown>) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+  }
+}
+
+export function isPlanUpgradeRequired(err: unknown): err is ApiError {
+  return (
+    err instanceof ApiError &&
+    err.status === 409 &&
+    err.body.code === PLAN_UPGRADE_REQUIRED
+  );
+}
+
 function clubSlugFromBrowser(): string | undefined {
   if (typeof window === 'undefined') return undefined;
   const host = window.location.host;
@@ -238,13 +274,33 @@ export function mediaUrl(url: string | null | undefined): string {
   return `${API_URL}${url.startsWith('/') ? url : `/${url}`}`;
 }
 
+function throwApiError(res: Response, data: Record<string, unknown>) {
+  const raw = data.message;
+  const msg = Array.isArray(raw)
+    ? raw.join(', ')
+    : typeof raw === 'string'
+      ? raw
+      : `Error ${res.status}`;
+  throw new ApiError(msg, res.status, data);
+}
+
 export async function apiUpload<T>(
   path: string,
   file: File,
-  options: { token?: string; clubSlug?: string; fieldName?: string } = {},
+  options: {
+    token?: string;
+    clubSlug?: string;
+    fieldName?: string;
+    fields?: Record<string, string>;
+  } = {},
 ): Promise<T> {
   const body = new FormData();
   body.append(options.fieldName || 'file', file);
+  if (options.fields) {
+    for (const [key, value] of Object.entries(options.fields)) {
+      body.append(key, value);
+    }
+  }
   const res = await fetch(`${API_URL}${path}`, {
     method: 'POST',
     body,
@@ -259,11 +315,8 @@ export async function apiUpload<T>(
     if (res.status === 401) {
       handleExpiredSession(options.token);
     }
-    const data = await res.json().catch(() => ({}));
-    const msg = Array.isArray(data.message)
-      ? data.message.join(', ')
-      : data.message || `Error ${res.status}`;
-    throw new Error(msg);
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    throwApiError(res, data);
   }
   return res.json() as Promise<T>;
 }
@@ -314,13 +367,41 @@ export async function apiFetch<T>(
     if (res.status === 401) {
       handleExpiredSession(token);
     }
-    const body = await res.json().catch(() => ({}));
-    const msg = Array.isArray(body.message)
-      ? body.message.join(', ')
-      : body.message || `Error ${res.status}`;
-    throw new Error(msg);
+    const data = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+    throwApiError(res, data);
   }
   return res.json() as Promise<T>;
+}
+
+export async function apiDownload(
+  path: string,
+  filename: string,
+  options: { token?: string; clubSlug?: string } = {},
+) {
+  const slug = options.clubSlug || clubSlugFromBrowser();
+  const res = await fetch(`${API_URL}${path}`, {
+    headers: {
+      ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
+      ...(slug ? { 'X-Club-Slug': slug } : {}),
+    },
+  });
+  if (!res.ok) {
+    if (res.status === 401) {
+      handleExpiredSession(options.token);
+    }
+    const data = await res.json().catch(() => ({}));
+    const msg = Array.isArray(data.message)
+      ? data.message.join(', ')
+      : data.message || `Error ${res.status}`;
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export { API_URL };

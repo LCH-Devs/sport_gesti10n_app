@@ -51,6 +51,28 @@ export default function FamiliasPage() {
     void load();
   }, [load]);
 
+  async function removeFamilia(id: number) {
+    const session = requireSession();
+    if (!session) return;
+    if (
+      !window.confirm(
+        t('admin.familias.confirmDelete', '¿Borrar este grupo familiar?'),
+      )
+    ) {
+      return;
+    }
+    try {
+      await apiFetch(`/familias/${id}`, {
+        method: 'DELETE',
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al borrar');
+    }
+  }
+
   return (
     <div className="relative">
       <h2 className="text-2xl font-bold">{t('admin.familias.title')}</h2>
@@ -73,6 +95,7 @@ export default function FamiliasPage() {
                 <th className="px-4 py-3">{t('admin.familias.nombre')}</th>
                 <th className="px-4 py-3">{t('admin.familias.titular')}</th>
                 <th className="px-4 py-3">{t('admin.familias.miembros')}</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -83,11 +106,29 @@ export default function FamiliasPage() {
                     {f.titular.apellido}, {f.titular.nombre}
                   </td>
                   <td className="px-4 py-3">{f.socios.length}</td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      className="mr-3 text-sm font-semibold text-[var(--club-primary)]"
+                      onClick={() =>
+                        router.push(`/gestion/familias/nuevo?id=${f.id}`)
+                      }
+                    >
+                      {t('admin.familias.editFamilia')}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-sm text-red-600"
+                      onClick={() => void removeFamilia(f.id)}
+                    >
+                      {t('admin.socios.eliminar')}
+                    </button>
+                  </td>
                 </tr>
               ))}
               {items.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-4 text-slate-500">
+                  <td colSpan={4} className="px-4 py-4 text-slate-500">
                     {t('messages.noData')}
                   </td>
                 </tr>

@@ -1,4 +1,4 @@
-import { PASSWORD_REGEX, TELEFONO_REGEX } from './dto-constraints';
+import { defaultSocioPassword, PASSWORD_REGEX, TELEFONO_REGEX } from './dto-constraints';
 
 describe('dto-constraints password', () => {
   it('acepta una clave que cumple la política', () => {
@@ -10,6 +10,10 @@ describe('dto-constraints password', () => {
     expect(PASSWORD_REGEX.test('Socioooo')).toBe(false);
     expect(PASSWORD_REGEX.test('Socio123')).toBe(false);
     expect(PASSWORD_REGEX.test('Ab1!')).toBe(false);
+  });
+
+  it('arma la clave inicial socio + DNI', () => {
+    expect(defaultSocioPassword('30.111.222')).toBe('socio30111222');
   });
 });
 

@@ -23,6 +23,18 @@ export type Trial10dMail = {
   clubNombre: string;
 };
 
+export type PlanUpgradeMail = {
+  to: string;
+  adminNombre: string;
+  clubNombre: string;
+  planActual: string;
+  precioActual: number;
+  planNuevo: string;
+  precioNuevo: number;
+  aplicaDesde: string;
+  confirmUrl: string;
+};
+
 export type MailResult = {
   sent: boolean;
   stub: boolean;
@@ -226,6 +238,40 @@ export function buildTrial10dHtml(p: Trial10dMail) {
   );
 }
 
+export function buildPlanUpgradeText(p: PlanUpgradeMail) {
+  return [
+    `Hola ${p.adminNombre},`,
+    ``,
+    `${p.clubNombre} superó el plan ${p.planActual} (USD ${p.precioActual}/mes).`,
+    ``,
+    `Los socios ya están cargados. Este mes no cambia el precio.`,
+    `Si confirmás, a partir del ${p.aplicaDesde} el club pasa a ${p.planNuevo} (USD ${p.precioNuevo}/mes).`,
+    ``,
+    `Confirmar el nuevo plan:`,
+    p.confirmUrl,
+    ``,
+    `Si no confirmás, el precio se mantiene y el equipo de ClubApp lo ve como pendiente.`,
+    ``,
+    `— Equipo ClubApp`,
+  ].join('\n');
+}
+
+export function buildPlanUpgradeHtml(p: PlanUpgradeMail) {
+  const nombre = escapeHtml(p.adminNombre);
+  const club = escapeHtml(p.clubNombre);
+  const url = escapeHtml(p.confirmUrl);
+  return wrapHtml(
+    `Actualización de plan — ${p.clubNombre}`,
+    `
+      <p style="margin:0 0 12px;font-size:16px;">Hola ${nombre},</p>
+      <p style="margin:0 0 16px;line-height:1.55;"><strong>${club}</strong> superó el plan ${escapeHtml(p.planActual)} (USD ${p.precioActual}/mes).</p>
+      <p style="margin:0 0 16px;line-height:1.55;">Los socios ya están cargados. Este mes no cambia el precio. Si confirmás, a partir del <strong>${escapeHtml(p.aplicaDesde)}</strong> el club pasa a <strong>${escapeHtml(p.planNuevo)}</strong> (USD ${p.precioNuevo}/mes).</p>
+      <p style="margin:0 0 16px;"><a href="${url}" style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px;font-weight:600;">Confirmar el nuevo plan</a></p>
+      <p style="margin:0;line-height:1.55;font-size:13px;color:#64748b;">Si no confirmás, el precio se mantiene y el equipo de ClubApp lo ve como pendiente.</p>
+    `,
+  );
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
@@ -276,6 +322,15 @@ export class MailService {
       subject: `Quedan 10 días de prueba de ClubApp — ${payload.clubNombre}`,
       text: buildTrial10dText(payload),
       html: buildTrial10dHtml(payload),
+    });
+  }
+
+  sendPlanUpgradePending(payload: PlanUpgradeMail) {
+    return this.deliver({
+      to: payload.to,
+      subject: `Tu club superó el plan — confirmá el cambio — ${payload.clubNombre}`,
+      text: buildPlanUpgradeText(payload),
+      html: buildPlanUpgradeHtml(payload),
     });
   }
 

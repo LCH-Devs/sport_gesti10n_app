@@ -12,6 +12,13 @@ type SolicitudPrefill = {
   apellido: string;
   nombre_club: string;
   email: string;
+  cantidad_miembros: number;
+};
+
+type PlanPreview = {
+  plan: string;
+  precio_usd_mes: number;
+  plan_hasta: number;
 };
 
 export default function NewClubPage() {
@@ -22,24 +29,34 @@ export default function NewClubPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [fromSolicitud, setFromSolicitud] = useState(false);
+  const [preview, setPreview] = useState<PlanPreview | null>(null);
   const [form, setForm] = useState({
     nombre: '',
     admin_email: '',
     admin_nombre: '',
     cantidad_miembros: '',
+    precio_usd_mes: '',
   });
 
-  function precioPorCantidadMiembros(cantidad: number): number {
-    if (cantidad <= 50) return 15;
-    if (cantidad <= 100) return 30;
-    return 45;
-  }
-
   const cantidadMiembrosNum = Number(form.cantidad_miembros);
-  const precioEstimado =
-    form.cantidad_miembros && cantidadMiembrosNum > 0
-      ? precioPorCantidadMiembros(cantidadMiembrosNum)
-      : null;
+
+  useEffect(() => {
+    if (!form.cantidad_miembros || cantidadMiembrosNum < 1) {
+      setPreview(null);
+      return;
+    }
+    const session = getPlatformSession();
+    if (!session) return;
+    void apiFetch<PlanPreview>(
+      `/platform/plan-tramos/preview?cantidad=${cantidadMiembrosNum}`,
+      { token: session.access_token },
+    )
+      .then((p) => {
+        setPreview(p);
+        setForm((f) => ({ ...f, precio_usd_mes: String(p.precio_usd_mes) }));
+      })
+      .catch(() => setPreview(null));
+  }, [form.cantidad_miembros, cantidadMiembrosNum]);
 
   useEffect(() => {
     if (!solicitudId) return;
@@ -53,12 +70,15 @@ export default function NewClubPage() {
     })
       .then((s) => {
         setFromSolicitud(true);
-        setForm({
+        setForm((f) => ({
+          ...f,
           nombre: s.nombre_club,
           admin_email: s.email,
           admin_nombre: `${s.nombre} ${s.apellido}`.trim(),
-          cantidad_miembros: '',
-        });
+          cantidad_miembros: s.cantidad_miembros
+            ? String(s.cantidad_miembros)
+            : '',
+        }));
       })
       .catch((err) => {
         setError(err instanceof Error ? err.message : t('messages.errorLoading'));
@@ -75,6 +95,7 @@ export default function NewClubPage() {
     setSaving(true);
     setError('');
     try {
+      const precio = Number(form.precio_usd_mes);
       await apiFetch('/platform/clubs', {
         method: 'POST',
         token: session.access_token,
@@ -82,7 +103,10 @@ export default function NewClubPage() {
           nombre: form.nombre,
           admin_email: form.admin_email,
           admin_nombre: form.admin_nombre || undefined,
-          precio_usd_mes: precioPorCantidadMiembros(cantidadMiembrosNum),
+          cantidad_miembros: cantidadMiembrosNum,
+          ...(precio > 0 && preview && precio !== preview.precio_usd_mes
+            ? { precio_usd_mes: precio }
+            : {}),
         }),
       });
       if (solicitudId) {
@@ -149,7 +173,7 @@ export default function NewClubPage() {
                 minLength={2}
               />
             </label>
-            <label className="text-sm sm:col-span-2">
+            <label className="text-sm">
               {t('newClub.memberCount')}
               <input
                 type="number"
@@ -157,12 +181,29 @@ export default function NewClubPage() {
                 step="1"
                 className="mt-1 w-full rounded-lg border px-3 py-2"
                 value={form.cantidad_miembros}
-                onChange={(e) => setForm({ ...form, cantidad_miembros: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, cantidad_miembros: e.target.value })
+                }
                 required
               />
-              {precioEstimado !== null && (
+            </label>
+            <label className="text-sm">
+              {t('newClub.monthlyPrice')}
+              <input
+                type="number"
+                min={0}
+                step="1"
+                className="mt-1 w-full rounded-lg border px-3 py-2"
+                value={form.precio_usd_mes}
+                onChange={(e) =>
+                  setForm({ ...form, precio_usd_mes: e.target.value })
+                }
+              />
+              {preview && (
                 <p className="mt-1 text-xs text-slate-500">
-                  {t('newClub.memberCountHelp').replace('{price}', String(precioEstimado))}
+                  {preview.plan} · tope {preview.plan_hasta} socios · USD{' '}
+                  {preview.precio_usd_mes}/mes. Podés cambiar el precio si hay
+                  un acuerdo.
                 </p>
               )}
             </label>

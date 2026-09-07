@@ -4,6 +4,7 @@ import {
   IsArray,
   IsBoolean,
   IsIn,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -33,10 +34,16 @@ export class CreateClubPlatformDto {
   @IsOptionalPersonName()
   admin_nombre?: string;
 
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  cantidad_miembros: number;
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
   @Type(() => Number)
-  precio_usd_mes: number;
+  precio_usd_mes?: number;
 }
 
 export class UpdateClubPlatformDto {

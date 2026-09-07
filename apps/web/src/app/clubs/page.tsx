@@ -88,6 +88,7 @@ export default function ClubsPage() {
           nombre: form.nombre,
           admin_email: form.admin_email,
           admin_nombre: form.admin_nombre || undefined,
+          cantidad_miembros: 50,
           precio_usd_mes: precio,
         }),
       });

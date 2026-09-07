@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
+import { PlanSaaSService } from '../plan-saas/plan-saas.service';
 import {
   CreateClubAdminDto,
   CreateClubPlatformDto,
@@ -18,6 +19,7 @@ import {
 } from './dto/platform.dto';
 import { NOT_DELETED, adminEmailInUseWhere, clubNombreInUseWhere, CLUB_NOMBRE_TAKEN } from '../common/club-users';
 import { normalizeDeportes } from '../common/club-deportes';
+import { ensureDefaultCategoriaCuota } from '../common/categorias-cuota';
 import {
   isReservedTenantSlug,
   staffPanelLoginUrl,
@@ -56,6 +58,7 @@ export class PlatformService {
     private readonly prisma: PrismaService,
     private readonly mail: MailService,
     private readonly config: ConfigService,
+    private readonly planes: PlanSaaSService,
   ) {}
 
   async listClubs() {
@@ -132,16 +135,25 @@ export class PlatformService {
     }
     const adminNombre = dto.admin_nombre?.trim() || 'Admin';
     const login_url = this.panelLoginUrl();
+    const assigned = await this.planes.assignForCantidad(dto.cantidad_miembros);
+    const precio =
+      dto.precio_usd_mes !== undefined ? dto.precio_usd_mes : assigned.precio_usd_mes;
 
     const created = await this.prisma.$transaction(async (tx: any) => {
       const club = await tx.club.create({
         data: {
           slug,
           nombre: dto.nombre.trim(),
-          precio_usd_mes: dto.precio_usd_mes,
+          plan: assigned.plan,
+          precio_usd_mes: precio,
+          plan_hasta: assigned.plan_hasta,
+          plan_consentido_hasta: assigned.plan_consentido_hasta,
           activo: true,
           onboarding_completo: false,
         },
+      });
+      await ensureDefaultCategoriaCuota(tx, club.id, {
+        monto: club.cuota_monto,
       });
 
       const existingUser = await tx.usuario.findUnique({
@@ -261,6 +273,13 @@ export class PlatformService {
         }),
       },
     });
+
+    if (dto.cuota_monto !== undefined) {
+      await ensureDefaultCategoriaCuota(this.prisma, id, {
+        monto: dto.cuota_monto,
+        syncMonto: true,
+      });
+    }
 
     if (dto.activo === false && wasActive) {
       const admin = await this.primaryAdmin(id);

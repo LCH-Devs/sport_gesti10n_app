@@ -6,10 +6,25 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFamiliaDto, UpdateFamiliaDto } from './dto/familia.dto';
 import { flattenPerson, NOT_DELETED, personInclude } from '../common/club-users';
+import { SociosService } from '../socios/socios.service';
+import { CreateSocioDto } from '../socios/dto/socio.dto';
+import { PlanSaaSService } from '../plan-saas/plan-saas.service';
+import { PagosService } from '../pagos/pagos.service';
+import { AltaCobrosFields } from '../pagos/dto/alta-cobros.dto';
+
+type FamiliaDb = Pick<
+  PrismaService,
+  'grupoFamiliar' | 'membresia' | 'usuario' | 'club' | 'categoriaCuota'
+>;
 
 @Injectable()
 export class FamiliasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly socios: SociosService,
+    private readonly planes: PlanSaaSService,
+    private readonly pagos: PagosService,
+  ) {}
 
   async list(clubId: number) {
     const rows = await this.prisma.grupoFamiliar.findMany({
@@ -23,67 +38,112 @@ export class FamiliasService {
     return rows.map((g) => this.shape(g));
   }
 
+  async getOne(clubId: number, id: number) {
+    return this.findOne(this.prisma, clubId, id);
+  }
+
   async create(clubId: number, dto: CreateFamiliaDto) {
-    await this.ensureSocio(clubId, dto.titular_id);
-    const memberIds = new Set(dto.socio_ids || []);
-    memberIds.add(dto.titular_id);
-    await this.ensureSocios(clubId, [...memberIds]);
-
-    const grupo = await this.prisma.grupoFamiliar.create({
-      data: {
-        club_id: clubId,
-        nombre: dto.nombre.trim(),
-        titular_id: dto.titular_id,
-      },
+    this.assertCreateTitular(dto);
+    await this.planes.assertCanAddMembers(
+      this.prisma,
+      clubId,
+      (dto.titular ? 1 : 0) + (dto.socios_nuevos?.length || 0),
+      dto.acepta_upgrade,
+    );
+    const { grupo, nuevosIds } = await this.prisma.$transaction(async (tx) => {
+      const { titularId, nuevoTitularId } = await this.resolveTitularId(
+        tx,
+        clubId,
+        this.conAlta(dto, dto),
+      );
+      const { memberIds, nuevosIds } = await this.collectMemberIds(tx, clubId, {
+        titularId,
+        socioIds: dto.socio_ids || [],
+        sociosNuevos: (dto.socios_nuevos || []).map((p) => this.conAltaPersona(p, dto)),
+      });
+      const created = await tx.grupoFamiliar.create({
+        data: {
+          club_id: clubId,
+          nombre: dto.nombre.trim(),
+          titular_id: titularId,
+        },
+      });
+      await this.replaceMembers(tx, clubId, created.id, memberIds);
+      return {
+        grupo: await this.findOne(tx, clubId, created.id),
+        nuevosIds: [...nuevosIds, ...(nuevoTitularId ? [nuevoTitularId] : [])],
+      };
     });
-
-    await this.prisma.membresia.updateMany({
-      where: { club_id: clubId, id: { in: [...memberIds] } },
-      data: { grupo_familiar_id: grupo.id },
-    });
-
-    return this.findOne(clubId, grupo.id);
+    await this.pagos.generarLinksDeAlta(clubId, nuevosIds);
+    return grupo;
   }
 
   async update(clubId: number, id: number, dto: UpdateFamiliaDto) {
-    await this.ensureInClub(clubId, id);
-
-    if (dto.titular_id !== undefined) {
-      await this.ensureSocio(clubId, dto.titular_id);
+    if (dto.titular_id != null && dto.titular) {
+      throw new BadRequestException(
+        'Indicá un titular existente o los datos de uno nuevo, no ambos',
+      );
     }
+    await this.planes.assertCanAddMembers(
+      this.prisma,
+      clubId,
+      (dto.titular ? 1 : 0) + (dto.socios_nuevos?.length || 0),
+      dto.acepta_upgrade,
+    );
+    const { grupo, nuevosIds } = await this.prisma.$transaction(async (tx) => {
+      const grupo = await this.ensureInClub(tx, clubId, id);
+      const { titularId, nuevoTitularId } = await this.resolveTitularId(tx, clubId, {
+        titular_id: dto.titular_id ?? grupo.titular_id,
+        titular: dto.titular ? this.conAltaPersona(dto.titular, dto) : undefined,
+      });
 
-    await this.prisma.grupoFamiliar.update({
-      where: { id },
-      data: {
-        ...(dto.nombre !== undefined && { nombre: dto.nombre }),
-        ...(dto.titular_id !== undefined && { titular_id: dto.titular_id }),
-      },
+      await tx.grupoFamiliar.update({
+        where: { id },
+        data: {
+          ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
+          titular_id: titularId,
+        },
+      });
+
+      const touchMembers =
+        dto.socio_ids !== undefined ||
+        (dto.socios_nuevos && dto.socios_nuevos.length > 0) ||
+        dto.titular != null ||
+        (dto.titular_id != null && dto.titular_id !== grupo.titular_id);
+
+      let extraNuevos: number[] = [];
+      if (touchMembers) {
+        const currentIds =
+          dto.socio_ids !== undefined
+            ? dto.socio_ids
+            : (
+                await tx.membresia.findMany({
+                  where: { club_id: clubId, grupo_familiar_id: id, ...NOT_DELETED },
+                  select: { id: true },
+                })
+              ).map((m) => m.id);
+        const collected = await this.collectMemberIds(tx, clubId, {
+          titularId,
+          socioIds: currentIds,
+          sociosNuevos: (dto.socios_nuevos || []).map((p) =>
+            this.conAltaPersona(p, dto),
+          ),
+        });
+        extraNuevos = collected.nuevosIds;
+        await this.replaceMembers(tx, clubId, id, collected.memberIds);
+      }
+
+      return {
+        grupo: await this.findOne(tx, clubId, id),
+        nuevosIds: [...extraNuevos, ...(nuevoTitularId ? [nuevoTitularId] : [])],
+      };
     });
-
-    if (dto.socio_ids !== undefined) {
-      const titularId =
-        dto.titular_id ??
-        (await this.prisma.grupoFamiliar.findUnique({ where: { id } }))!
-          .titular_id;
-      const memberIds = new Set(dto.socio_ids);
-      memberIds.add(titularId);
-      await this.ensureSocios(clubId, [...memberIds]);
-
-      await this.prisma.membresia.updateMany({
-        where: { club_id: clubId, grupo_familiar_id: id },
-        data: { grupo_familiar_id: null },
-      });
-      await this.prisma.membresia.updateMany({
-        where: { club_id: clubId, id: { in: [...memberIds] } },
-        data: { grupo_familiar_id: id },
-      });
-    }
-
-    return this.findOne(clubId, id);
+    await this.pagos.generarLinksDeAlta(clubId, nuevosIds);
+    return grupo;
   }
 
   async remove(clubId: number, id: number) {
-    await this.ensureInClub(clubId, id);
+    await this.ensureInClub(this.prisma, clubId, id);
     await this.prisma.membresia.updateMany({
       where: { club_id: clubId, grupo_familiar_id: id },
       data: { grupo_familiar_id: null },
@@ -95,8 +155,93 @@ export class FamiliasService {
     return { ok: true };
   }
 
-  private async findOne(clubId: number, id: number) {
-    const g = await this.prisma.grupoFamiliar.findFirst({
+  private assertCreateTitular(dto: CreateFamiliaDto) {
+    const hasId = dto.titular_id != null;
+    const hasNew = dto.titular != null;
+    if (hasId === hasNew) {
+      throw new BadRequestException(
+        'Indicá un titular existente o los datos de uno nuevo, no ambos',
+      );
+    }
+  }
+
+  private conAlta<T extends { titular?: CreateSocioDto }>(
+    dto: T,
+    alta: AltaCobrosFields,
+  ): T {
+    if (!dto.titular) return dto;
+    return { ...dto, titular: this.conAltaPersona(dto.titular, alta) };
+  }
+
+  private conAltaPersona(
+    persona: CreateSocioDto,
+    alta: AltaCobrosFields,
+  ): CreateSocioDto {
+    return {
+      ...persona,
+      inscripcion: persona.inscripcion ?? alta.inscripcion,
+      inscripcion_monto: persona.inscripcion_monto ?? alta.inscripcion_monto,
+      inscripcion_cuotas: persona.inscripcion_cuotas ?? alta.inscripcion_cuotas,
+      bonificar_meses: persona.bonificar_meses ?? alta.bonificar_meses,
+    };
+  }
+
+  private async resolveTitularId(
+    db: FamiliaDb,
+    clubId: number,
+    dto: { titular_id?: number; titular?: CreateSocioDto },
+  ) {
+    if (dto.titular) {
+      const created = await this.socios.createWithClient(db, clubId, dto.titular);
+      return { titularId: created.id, nuevoTitularId: created.id };
+    }
+    const titularId = dto.titular_id;
+    if (titularId == null) {
+      throw new BadRequestException('Falta el titular del grupo');
+    }
+    await this.ensureSocio(db, clubId, titularId);
+    return { titularId, nuevoTitularId: null as number | null };
+  }
+
+  private async collectMemberIds(
+    db: FamiliaDb,
+    clubId: number,
+    opts: {
+      titularId: number;
+      socioIds: number[];
+      sociosNuevos: CreateSocioDto[];
+    },
+  ) {
+    const memberIds = new Set(opts.socioIds);
+    memberIds.add(opts.titularId);
+    const nuevosIds: number[] = [];
+    for (const nuevo of opts.sociosNuevos) {
+      const created = await this.socios.createWithClient(db, clubId, nuevo);
+      memberIds.add(created.id);
+      nuevosIds.push(created.id);
+    }
+    await this.ensureSocios(db, clubId, [...memberIds]);
+    return { memberIds, nuevosIds };
+  }
+
+  private async replaceMembers(
+    db: FamiliaDb,
+    clubId: number,
+    grupoId: number,
+    memberIds: Set<number>,
+  ) {
+    await db.membresia.updateMany({
+      where: { club_id: clubId, grupo_familiar_id: grupoId },
+      data: { grupo_familiar_id: null },
+    });
+    await db.membresia.updateMany({
+      where: { club_id: clubId, id: { in: [...memberIds] } },
+      data: { grupo_familiar_id: grupoId },
+    });
+  }
+
+  private async findOne(db: FamiliaDb, clubId: number, id: number) {
+    const g = await db.grupoFamiliar.findFirst({
       where: { id, club_id: clubId, ...NOT_DELETED },
       include: {
         titular: { include: personInclude },
@@ -119,23 +264,23 @@ export class FamiliasService {
     };
   }
 
-  private async ensureInClub(clubId: number, id: number) {
-    const g = await this.prisma.grupoFamiliar.findFirst({
+  private async ensureInClub(db: FamiliaDb, clubId: number, id: number) {
+    const g = await db.grupoFamiliar.findFirst({
       where: { id, club_id: clubId, ...NOT_DELETED },
     });
     if (!g) throw new NotFoundException('Familia no encontrada');
     return g;
   }
 
-  private async ensureSocio(clubId: number, socioId: number) {
-    const s = await this.prisma.membresia.findFirst({
+  private async ensureSocio(db: FamiliaDb, clubId: number, socioId: number) {
+    const s = await db.membresia.findFirst({
       where: { id: socioId, club_id: clubId, ...NOT_DELETED },
     });
     if (!s) throw new BadRequestException(`Socio ${socioId} no encontrado`);
     return s;
   }
 
-  private async ensureSocios(clubId: number, ids: number[]) {
-    for (const id of ids) await this.ensureSocio(clubId, id);
+  private async ensureSocios(db: FamiliaDb, clubId: number, ids: number[]) {
+    for (const id of ids) await this.ensureSocio(db, clubId, id);
   }
 }

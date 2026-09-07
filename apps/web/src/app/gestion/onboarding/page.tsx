@@ -17,6 +17,8 @@ import {
   type GeoRefLocalidad,
   type GeoRefCalle,
 } from '@/components/PlaceAutocomplete';
+import { DeportesPicker } from '@/components/DeportesPicker';
+import { deporteKey, mergeDeportes } from '@/lib/deportes-catalogo';
 
 const STEPS = [
   { id: 1, label: 'Titular' },
@@ -31,16 +33,6 @@ const NAME_REGEX = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]*$/;
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%&*_\-+=]).{8,}$/;
 
-const DEPORTES_CATALOGO = [
-  'Fútbol',
-  'Básquet',
-  'Pádel',
-  'Tenis',
-  'Vóley',
-  'Natación',
-  'Hockey',
-] as const;
-
 const ESPACIO_TIPOS = [
   { value: 'cancha', label: 'Cancha' },
   { value: 'padel', label: 'Pádel' },
@@ -53,6 +45,7 @@ const ESPACIO_TIPOS = [
 ] as const;
 
 type EspacioBorrador = { nombre: string; tipo: string };
+type ExtraCategoria = { nombre: string; monto: string };
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -85,8 +78,9 @@ export default function OnboardingPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deportesSeleccionados, setDeportesSeleccionados] = useState<string[]>([]);
-  const [deporteOtro, setDeporteOtro] = useState('');
+  const [deportesExtras, setDeportesExtras] = useState<string[]>([]);
   const [espacios, setEspacios] = useState<EspacioBorrador[]>([]);
+  const [extrasCategoria, setExtrasCategoria] = useState<ExtraCategoria[]>([]);
   const [espacioNombre, setEspacioNombre] = useState('');
   const [espacioTipo, setEspacioTipo] = useState<string>(ESPACIO_TIPOS[0].value);
   const [espaciosWarning, setEspaciosWarning] = useState('');
@@ -155,6 +149,18 @@ export default function OnboardingPage() {
     );
   }
 
+  function addDeporteExtra(deporte: string) {
+    const key = deporteKey(deporte);
+    setDeportesExtras((prev) =>
+      prev.some((d) => deporteKey(d) === key) ? prev : [...prev, deporte.trim()],
+    );
+  }
+
+  function removeDeporteExtra(deporte: string) {
+    const key = deporteKey(deporte);
+    setDeportesExtras((prev) => prev.filter((d) => deporteKey(d) !== key));
+  }
+
   function addEspacio() {
     if (!espacioNombre.trim()) return;
     setEspacios((prev) => [...prev, { nombre: espacioNombre.trim(), tipo: espacioTipo }]);
@@ -213,11 +219,7 @@ export default function OnboardingPage() {
 
     const cuitCuilDigits = form.cuit_cuil.replace(/\D/g, '');
     const direccionCompleta = `${calleNombre}${altura ? ' ' + altura : ''}`.trim();
-    const otros = deporteOtro
-      .split(',')
-      .map((d) => d.trim())
-      .filter(Boolean);
-    const deportes = [...deportesSeleccionados, ...otros];
+    const deportes = mergeDeportes(deportesSeleccionados, deportesExtras);
 
     setSaving(true);
     try {
@@ -238,6 +240,16 @@ export default function OnboardingPage() {
           color_secundario: form.color_secundario || null,
           color_terciario: form.color_terciario || null,
           cuota_monto: Number(form.cuota_monto),
+          ...(extrasCategoria.some((c) => c.nombre.trim())
+            ? {
+                categorias: extrasCategoria
+                  .filter((c) => c.nombre.trim())
+                  .map((c) => ({
+                    nombre: c.nombre.trim(),
+                    monto: Number(c.monto || 0),
+                  })),
+              }
+            : {}),
           nueva_password: form.nueva_password,
           ubicacion_json: ubicacion || undefined,
           deportes: deportes.length ? deportes : undefined,
@@ -422,17 +434,83 @@ export default function OnboardingPage() {
         {step === 2 && (
           <>
             <label className="text-sm">
-              Cuota base ($)
+              Cuota Socio pleno ($)
               <input
                 type="number"
                 className="mt-1 w-full rounded-lg border px-3 py-2"
                 value={form.cuota_monto}
                 onChange={(e) => setForm({ ...form, cuota_monto: e.target.value })}
                 placeholder="Ej: 5000"
+                min={0}
                 required
               />
             </label>
             <div />
+            <div className="sm:col-span-2 rounded-lg border border-slate-200 p-3">
+              <p className="text-sm font-medium">Tipos de socio y cuotas</p>
+              <p className="mt-1 text-xs text-slate-500">
+                Socio pleno es el default. Si el club tiene más tipos (deportivo, menor, jubilado),
+                agregalos ahora o después desde Cobros.
+              </p>
+              <ul className="mt-3 space-y-2">
+                <li className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+                  <span className="min-w-[10rem] font-medium">Socio pleno</span>
+                  <span>${form.cuota_monto || '0'}</span>
+                  <span className="text-xs text-slate-500">(por defecto)</span>
+                </li>
+                {extrasCategoria.map((extra, idx) => (
+                  <li
+                    key={idx}
+                    className="flex flex-wrap items-center gap-2"
+                  >
+                    <input
+                      className="min-w-[10rem] flex-1 rounded-lg border px-3 py-2 text-sm"
+                      value={extra.nombre}
+                      onChange={(e) =>
+                        setExtrasCategoria((prev) =>
+                          prev.map((row, i) =>
+                            i === idx ? { ...row, nombre: e.target.value } : row,
+                          ),
+                        )
+                      }
+                      placeholder="Ej: Deportivo"
+                    />
+                    <input
+                      type="number"
+                      min={0}
+                      className="w-28 rounded-lg border px-3 py-2 text-sm"
+                      value={extra.monto}
+                      onChange={(e) =>
+                        setExtrasCategoria((prev) =>
+                          prev.map((row, i) =>
+                            i === idx ? { ...row, monto: e.target.value } : row,
+                          ),
+                        )
+                      }
+                      placeholder="$"
+                    />
+                    <button
+                      type="button"
+                      className="text-xs text-red-600"
+                      onClick={() =>
+                        setExtrasCategoria((prev) => prev.filter((_, i) => i !== idx))
+                      }
+                    >
+                      Quitar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
+                onClick={() =>
+                  setExtrasCategoria((prev) => [...prev, { nombre: '', monto: '' }])
+                }
+              >
+                Agregar tipo de socio
+              </button>
+            </div>
             <PlaceAutocomplete<GeoRefLocalidad>
               label="Ciudad/Provincia"
               value={form.ciudad}
@@ -527,28 +605,14 @@ export default function OnboardingPage() {
         {step === 3 && (
           <>
             <div className="sm:col-span-2">
-              <p className="text-sm font-medium">Deportes del club o institución</p>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {DEPORTES_CATALOGO.map((deporte) => (
-                  <label key={deporte} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={deportesSeleccionados.includes(deporte)}
-                      onChange={() => toggleDeporte(deporte)}
-                    />
-                    {deporte}
-                  </label>
-                ))}
-              </div>
-              <label className="mt-2 block text-sm">
-                Otros deportes (separados por coma)
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2"
-                  value={deporteOtro}
-                  onChange={(e) => setDeporteOtro(e.target.value)}
-                  placeholder="Ej: Rugby, Ajedrez"
-                />
-              </label>
+              <DeportesPicker
+                seleccionados={deportesSeleccionados}
+                extras={deportesExtras}
+                onToggle={toggleDeporte}
+                onAddExtra={addDeporteExtra}
+                onRemoveExtra={removeDeporteExtra}
+                hint="Podés agregar o sacar deportes después en Configuración."
+              />
             </div>
 
             <div className="sm:col-span-2">
@@ -772,7 +836,7 @@ export default function OnboardingPage() {
             <div className="rounded-lg border border-slate-200 p-4">
               <p className="text-sm font-semibold text-slate-700">Club</p>
               <dl className="mt-2 grid grid-cols-2 gap-y-1 text-sm">
-                <dt className="text-slate-500">Cuota base</dt>
+                <dt className="text-slate-500">Cuota Socio pleno</dt>
                 <dd>${form.cuota_monto || '—'}</dd>
                 <dt className="text-slate-500">Ciudad</dt>
                 <dd>{form.ciudad || '—'}</dd>
@@ -780,6 +844,17 @@ export default function OnboardingPage() {
                 <dd>
                   {calleNombre ? `${calleNombre}${altura ? ' ' + altura : ''}` : '—'}
                 </dd>
+                {extrasCategoria.filter((c) => c.nombre.trim()).length > 0 && (
+                  <>
+                    <dt className="text-slate-500">Otras categorías</dt>
+                    <dd>
+                      {extrasCategoria
+                        .filter((c) => c.nombre.trim())
+                        .map((c) => `${c.nombre} ($${c.monto || 0})`)
+                        .join(', ')}
+                    </dd>
+                  </>
+                )}
               </dl>
             </div>
 
@@ -788,7 +863,7 @@ export default function OnboardingPage() {
               <dl className="mt-2 grid grid-cols-2 gap-y-1 text-sm">
                 <dt className="text-slate-500">Deportes</dt>
                 <dd>
-                  {[...deportesSeleccionados, ...deporteOtro.split(',').map((d) => d.trim()).filter(Boolean)].join(', ') || '—'}
+                  {mergeDeportes(deportesSeleccionados, deportesExtras).join(', ') || '—'}
                 </dd>
                 <dt className="text-slate-500">Espacios</dt>
                 <dd>{espacios.length ? `${espacios.length} cargado(s)` : '—'}</dd>

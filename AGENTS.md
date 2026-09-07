@@ -89,7 +89,7 @@ DNI único **por club**, no global. Email único en `Usuario`. Si el email ya ex
    `Solicitud` es tabla de **plataforma** (landing, el club todavía no existe): **sin** `club_id`. `POST /solicitudes` es público. Listado/PATCH: JWT `platform`. Ver `docs/FRONT_SOLICITUDES.md`.
 8. Config (moroso, reservas, cuota, branding) vive en `Club`. Cero reglas globales hardcodeadas salvo defaults al crear el club.
 
-Índices nuevos: compuestos con `club_id`. Plan básico: tope ~100 socios activos al crear (ya validado en `SociosService`).
+Índices nuevos: compuestos con `club_id`. Tope de socios: tramos `PlanTramo` (plataforma). El club no se bloquea al cruzar: modal + pendiente + mail. El precio (`precio_usd_mes`) solo cambia si confirman y corre el job del próximo ciclo. Cobro real SaaS: después.
 
 ---
 
@@ -137,7 +137,7 @@ Portal socio: `socios/socio-portal.controller.ts` con `UseClubAuth(SocioRoleGuar
 - Schema en `apps/api/prisma/schema.prisma`. Cambios de tablas: `pnpm db:sync` (local). No borrar migrations a mano.
 - No usar `prisma.admin` / `prisma.socio`. Es `usuario` + `membresia`.
 - Transacciones al crear usuario+membresía juntos.
-- Passwords: bcrypt cost 10. Default socio seed: `socio123` solo al crear si no mandan password.
+- Passwords: bcrypt cost 10. Seed de demo: `socio123`. Alta de socio sin password: `socio` + DNI (ej. `socio30111222`).
 
 ### Auth / seguridad
 
@@ -150,7 +150,7 @@ Portal socio: `socios/socio-portal.controller.ts` con `UseClubAuth(SocioRoleGuar
 
 - ClubApp **no cobra ni custodia** fondos. Preferences con el token MP **del club**.
 - Prod: sin fallback a `MP_ACCESS_TOKEN` de plataforma. Ese env es solo sandbox/demo.
-- Unique `(socio_id, mes)` — `socio_id` es la membresía. Cobrar mes es idempotente.
+- Unique `(socio_id, mes, tipo)` — `socio_id` es la membresía. Cobrar mes es idempotente. Familia = un `Pago` al titular. `BonificacionCuota` saltea ese mes.
 - Siempre existe marcar pagado manual. Push FCM no debe romper el request de negocio.
 - No agregar WhatsApp/SMS pagos como canal de cuotas.
 
@@ -204,7 +204,8 @@ No implementar salvo pedido explícito:
 - App móvil, Modo Entrada QR, carnet offline, FCM real (hoy stub)
 - OAuth MP por club (prod)
 - Cantina / consumo
-- Billing SaaS self-serve, Kubernetes, S3/R2 (uploads local está bien)
+- Cobro real SaaS (MP/factura a ClubApp). Los tramos, el pendiente y la cola Superadmin **sí** están.
+- Kubernetes, S3/R2 (uploads local está bien)
 - Roles granulares de comisión (tesorero vs presidente)
 - Nuevos módulos de dominio “por las dudas”
 

@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  StreamableFile,
   UploadedFile,
   UseGuards,
   UseInterceptors,
@@ -18,6 +19,7 @@ import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
 import { UseClubAuth } from '../common/use-club-auth';
 import { CreateSocioDto, UpdateSocioDto } from './dto/socio.dto';
+import { buildSocioImportTemplate } from './socios-import';
 
 @Controller('socios')
 @UseClubAuth(ClubStaffGuard)
@@ -27,6 +29,15 @@ export class SociosController {
   @Get()
   list(@ClubId() clubId: number) {
     return this.socios.list(clubId);
+  }
+
+  @Get('import-template')
+  @UseGuards(AdminRoleGuard)
+  downloadImportTemplate() {
+    return new StreamableFile(buildSocioImportTemplate(), {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      disposition: 'attachment; filename="plantilla-socios.xlsx"',
+    });
   }
 
   @Get(':id')
@@ -42,19 +53,23 @@ export class SociosController {
 
   @Post('import-csv')
   @UseGuards(AdminRoleGuard)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: { fileSize: 2 * 1024 * 1024 },
+    }),
+  )
   async importCsv(
     @ClubId() clubId: number,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file?: Express.Multer.File,
     @Body('csv') csvBody?: string,
+    @Body('acepta_upgrade') aceptaUpgrade?: string | boolean,
   ) {
-    const text =
-      csvBody ||
-      (file ? file.buffer.toString('utf-8') : undefined);
-    if (!text) {
-      return this.socios.importCsv(clubId, '');
-    }
-    return this.socios.importCsv(clubId, text);
+    return this.socios.importCsv(clubId, {
+      csvText: csvBody,
+      buffer: file?.buffer,
+      filename: file?.originalname,
+      acepta_upgrade: aceptaUpgrade === true || aceptaUpgrade === 'true',
+    });
   }
 
   @Patch(':id')

@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ClubsService } from './clubs.service';
+import { PlanSaaSService } from '../plan-saas/plan-saas.service';
 import { AdminRoleGuard } from '../common/admin-role.guard';
 import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
@@ -22,7 +23,10 @@ import { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('clubs')
 export class ClubsController {
-  constructor(private readonly clubs: ClubsService) {}
+  constructor(
+    private readonly clubs: ClubsService,
+    private readonly planes: PlanSaaSService,
+  ) {}
 
   @Get('buscar')
   buscar(@Query('q') q = '') {
@@ -38,6 +42,18 @@ export class ClubsController {
   @Get('me')
   me(@ClubId() clubId: number) {
     return this.clubs.findById(clubId);
+  }
+
+  @UseClubAuth(ClubStaffGuard)
+  @Get('me/plan')
+  planUso(@ClubId() clubId: number) {
+    return this.planes.usoDelClub(clubId);
+  }
+
+  @UseClubAuth(AdminRoleGuard)
+  @Post('me/plan/confirmar')
+  confirmarPlan(@ClubId() clubId: number) {
+    return this.planes.confirmarClub(clubId);
   }
 
   @UseClubAuth(AdminRoleGuard)

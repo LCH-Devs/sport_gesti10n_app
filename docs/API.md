@@ -34,18 +34,26 @@ Body con campos que el DTO no declara → **400**. Login público (`/auth/login`
 - `GET /clubs/buscar?q=`
 - `GET /clubs/slug/:slug` — branding público para login white-label
 - `GET /clubs/me` — Bearer (incluye config + onboarding, `deportes`, `descuento_familiar_pct`)
-- `PATCH /clubs/me` — config: cuota, logo, color, reglas, nombre, `deportes?`, `descuento_familiar_pct?` (0–100). El nombre no puede coincidir con otro club vivo
+- `PATCH /clubs/me` — config: cuota (Socio pleno), logo, color, reglas, nombre, `deportes?`, `descuento_familiar_pct?` (0–100). El nombre no puede coincidir con otro club vivo
 - `POST /clubs/me/logo` — multipart `file` (JPG/PNG/WEBP/GIF, máx. 2 MB).  
   Con `IMAGEKIT_PRIVATE_KEY` sube a ImageKit (CDN) y guarda esa URL en `logo_url`. Sin ImageKit (dev), guarda en disco `uploads/logos/` y `logo_url` queda `/uploads/logos/...`.
-- `PATCH /clubs/me/onboarding` — primer acceso. Body: titular, CUIT/CUIL, branding, `nueva_password` (fuerte), y opcional `bloquear_entrada`, `deportes` (`string[]`, ej. `["padel","futbol"]`), `descuento_familiar_pct` (0–100). Los espacios se crean aparte con `POST /espacios`. El % familiar se **guarda**; todavía no se aplica en cobros.
+- `PATCH /clubs/me/onboarding` — primer acceso. Body: titular, CUIT/CUIL, branding, `nueva_password` (fuerte), `cuota_monto` (Socio pleno), `categorias?` (tipos extra con monto), y opcional `bloquear_entrada`, `deportes` (`string[]`), `descuento_familiar_pct` (0–100). Los espacios se crean aparte con `POST /espacios`. El % familiar se aplica al **cobrar el mes** si la familia tiene 2+ socios no bonificados.
 
 ## Plataforma (superadmin)
 
 JWT con `role: platform` (sin `club_id`).
 
-- `GET /platform/clubs` — listado + counts
+- `GET /platform/clubs` — listado + counts + `plan`, `plan_hasta`, pendiente
+- `GET /platform/resumen` — clubes activos, socios totales, solicitudes, planes sin confirmar
+- `GET /platform/plan-tramos` · `PUT /platform/plan-tramos` — tramos SaaS (`nombre`, `desde`, `hasta`, `precio_usd`)
+- `GET /platform/plan-tramos/preview?cantidad=` — plan y precio para esa cantidad
+- `GET /platform/planes/pendientes` — clubes over-limit que no confirmaron el upgrade
+- `POST /platform/clubs/:id/plan/confirmar` — soporte fuerza la confirmación (no cobra)
+- `POST /platform/clubs/:id/plan/reenviar-mail`
 - `GET /platform/clubs/:id`
-- `POST /platform/clubs` — alta `{ nombre, admin_email, admin_nombre?, precio_usd_mes }`  
+- `POST /platform/clubs` — alta `{ nombre, admin_email, admin_nombre?, cantidad_miembros, precio_usd_mes? }`  
+  `cantidad_miembros` elige el tramo vigente. `precio_usd_mes` es override opcional.  
+
   Siempre genera **contraseña temporal nueva** (también si el email ya existía por un club dado de baja).  
   El **nombre** no puede repetirse si hay otro club vivo (activo o suspendido); un club dado de baja sí libera el nombre.  
   `credentials_once`: `{ email, password, login_url }` — `login_url` es `{WEB_APP_URL}/login` (sin slug/subdominio).  
@@ -70,13 +78,23 @@ JWT con `role: platform` (sin `club_id`).
 ## Socios / Admins
 
 - `GET|POST /socios` · `GET|PATCH|DELETE /socios/:id`
-- `POST /socios/import-csv` — `{ csv }` o multipart
+- `POST /socios` y `POST /familias` aceptan `acepta_upgrade` si el alta cruza el tope del plan. Sin el flag → **409** `PLAN_UPGRADE_REQUIRED` (el socio no se crea).
+- Alta de socio/familia (solo personas nuevas): `inscripcion?` + `inscripcion_monto?` + `inscripcion_cuotas?` (1–12) y `bonificar_meses?` (`YYYY-MM[]`). Sin tilde / sin monto = sin deuda de inscripción. Los meses bonificados no generan cuota al cobrar.
+- `POST /socios/import-csv` — `{ csv }` o multipart `file` (CSV / Excel `.xlsx` / `.xls`). Si el lote cruza el tope, 409 y no procesa nada. Reenviar con `acepta_upgrade=true`.
+- `GET /socios/import-template` — plantilla Excel (solo admin)
+- `GET /clubs/me/plan` — uso vs tope + pendiente
+- `POST /clubs/me/plan/confirmar` — el admin del club confirma el upgrade (aplica el 1° del mes siguiente)
+- `GET /public/plan/confirmar?token=` — mismo efecto, desde el mail (sin JWT)
 - `GET|POST /admins` · `PATCH|DELETE /admins/:id` (rol admin)
+
+## Categorías de cuota
+
+- `GET|POST /categorias-cuota` · `PATCH|DELETE /categorias-cuota/:id` — tipos de socio y su monto (Socio pleno es el default; no se borra)
 
 ## Pagos
 
-- `GET /pagos/resumen?mes=YYYY-MM`
-- `POST /pagos/cobrar-mes` · `POST /api/cuotas/generar-links`
+- `GET /pagos/resumen?mes=YYYY-MM` — incluye `tipo` (`cuota` | `inscripcion`), `concepto`, `grupo_familiar`
+- `POST /pagos/cobrar-mes` · `POST /api/cuotas/generar-links` — un pago de cuota por socio suelto; si hay familia, **un solo cobro al titular** (suma de categorías − `%` familiar). Idempotente por `(socio_id, mes, tipo)`
 - `PATCH /pagos/:id/marcar-manual`
 - `POST /api/webhook/mp` (público)
 
@@ -112,7 +130,7 @@ No es la solapa de eventos del club (`/noticias`). JWT de **cualquier** rol (o p
 
 ## Familias / Actividades
 
-- `GET|POST /familias` · `PATCH|DELETE /familias/:id`
+- `GET|POST /familias` · `GET|PATCH|DELETE /familias/:id` — alta: `titular_id` **o** `titular` (datos de socio nuevo); `socio_ids` y/o `socios_nuevos`
 - `GET|POST /actividades` · `PATCH|DELETE /actividades/:id`
 - `GET|POST /actividades/:id/socios` — `{ socio_ids }`
 

@@ -220,6 +220,10 @@ Solo admin. Primer acceso (si `onboarding_completo` ya es true → 400).
   "color_secundario": "#0f172a",
   "color_terciario": "#f59e0b",
   "cuota_monto": 5000,
+  "categorias": [
+    { "nombre": "Deportivo", "monto": 3500 },
+    { "nombre": "Menor", "monto": 2500 }
+  ],
   "nueva_password": "ClubApp1!",
   "bloquear_entrada": false,
   "deportes": ["padel", "futbol"],
@@ -242,10 +246,11 @@ Solo admin. Primer acceso (si `onboarding_completo` ya es true → 400).
 | `color_primario` | no | `#RRGGBB` |
 | `color_secundario` | no | `#RRGGBB` o `null` |
 | `color_terciario` | no | `#RRGGBB` o `null` |
-| `cuota_monto` | no | number ≥ 0 |
+| `cuota_monto` | no | number ≥ 0. Queda como **Socio pleno** |
+| `categorias` | no | extras `{ nombre, monto }[]` (máx. 20 en total con pleno). No mandar Socio pleno de nuevo |
 | `bloquear_entrada` | no | boolean |
 | `deportes` | no | `string[]` (máx. 30 ítems, 60 chars c/u). No crea espacios |
-| `descuento_familiar_pct` | no | 0–100. Se guarda; **no** se aplica aún en cobros |
+| `descuento_familiar_pct` | no | 0–100. Al cobrar el mes se aplica a la suma familiar (2+ socios no bonificados) |
 
 No mandar `passwordConfirm` ni `club_id`. Los espacios del step de deportes van a `POST /espacios`.
 
@@ -264,7 +269,12 @@ No mandar `passwordConfirm` ni `club_id`. Los espacios del step de deportes van 
   "telefono": "1155550000",
   "password": "Socio123!",
   "rol": "socio",
-  "fecha_nacimiento": "1990-05-12"
+  "fecha_nacimiento": "1990-05-12",
+  "categoria_id": 1,
+  "inscripcion": true,
+  "inscripcion_monto": 15000,
+  "inscripcion_cuotas": 3,
+  "bonificar_meses": ["2026-09", "2026-10"]
 }
 ```
 
@@ -275,9 +285,14 @@ No mandar `passwordConfirm` ni `club_id`. Los espacios del step de deportes van 
 | `apellido` | sí | |
 | `email` | sí | único global en `Usuario`; si existe, se vincula membresía |
 | `telefono` | no | máx. 30 (string libre, no el regex de solicitudes) |
-| `password` | no | si falta o vacío → default **`socio123`**. Si viene, password fuerte |
-| `rol` | no | `socio` \| `profe` (default `socio`) |
-| `fecha_nacimiento` | no | ISO date |
+| `password` | no | si falta o vacío → **`socio` + DNI** (ej. `socio30111222`). Si viene, password fuerte |
+| `rol` | sí | `socio` \| `profe` |
+| `fecha_nacimiento` | sí | ISO date (`YYYY-MM-DD`) |
+| `categoria_id` | no | id de `GET /categorias-cuota`. Si falta → **Socio pleno** |
+| `inscripcion` | no | si es `true` y hay `inscripcion_monto` > 0, crea pagos `tipo=inscripcion` (desde el mes actual) |
+| `inscripcion_monto` | no | si falta o 0, no hay deuda de inscripción |
+| `inscripcion_cuotas` | no | 1–12; default 1 |
+| `bonificar_meses` | no | `YYYY-MM[]`; esos meses no generan cuota al cobrar |
 
 También: **`GET /socios/:id`** (staff). Id = membresía. 404 si no es de este club.
 
@@ -285,19 +300,44 @@ También: **`GET /socios/:id`** (staff). Id = membresía. 404 si no es de este c
 
 ### `POST /socios/import-csv`
 
-Solo admin. Una de dos formas:
+Solo admin. Máx. **2 MB** y **500 filas**. Una de dos formas:
 
 **JSON**
 
 ```json
 {
-  "csv": "dni,nombre,apellido,email,telefono\n30111222,Carlos,Gomez,carlos@mail.com,1155550000"
+  "csv": "dni,nombre,apellido,email,fecha_nacimiento,telefono,rol\n30111222,Carlos,Gomez,carlos@mail.com,14/08/1990,1155550000,socio"
 }
 ```
 
-**Multipart:** campo archivo `file` (texto CSV UTF-8) **o** campo `csv` en el body.
+**Multipart:** campo archivo `file` — CSV UTF-8 **o** Excel `.xlsx` / `.xls`.
 
-Cabecera requerida: `dni,nombre,apellido,email` y opcional `telefono`.
+Cabecera requerida: `dni,nombre,apellido,email,fecha_nacimiento,rol`. Opcional: `telefono`, `categoria`.
+Separador CSV: `,` `;` o tab (Excel en español suele usar `;`). El DNI puede ir con puntos (`30.111.222`).
+Fecha obligatoria: `14/08/1990`, `14-08-90`, `1990-08-14`, `14.08.1990` (día/mes, año de 2 dígitos: 30–99 → 1900).
+Rol obligatorio: `socio` o `profe`.
+`categoria` opcional: nombre del tipo en el club (`Deportivo`, `Menor`, …). Vacío o `pleno` → **Socio pleno**.
+
+Por fila: DNI 7–8 dígitos **único por club**, nombre/apellido letras 2–80, email válido, teléfono opcional con el regex de producto. Duplicados de DNI/email **dentro del archivo** o DNI ya usado por otra persona del club → error. Misma persona (mismo DNI + mismo email) se actualiza. Password de altas nuevas: **`socio` + DNI**. Tope plan básico: 100 socios activos.
+
+Respuesta `{ created, updated, errors }`. Las filas inválidas no frenan el resto.
+
+### `GET /socios/import-template`
+
+Solo admin. Devuelve `plantilla-socios.xlsx` con cabecera `dni,nombre,apellido,email,fecha_nacimiento,rol,telefono,categoria` y una fila de ejemplo.
+
+---
+
+### `GET|POST /categorias-cuota`
+
+Staff lista; mutaciones solo admin. Máx. 20 por club.
+
+```json
+{ "nombre": "Deportivo", "monto": 3500 }
+```
+
+`PATCH /categorias-cuota/:id` `{ nombre?, monto? }`. Cambiar el monto de Socio pleno también actualiza `Club.cuota_monto`.
+`DELETE` no permite borrar Socio pleno; los socios de esa categoría pasan a pleno.
 
 ---
 
@@ -337,7 +377,9 @@ Alias: `POST /api/cuotas/generar-links`. Solo admin. Body opcional (se puede `{}
 | Campo | Req | Notas |
 |-------|-----|--------|
 | `mes` | no | `YYYY-MM`; si falta, el back usa el mes actual |
-| `monto` | no | number ≥ 1; si falta, usa la cuota del club |
+| `monto` | no | number ≥ 1; si falta, usa la categoría de cada socio (o la cuota del club). En una familia es el **total** del único cobro al titular (sin aplicar % extra) |
+
+Familia = un cobro: se suma la categoría de cada miembro activo no bonificado, se aplica `Club.descuento_familiar_pct` si hay 2+ en esa suma, y el `Pago` queda en el **titular**. El resto del grupo no recibe link. Unique `(socio_id, mes, tipo)`.
 
 ---
 
@@ -455,21 +497,43 @@ Solo admin.
 
 ### `POST /familias`
 
-Solo admin.
+Solo admin. El titular es un socio **existente** (`titular_id`) **o** uno **nuevo** (`titular`, mismos campos que `POST /socios`). Se pueden mezclar miembros ya cargados (`socio_ids`) con altas (`socios_nuevos`). Todo corre en una transacción: si una fila falla, no queda el grupo a medias.
 
 ```json
 {
   "nombre": "Familia Gómez",
-  "titular_id": 42,
-  "socio_ids": [42, 43, 44]
+  "titular": {
+    "dni": "30111222",
+    "nombre": "Carlos",
+    "apellido": "Gómez",
+    "email": "carlos@mail.com",
+    "fecha_nacimiento": "1990-08-14",
+    "rol": "socio"
+  },
+  "socio_ids": [43],
+  "socios_nuevos": [
+    {
+      "dni": "40111222",
+      "nombre": "Lucía",
+      "apellido": "Gómez",
+      "email": "lucia@mail.com",
+      "fecha_nacimiento": "2014-03-02",
+      "rol": "socio"
+    }
+  ]
 }
 ```
 
 | Campo | Req | Notas |
 |-------|-----|--------|
 | `nombre` | sí | máx. 80 |
-| `titular_id` | sí | membresía |
+| `titular_id` | uno de los dos | membresía existente |
+| `titular` | uno de los dos | misma forma que `CreateSocioDto` |
 | `socio_ids` | no | array de integers únicos |
+| `socios_nuevos` | no | máx. 20; mismas reglas de alta de socio (DNI único por club, tope plan, categoría default Socio pleno) |
+| `inscripcion` / `inscripcion_monto` / `inscripcion_cuotas` / `bonificar_meses` | no | se copian a **personas nuevas** (titular nuevo + `socios_nuevos`). Los socios ya existentes no cambian |
+
+`PATCH /familias/:id` acepta los mismos campos (todos opcionales). `GET /familias/:id` devuelve el grupo.
 
 ---
 
@@ -665,7 +729,9 @@ Si no hay `data.id`, el back responde `{ ok: true, skipped: true }`.
 | `/clubs/me/logo` | multipart `file` |
 | `/clubs/me/onboarding` (PATCH) | `{ titular_nombre, titular_apellido, cuit_cuil, nueva_password }` |
 | `/socios` | `{ dni, nombre, apellido, email }` |
-| `/socios/import-csv` | `{ csv }` o multipart `file` |
+| `/socios/import-csv` | `{ csv }` o multipart `file` (CSV / Excel) |
+| `/socios/import-template` | — (descarga `plantilla-socios.xlsx`) |
+| `/categorias-cuota` | `{ nombre, monto }` |
 | `/admins` | `{ email, nombre, password }` |
 | `/pagos/cobrar-mes` | `{}` |
 | `/api/cuotas/generar-links` | `{}` |
@@ -674,7 +740,7 @@ Si no hay `data.id`, el back responde `{ ok: true, skipped: true }`.
 | `/reservas` | `{ espacio_id, socio_id, inicio, fin }` |
 | `/horarios` | `{ titulo, dias, hora_inicio, hora_fin }` |
 | `/noticias` | `{ titulo, cuerpo }` |
-| `/familias` | `{ nombre, titular_id }` |
+| `/familias` | `{ nombre, titular_id }` **o** `{ nombre, titular }` (+ `socio_ids?`, `socios_nuevos?`) |
 | `/actividades` | `{ nombre, modo_cobro }` |
 | `/actividades/:id/socios` | `{ socio_ids }` |
 | `/cobros-profe` | `{ actividad_id, socio_id, mes, monto_alumno }` |

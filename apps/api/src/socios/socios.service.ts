@@ -12,18 +12,34 @@ import {
   NOT_DELETED,
   personInclude,
 } from '../common/club-users';
-import { isValidDni, isValidPersonName } from '../common/dto-constraints';
-
-const PLAN_BASICO_MAX = 100;
+import { parseSocioImportSource } from './socios-import';
+import { defaultSocioPassword, normalizeDni } from '../common/dto-constraints';
+import {
+  ensureDefaultCategoriaCuota,
+  matchCategoriaCuota,
+} from '../common/categorias-cuota';
+import { PlanSaaSService } from '../plan-saas/plan-saas.service';
+import { PagosService } from '../pagos/pagos.service';
 
 const socioWhere = (clubId: number) => ({
   club_id: clubId,
   rol: { in: [...MEMBER_ROLES] },
 });
 
+type SocioWriteDb = {
+  membresia: PrismaService['membresia'];
+  usuario: PrismaService['usuario'];
+  club: PrismaService['club'];
+  categoriaCuota: PrismaService['categoriaCuota'];
+};
+
 @Injectable()
 export class SociosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly planes: PlanSaaSService,
+    private readonly pagos: PagosService,
+  ) {}
 
   async list(clubId: number) {
     const rows = await this.prisma.membresia.findMany({
@@ -46,25 +62,49 @@ export class SociosService {
   }
 
   async create(clubId: number, dto: CreateSocioDto) {
-    const count = await this.prisma.membresia.count({
-      where: { ...socioWhere(clubId), ...NOT_DELETED },
-    });
-    if (count >= PLAN_BASICO_MAX) {
-      throw new BadRequestException(
-        `Plan básico: máximo ${PLAN_BASICO_MAX} socios`,
+    await this.planes.assertCanAddMembers(
+      this.prisma,
+      clubId,
+      1,
+      dto.acepta_upgrade,
+    );
+    const person = await this.prisma.$transaction((tx) =>
+      this.createWithClient(tx, clubId, dto, { skipPlanCheck: true }),
+    );
+    await this.pagos.generarLinksDeAlta(clubId, [person.id]);
+    return person;
+  }
+
+  async createWithClient(
+    db: SocioWriteDb,
+    clubId: number,
+    dto: CreateSocioDto,
+    opts: { skipPlanCheck?: boolean } = {},
+  ) {
+    if (!opts.skipPlanCheck) {
+      await this.planes.assertCanAddMembers(
+        this.prisma,
+        clubId,
+        1,
+        dto.acepta_upgrade,
       );
     }
 
     const email = dto.email.toLowerCase().trim();
-    const dni = dto.dni.trim();
+    const dni = normalizeDni(dto.dni);
     const rol = dto.rol === 'profe' ? 'profe' : 'socio';
-    await this.assertDniFree(clubId, dni);
+    const categoria_id = await this.resolveCategoriaId(
+      db,
+      clubId,
+      dto.categoria_id,
+    );
+    await this.assertDniFree(db, clubId, dni);
 
-    const existingUser = await this.prisma.usuario.findUnique({
+    const existingUser = await db.usuario.findUnique({
       where: { email },
     });
     if (existingUser) {
-      const already = await this.prisma.membresia.findUnique({
+      const already = await db.membresia.findUnique({
         where: {
           usuario_id_club_id: { usuario_id: existingUser.id, club_id: clubId },
         },
@@ -73,75 +113,77 @@ export class SociosService {
         throw new BadRequestException('Ese usuario ya está en este club');
       }
       if (already?.eliminado) {
-        await this.prisma.usuario.update({
+        await db.usuario.update({
           where: { id: existingUser.id },
           data: {
             nombre: dto.nombre.trim(),
             apellido: dto.apellido.trim(),
             dni,
             telefono: dto.telefono || existingUser.telefono,
-            ...(dto.fecha_nacimiento
-              ? { fecha_nacimiento: new Date(dto.fecha_nacimiento) }
-              : {}),
+            fecha_nacimiento: new Date(dto.fecha_nacimiento),
           },
         });
-        const restored = await this.prisma.membresia.update({
+        const restored = await db.membresia.update({
           where: { id: already.id },
-          data: { eliminado: false, rol, estado: 'activo' },
+          data: { eliminado: false, rol, estado: 'activo', categoria_id },
           include: personInclude,
         });
+        await this.pagos.persistirAlta(db, clubId, restored.id, dto);
         return flattenPerson(restored);
       }
     }
 
     const password_hash = existingUser
       ? existingUser.password_hash
-      : await bcrypt.hash(dto.password || 'socio123', 10);
+      : await bcrypt.hash(
+          dto.password?.trim() || defaultSocioPassword(dni),
+          10,
+        );
 
-    const created = await this.prisma.$transaction(async (tx) => {
-      const usuario = existingUser
-        ? await tx.usuario.update({
-            where: { id: existingUser.id },
-            data: {
-              nombre: dto.nombre.trim(),
-              apellido: dto.apellido.trim(),
-              dni,
-              telefono: dto.telefono || existingUser.telefono,
-              ...(dto.fecha_nacimiento
-                ? { fecha_nacimiento: new Date(dto.fecha_nacimiento) }
-                : {}),
-            },
-          })
-        : await tx.usuario.create({
-            data: {
-              email,
-              password_hash,
-              nombre: dto.nombre.trim(),
-              apellido: dto.apellido.trim(),
-              dni,
-              telefono: dto.telefono || '',
-              ...(dto.fecha_nacimiento
-                ? { fecha_nacimiento: new Date(dto.fecha_nacimiento) }
-                : {}),
-            },
-          });
+    const usuario = existingUser
+      ? await db.usuario.update({
+          where: { id: existingUser.id },
+          data: {
+            nombre: dto.nombre.trim(),
+            apellido: dto.apellido.trim(),
+            dni,
+            telefono: dto.telefono || existingUser.telefono,
+            fecha_nacimiento: new Date(dto.fecha_nacimiento),
+          },
+        })
+      : await db.usuario.create({
+          data: {
+            email,
+            password_hash,
+            nombre: dto.nombre.trim(),
+            apellido: dto.apellido.trim(),
+            dni,
+            telefono: dto.telefono || '',
+            fecha_nacimiento: new Date(dto.fecha_nacimiento),
+          },
+        });
 
-      return tx.membresia.create({
-        data: {
-          usuario_id: usuario.id,
-          club_id: clubId,
-          rol,
-          estado: 'activo',
-        },
-        include: personInclude,
-      });
+    const created = await db.membresia.create({
+      data: {
+        usuario_id: usuario.id,
+        club_id: clubId,
+        rol,
+        estado: 'activo',
+        categoria_id,
+      },
+      include: personInclude,
     });
 
+    await this.pagos.persistirAlta(db, clubId, created.id, dto);
     return flattenPerson(created);
   }
 
   async update(clubId: number, id: number, dto: UpdateSocioDto) {
     const membresia = await this.ensureInClub(clubId, id);
+    const categoria_id =
+      dto.categoria_id !== undefined
+        ? await this.resolveCategoriaId(this.prisma, clubId, dto.categoria_id)
+        : undefined;
     const updated = await this.prisma.$transaction(async (tx) => {
       if (
         dto.nombre !== undefined ||
@@ -180,6 +222,7 @@ export class SociosService {
           ...(dto.rol !== undefined && {
             rol: dto.rol === 'profe' ? 'profe' : 'socio',
           }),
+          ...(categoria_id !== undefined && { categoria_id }),
         },
         include: personInclude,
       });
@@ -197,123 +240,115 @@ export class SociosService {
   }
 
   /**
-   * Importa CSV con cabecera:
-   * dni,nombre,apellido,email,telefono
+   * Importa CSV o Excel (xlsx/xls). Cabecera:
+   * dni,nombre,apellido,email,fecha_nacimiento,rol[,telefono]
    */
-  async importCsv(clubId: number, csvText: string) {
-    const lines = csvText
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean);
-    if (lines.length < 2) {
-      throw new BadRequestException('CSV vacío o sin filas de datos');
-    }
-
-    const header = lines[0].toLowerCase().split(',').map((h) => h.trim());
-    const idx = {
-      dni: header.indexOf('dni'),
-      nombre: header.indexOf('nombre'),
-      apellido: header.indexOf('apellido'),
-      email: header.indexOf('email'),
-      telefono: header.indexOf('telefono'),
-    };
-    if (idx.dni < 0 || idx.nombre < 0 || idx.apellido < 0 || idx.email < 0) {
-      throw new BadRequestException(
-        'Cabecera requerida: dni,nombre,apellido,email[,telefono]',
-      );
-    }
-
+  async importCsv(
+    clubId: number,
+    source:
+      | string
+      | {
+          csvText?: string;
+          buffer?: Buffer;
+          filename?: string;
+          acepta_upgrade?: boolean;
+        },
+  ) {
+    const payload = typeof source === 'string' ? { csvText: source } : source;
+    const parsed = parseSocioImportSource(payload);
+    const errors = [...parsed.errors];
     let created = 0;
     let updated = 0;
-    const errors: string[] = [];
+    const club = await this.prisma.club.findUnique({
+      where: { id: clubId },
+      select: { cuota_monto: true },
+    });
+    await ensureDefaultCategoriaCuota(this.prisma, clubId, {
+      monto: club?.cuota_monto ?? 5000,
+    });
+    const categorias = await this.prisma.categoriaCuota.findMany({
+      where: { club_id: clubId, ...NOT_DELETED },
+    });
 
-    for (let i = 1; i < lines.length; i++) {
-      const cols = this.parseCsvLine(lines[i]);
-      const dni = cols[idx.dni]?.trim();
-      const nombre = cols[idx.nombre]?.trim();
-      const apellido = cols[idx.apellido]?.trim();
-      const email = cols[idx.email]?.trim()?.toLowerCase();
-      const telefono =
-        idx.telefono >= 0 ? cols[idx.telefono]?.trim() || '' : '';
+    const classified: Array<{
+      row: (typeof parsed.rows)[number];
+      existing: { id: number; usuario_id: number; usuario: { email: string } } | null;
+    }> = [];
+    let newCount = 0;
+    for (const row of parsed.rows) {
+      const existing = await this.prisma.membresia.findFirst({
+        where: {
+          ...socioWhere(clubId),
+          ...NOT_DELETED,
+          usuario: { dni: row.dni },
+        },
+        include: { usuario: { select: { email: true } } },
+      });
+      classified.push({ row, existing });
+      if (!existing) newCount += 1;
+    }
+    await this.planes.assertCanAddMembers(
+      this.prisma,
+      clubId,
+      newCount,
+      payload.acepta_upgrade,
+    );
 
-      if (!dni || !nombre || !apellido || !email) {
-        errors.push(`Fila ${i + 1}: datos incompletos`);
+    for (const { row, existing } of classified) {
+      const categoria = matchCategoriaCuota(categorias, row.categoria);
+      if (!categoria) {
+        errors.push(
+          `Fila ${row.line}: categoría desconocida (usá el nombre del club o dejala vacía para Socio pleno)`,
+        );
         continue;
       }
-      if (!isValidDni(dni)) {
-        errors.push(`Fila ${i + 1}: DNI inválido (7 u 8 dígitos)`);
-        continue;
-      }
-      if (!isValidPersonName(nombre) || !isValidPersonName(apellido)) {
-        errors.push(`Fila ${i + 1}: nombre o apellido inválido`);
-        continue;
-      }
-      if (!email.includes('@') || email.length > 254) {
-        errors.push(`Fila ${i + 1}: email inválido`);
-        continue;
-      }
-
       try {
-        const count = await this.prisma.membresia.count({
-          where: { ...socioWhere(clubId), ...NOT_DELETED },
-        });
-        const existing = await this.prisma.membresia.findFirst({
-          where: {
-            ...socioWhere(clubId),
-            ...NOT_DELETED,
-            usuario: { dni },
-          },
-        });
-
         if (existing) {
-          await this.prisma.usuario.update({
-            where: { id: existing.usuario_id },
-            data: { nombre, apellido, email, telefono },
-          });
-          updated++;
-        } else {
-          if (count >= PLAN_BASICO_MAX) {
-            errors.push(`Fila ${i + 1}: límite de plan básico alcanzado`);
+          if (existing.usuario.email.toLowerCase() !== row.email) {
+            errors.push(
+              `Fila ${row.line}: ya hay un usuario con ese DNI en el club`,
+            );
             continue;
           }
-          await this.create(clubId, {
-            dni,
-            nombre,
-            apellido,
-            email,
-            telefono,
-            password: 'socio123',
+          await this.prisma.$transaction(async (tx) => {
+            await tx.usuario.update({
+              where: { id: existing.usuario_id },
+              data: {
+                nombre: row.nombre,
+                apellido: row.apellido,
+                telefono: row.telefono,
+                fecha_nacimiento: new Date(row.fecha_nacimiento),
+              },
+            });
+            await tx.membresia.update({
+              where: { id: existing.id },
+              data: { rol: row.rol, categoria_id: categoria.id },
+            });
           });
-          created++;
+          updated++;
+          continue;
         }
+
+        await this.createWithClient(this.prisma, clubId, {
+          dni: row.dni,
+          nombre: row.nombre,
+          apellido: row.apellido,
+          email: row.email,
+          ...(row.telefono ? { telefono: row.telefono } : {}),
+          fecha_nacimiento: row.fecha_nacimiento,
+          rol: row.rol,
+          categoria_id: categoria.id,
+          acepta_upgrade: true,
+        }, { skipPlanCheck: true });
+        created++;
       } catch (e) {
         errors.push(
-          `Fila ${i + 1}: ${e instanceof Error ? e.message : 'error'}`,
+          `Fila ${row.line}: ${e instanceof Error ? e.message : 'error'}`,
         );
       }
     }
 
     return { created, updated, errors };
-  }
-
-  private parseCsvLine(line: string): string[] {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    for (const ch of line) {
-      if (ch === '"') {
-        inQuotes = !inQuotes;
-        continue;
-      }
-      if (ch === ',' && !inQuotes) {
-        result.push(current);
-        current = '';
-        continue;
-      }
-      current += ch;
-    }
-    result.push(current);
-    return result;
   }
 
   async updateSelf(clubId: number, socioId: number, dto: UpdateSelfSocioDto) {
@@ -388,7 +423,9 @@ export class SociosService {
           estado: true,
           mp_init_point: true,
           fecha_pago: true,
-        },
+          tipo: true,
+          concepto: true,
+        } as Record<string, boolean>,
       }),
       this.prisma.noticia.findMany({
         where: { club_id: clubId, published: true, ...NOT_DELETED },
@@ -420,8 +457,37 @@ export class SociosService {
     };
   }
 
-  private async assertDniFree(clubId: number, dni: string, exceptId?: number) {
-    const taken = await this.prisma.membresia.findFirst({
+  private async resolveCategoriaId(
+    db: SocioWriteDb,
+    clubId: number,
+    categoriaId?: number,
+  ) {
+    if (categoriaId) {
+      const cat = await db.categoriaCuota.findFirst({
+        where: { id: categoriaId, club_id: clubId, ...NOT_DELETED },
+      });
+      if (!cat) {
+        throw new BadRequestException('Categoría no encontrada en este club');
+      }
+      return cat.id;
+    }
+    const club = await db.club.findUnique({
+      where: { id: clubId },
+      select: { cuota_monto: true },
+    });
+    const def = await ensureDefaultCategoriaCuota(db, clubId, {
+      monto: club?.cuota_monto ?? 5000,
+    });
+    return def.id;
+  }
+
+  private async assertDniFree(
+    db: SocioWriteDb,
+    clubId: number,
+    dni: string,
+    exceptId?: number,
+  ) {
+    const taken = await db.membresia.findFirst({
       where: {
         club_id: clubId,
         ...NOT_DELETED,

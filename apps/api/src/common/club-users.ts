@@ -43,8 +43,17 @@ export const usuarioPublicSelect = {
   fecha_nacimiento: true,
 } as const;
 
+export const categoriaPublicSelect = {
+  id: true,
+  nombre: true,
+  slug: true,
+  monto: true,
+  es_default: true,
+} as const;
+
 export const personInclude = {
   usuario: { select: usuarioPublicSelect },
+  categoria: { select: categoriaPublicSelect },
 } as const;
 
 type UsuarioPublic = {
@@ -56,11 +65,21 @@ type UsuarioPublic = {
   fecha_nacimiento?: Date | null;
 };
 
+type CategoriaPublic = {
+  id: number;
+  nombre: string;
+  slug: string;
+  monto: number;
+  es_default: boolean;
+};
+
 export function flattenPerson(m: {
   id: number;
   rol: string;
   estado?: string;
   grupo_familiar_id?: number | null;
+  categoria_id?: number | null;
+  categoria?: CategoriaPublic | null;
   usuario: UsuarioPublic;
 }) {
   return {
@@ -74,6 +93,15 @@ export function flattenPerson(m: {
     rol: m.rol,
     fecha_nacimiento: m.usuario.fecha_nacimiento ?? null,
     grupo_familiar_id: m.grupo_familiar_id ?? null,
+    categoria_id: m.categoria_id ?? m.categoria?.id ?? null,
+    categoria: m.categoria
+      ? {
+          id: m.categoria.id,
+          nombre: m.categoria.nombre,
+          slug: m.categoria.slug,
+          monto: m.categoria.monto,
+        }
+      : null,
   };
 }
 

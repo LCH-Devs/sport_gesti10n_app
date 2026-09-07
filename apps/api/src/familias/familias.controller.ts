@@ -26,6 +26,11 @@ export class FamiliasController {
     return this.familias.list(clubId);
   }
 
+  @Get(':id')
+  getOne(@ClubId() clubId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.familias.getOne(clubId, id);
+  }
+
   @Post()
   @UseGuards(AdminRoleGuard)
   create(@ClubId() clubId: number, @Body() dto: CreateFamiliaDto) {

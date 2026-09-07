@@ -7,6 +7,12 @@ import { UpdateClubConfigDto } from './dto/update-club-config.dto';
 import { CompleteOnboardingDto } from './dto/complete-onboarding.dto';
 import { clubNombreInUseWhere, CLUB_NOMBRE_TAKEN } from '../common/club-users';
 import { normalizeDeportes } from '../common/club-deportes';
+import {
+  CATEGORIA_MAX_POR_CLUB,
+  ensureDefaultCategoriaCuota,
+  isDefaultCategoriaLabel,
+  slugifyCategoriaNombre,
+} from '../common/categorias-cuota';
 
 const CLUB_PUBLIC_SELECT = {
   id: true,
@@ -18,6 +24,9 @@ const CLUB_PUBLIC_SELECT = {
   color_terciario: true,
   cuota_monto: true,
   plan: true,
+  precio_usd_mes: true,
+  plan_hasta: true,
+  plan_consentido_hasta: true,
   activo: true,
   eliminado: true,
   onboarding_completo: true,
@@ -114,7 +123,7 @@ export class ClubsService {
         throw new BadRequestException(CLUB_NOMBRE_TAKEN);
       }
     }
-    return this.prisma.club.update({
+    const updated = await this.prisma.club.update({
       where: { id: clubId },
       data: {
         ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
@@ -156,6 +165,13 @@ export class ClubsService {
       },
       select: CLUB_PUBLIC_SELECT,
     });
+    if (dto.cuota_monto !== undefined) {
+      await ensureDefaultCategoriaCuota(this.prisma, clubId, {
+        monto: dto.cuota_monto,
+        syncMonto: true,
+      });
+    }
+    return updated;
   }
 
   async completeOnboarding(
@@ -170,15 +186,33 @@ export class ClubsService {
     }
 
     const password_hash = await bcrypt.hash(dto.nueva_password, 10);
+    const cuota = dto.cuota_monto ?? club.cuota_monto;
+    const extras = (dto.categorias || []).filter(
+      (c) => c.nombre.trim() && !isDefaultCategoriaLabel(c.nombre),
+    );
+    const seen = new Set<string>();
+    for (const extra of extras) {
+      const slug = slugifyCategoriaNombre(extra.nombre);
+      if (seen.has(slug)) {
+        throw new BadRequestException('Hay categorías repetidas');
+      }
+      seen.add(slug);
+    }
+    if (1 + extras.length > CATEGORIA_MAX_POR_CLUB) {
+      throw new BadRequestException(
+        `Máximo ${CATEGORIA_MAX_POR_CLUB} categorías por club`,
+      );
+    }
 
-    await this.prisma.$transaction([
-      this.prisma.club.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.club.update({
         where: { id: clubId },
         data: {
           onboarding_completo: true,
           titular_nombre: dto.titular_nombre.trim(),
           titular_apellido: dto.titular_apellido.trim(),
           cuit_cuil: dto.cuit_cuil.trim(),
+          cuota_monto: cuota,
           ...(dto.direccion !== undefined && { direccion: dto.direccion }),
           ...(dto.provincia !== undefined && { provincia: dto.provincia }),
           ...(dto.ciudad !== undefined && { ciudad: dto.ciudad }),
@@ -198,14 +232,6 @@ export class ClubsService {
           ...(dto.color_terciario !== undefined && {
             color_terciario: dto.color_terciario || null,
           }),
-          ...(dto.cuota_monto !== undefined && { cuota_monto: dto.cuota_monto }),
-          ...(dto.deportes !== undefined && { deportes: dto.deportes }),
-          ...(dto.bloquear_entrada !== undefined && {
-            bloquear_entrada: dto.bloquear_entrada,
-          }),
-          ...(dto.descuento_familiar_pct !== undefined && {
-            descuento_familiar_pct: dto.descuento_familiar_pct,
-          }),
           ...(dto.bloquear_entrada !== undefined && {
             bloquear_entrada: dto.bloquear_entrada,
           }),
@@ -216,8 +242,8 @@ export class ClubsService {
             descuento_familiar_pct: dto.descuento_familiar_pct,
           }),
         },
-      }),
-      this.prisma.membresia.update({
+      });
+      await tx.membresia.update({
         where: { id: adminId },
         data: {
           must_change_password: false,
@@ -228,8 +254,39 @@ export class ClubsService {
             },
           },
         },
-      }),
-    ]);
+      });
+      await ensureDefaultCategoriaCuota(tx, clubId, {
+        monto: cuota,
+        syncMonto: true,
+      });
+      for (const extra of extras) {
+        const slug = slugifyCategoriaNombre(extra.nombre);
+        const existing = await tx.categoriaCuota.findFirst({
+          where: { club_id: clubId, slug },
+        });
+        if (existing) {
+          await tx.categoriaCuota.update({
+            where: { id: existing.id },
+            data: {
+              nombre: extra.nombre.trim(),
+              monto: extra.monto,
+              eliminado: false,
+              es_default: false,
+            },
+          });
+        } else {
+          await tx.categoriaCuota.create({
+            data: {
+              club_id: clubId,
+              nombre: extra.nombre.trim(),
+              slug,
+              monto: extra.monto,
+              es_default: false,
+            },
+          });
+        }
+      }
+    });
 
     return this.findById(clubId);
   }

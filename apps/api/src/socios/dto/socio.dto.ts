@@ -1,4 +1,13 @@
-import { IsDateString, IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsBoolean,
+  IsDateString,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 import {
   IsAppEmail,
   IsDni,
@@ -6,8 +15,9 @@ import {
   IsOptionalStrongPassword,
   IsPersonName,
 } from '../../common/dto-constraints';
+import { AltaCobrosFields } from '../../pagos/dto/alta-cobros.dto';
 
-export class CreateSocioDto {
+export class CreateSocioDto extends AltaCobrosFields {
   @IsDni()
   dni: string;
 
@@ -28,13 +38,21 @@ export class CreateSocioDto {
   @IsOptionalStrongPassword()
   password?: string;
 
-  @IsOptional()
   @IsIn(['socio', 'profe'])
-  rol?: string;
+  rol!: string;
+
+  @IsDateString()
+  fecha_nacimiento!: string;
 
   @IsOptional()
-  @IsDateString()
-  fecha_nacimiento?: string;
+  @Type(() => Number)
+  @IsInt()
+  categoria_id?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  acepta_upgrade?: boolean;
 }
 
 export class UpdateSelfSocioDto {
@@ -85,4 +103,9 @@ export class UpdateSocioDto {
   @IsOptional()
   @IsDateString()
   fecha_nacimiento?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  categoria_id?: number;
 }

@@ -9,7 +9,10 @@ type PagoRow = {
   mes: string;
   monto: number;
   estado: string;
+  tipo?: string;
+  concepto?: string | null;
   mp_init_point: string | null;
+  grupo_familiar?: { id: number; nombre: string } | null;
   socio: {
     id: number;
     dni: string;
@@ -29,6 +32,13 @@ type Resumen = {
   pagos: PagoRow[];
 };
 
+type CategoriaCuota = {
+  id: number;
+  nombre: string;
+  monto: number;
+  es_default: boolean;
+};
+
 function mesDefault() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -42,6 +52,23 @@ export default function CobrosPage() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [categorias, setCategorias] = useState<CategoriaCuota[]>([]);
+  const [nuevaCategoria, setNuevaCategoria] = useState({ nombre: '', monto: '' });
+  const [savingCategoria, setSavingCategoria] = useState(false);
+
+  const loadCategorias = useCallback(async () => {
+    const session = requireSession();
+    if (!session) return;
+    try {
+      const rows = await apiFetch<CategoriaCuota[]>('/categorias-cuota', {
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+      setCategorias(rows);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al cargar categorías');
+    }
+  }, []);
 
   const load = useCallback(async () => {
     const session = requireSession();
@@ -61,6 +88,10 @@ export default function CobrosPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadCategorias();
+  }, [loadCategorias]);
 
   async function onGenerar(e: FormEvent) {
     e.preventDefault();
@@ -91,6 +122,65 @@ export default function CobrosPage() {
     }
   }
 
+  async function addCategoria(e: FormEvent) {
+    e.preventDefault();
+    const session = requireSession();
+    if (!session) return;
+    if (!nuevaCategoria.nombre.trim() || nuevaCategoria.monto === '') return;
+    setSavingCategoria(true);
+    setError('');
+    try {
+      await apiFetch('/categorias-cuota', {
+        method: 'POST',
+        token: session.access_token,
+        clubSlug: session.club.slug,
+        body: JSON.stringify({
+          nombre: nuevaCategoria.nombre.trim(),
+          monto: Number(nuevaCategoria.monto),
+        }),
+      });
+      setNuevaCategoria({ nombre: '', monto: '' });
+      await loadCategorias();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al crear categoría');
+    } finally {
+      setSavingCategoria(false);
+    }
+  }
+
+  async function updateCategoriaMonto(id: number, monto: string) {
+    const session = requireSession();
+    if (!session) return;
+    const value = Number(monto);
+    if (Number.isNaN(value) || value < 0) return;
+    try {
+      await apiFetch(`/categorias-cuota/${id}`, {
+        method: 'PATCH',
+        token: session.access_token,
+        clubSlug: session.club.slug,
+        body: JSON.stringify({ monto: value }),
+      });
+      await loadCategorias();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al actualizar');
+    }
+  }
+
+  async function removeCategoria(id: number) {
+    const session = requireSession();
+    if (!session) return;
+    try {
+      await apiFetch(`/categorias-cuota/${id}`, {
+        method: 'DELETE',
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+      await loadCategorias();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error al borrar');
+    }
+  }
+
   async function marcarPagado(id: number) {
     const session = requireSession();
     if (!session) return;
@@ -112,6 +202,84 @@ export default function CobrosPage() {
       <p className="mt-1 text-sm text-slate-600">
         {t('admin.cobros.subtitle')}
       </p>
+
+      <div className="mt-6 rounded-xl border bg-white p-4">
+        <h3 className="font-semibold">{t('admin.cobros.categoriasTitle')}</h3>
+        <p className="mt-1 text-xs text-slate-500">{t('admin.cobros.categoriasHint')}</p>
+        <ul className="mt-3 space-y-2">
+          {categorias.map((c) => (
+            <li
+              key={c.id}
+              className="flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm"
+            >
+              <span className="min-w-[10rem] font-medium">
+                {c.nombre}
+                {c.es_default && (
+                  <span className="ml-2 text-xs font-normal text-slate-500">
+                    ({t('admin.cobros.defaultBadge')})
+                  </span>
+                )}
+              </span>
+              <input
+                type="number"
+                min={0}
+                defaultValue={c.monto}
+                key={`${c.id}-${c.monto}`}
+                className="w-28 rounded-lg border px-2 py-1"
+                onBlur={(e) => {
+                  if (Number(e.target.value) !== c.monto) {
+                    void updateCategoriaMonto(c.id, e.target.value);
+                  }
+                }}
+              />
+              {!c.es_default && (
+                <button
+                  type="button"
+                  className="text-xs text-red-600"
+                  onClick={() => void removeCategoria(c.id)}
+                >
+                  {t('admin.socios.eliminar')}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+        <form onSubmit={(e) => void addCategoria(e)} className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="text-sm">
+            {t('admin.cobros.categoriaNombre')}
+            <input
+              className="mt-1 block rounded-lg border px-3 py-2"
+              value={nuevaCategoria.nombre}
+              onChange={(e) =>
+                setNuevaCategoria((f) => ({ ...f, nombre: e.target.value }))
+              }
+              placeholder="Ej: Deportivo"
+            />
+          </label>
+          <label className="text-sm">
+            {t('admin.cobros.categoriaMonto')}
+            <input
+              type="number"
+              min={0}
+              className="mt-1 block rounded-lg border px-3 py-2"
+              value={nuevaCategoria.monto}
+              onChange={(e) =>
+                setNuevaCategoria((f) => ({ ...f, monto: e.target.value }))
+              }
+              placeholder="0"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={savingCategoria}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+          >
+            {savingCategoria
+              ? t('admin.cobros.savingCategoria')
+              : t('admin.cobros.addCategoria')}
+          </button>
+        </form>
+      </div>
 
       <form
         onSubmit={onGenerar}
@@ -187,6 +355,7 @@ export default function CobrosPage() {
           <thead className="border-b bg-slate-50">
             <tr>
               <th className="px-4 py-3">{t('dashboard.member')}</th>
+              <th className="px-4 py-3">{t('admin.cobros.concepto', 'Concepto')}</th>
               <th className="px-4 py-3">{t('dashboard.dni')}</th>
               <th className="px-4 py-3">{t('admin.cobros.monto')}</th>
               <th className="px-4 py-3">{t('dashboard.status')}</th>
@@ -199,6 +368,21 @@ export default function CobrosPage() {
               <tr key={p.id} className="border-b last:border-0">
                 <td className="px-4 py-3">
                   {p.socio.apellido}, {p.socio.nombre}
+                  {p.grupo_familiar?.nombre && (
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      {p.grupo_familiar.nombre}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  <span className="text-xs uppercase text-slate-500">
+                    {p.tipo === 'inscripcion'
+                      ? t('admin.cobros.tipoInscripcion', 'Inscripción')
+                      : t('admin.cobros.tipoCuota', 'Cuota')}
+                  </span>
+                  {p.concepto && (
+                    <span className="mt-0.5 block">{p.concepto}</span>
+                  )}
                 </td>
                 <td className="px-4 py-3 font-mono">{p.socio.dni}</td>
                 <td className="px-4 py-3">${p.monto}</td>

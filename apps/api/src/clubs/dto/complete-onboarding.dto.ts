@@ -10,7 +10,9 @@ import {
   Max,
   MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
+import { OnboardingCategoriaDto } from '../../categorias-cuota/dto/categoria-cuota.dto';
 import {
   IsCuitCuil,
   IsOptionalColorHex,
@@ -92,4 +94,11 @@ export class CompleteOnboardingDto {
   @Min(0)
   @Max(100)
   descuento_familiar_pct?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @ValidateNested({ each: true })
+  @Type(() => OnboardingCategoriaDto)
+  categorias?: OnboardingCategoriaDto[];
 }

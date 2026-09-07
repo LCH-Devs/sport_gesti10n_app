@@ -1,6 +1,7 @@
 'use client';
 
-import { apiFetch, requireSession } from '@/lib/api';
+import { apiDownload, apiFetch, apiUpload, isPlanUpgradeRequired, requireSession, type PlanUpgradeBody } from '@/lib/api';
+import { PlanUpgradeModal } from '@/components/PlanUpgradeModal';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
@@ -16,6 +17,13 @@ type Socio = {
   telefono: string;
   estado: string;
   rol: string;
+  categoria?: { nombre: string; monto: number } | null;
+};
+
+type ImportResult = {
+  created: number;
+  updated: number;
+  errors: string[];
 };
 
 export default function SociosPage() {
@@ -23,7 +31,12 @@ export default function SociosPage() {
   const router = useRouter();
   const [socios, setSocios] = useState<Socio[]>([]);
   const [error, setError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [upgrade, setUpgrade] = useState<PlanUpgradeBody | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
 
   const load = useCallback(async () => {
     const session = requireSession();
@@ -62,6 +75,52 @@ export default function SociosPage() {
     }
   }
 
+  async function onDownloadTemplate() {
+    const session = requireSession();
+    if (!session) return;
+    setDownloadingTemplate(true);
+    setError('');
+    try {
+      await apiDownload('/socios/import-template', 'plantilla-socios.xlsx', {
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : t('admin.socios.templateError'),
+      );
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  }
+
+  async function onImport(file: File, aceptaUpgrade = false) {
+    const session = requireSession();
+    if (!session) return;
+    setImporting(true);
+    setError('');
+    setImportResult(null);
+    try {
+      const result = await apiUpload<ImportResult>('/socios/import-csv', file, {
+        token: session.access_token,
+        clubSlug: session.club.slug,
+        fields: aceptaUpgrade ? { acepta_upgrade: 'true' } : undefined,
+      });
+      setImportResult(result);
+      setPendingFile(null);
+      await load();
+    } catch (err) {
+      if (isPlanUpgradeRequired(err)) {
+        setPendingFile(file);
+        setUpgrade(err.body as unknown as PlanUpgradeBody);
+        return;
+      }
+      setError(err instanceof Error ? err.message : t('admin.socios.importError'));
+    } finally {
+      setImporting(false);
+    }
+  }
+
   const columns: Column<Socio>[] = [
     { key: 'dni', header: t('admin.socios.dni'), sortable: true },
     {
@@ -73,6 +132,11 @@ export default function SociosPage() {
     { key: 'email', header: t('admin.socios.email'), sortable: true },
     { key: 'estado', header: t('admin.socios.estado'), sortable: true },
     { key: 'rol', header: t('admin.socios.rol'), sortable: true },
+    {
+      key: 'categoria',
+      header: t('admin.socios.categoria', 'Categoría'),
+      render: (s) => s.categoria?.nombre || 'Socio pleno',
+    },
   ];
 
   return (
@@ -93,44 +157,49 @@ export default function SociosPage() {
         <p className="mt-1 text-xs text-slate-500">
           {t('admin.socios.csvHeader')}
         </p>
-        <input
-          type="file"
-          accept=".csv,text/csv"
-          className="mt-3 block text-sm"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const session = requireSession();
-            if (!session) return;
-            const text = await file.text();
-            try {
-              const result = await apiFetch<{
-                created: number;
-                updated: number;
-                errors: string[];
-              }>('/socios/import-csv', {
-                method: 'POST',
-                token: session.access_token,
-                clubSlug: session.club.slug,
-                body: JSON.stringify({ csv: text }),
-              });
-              setError(
-                result.errors.length
-                  ? `OK ${result.created} altas, ${result.updated} updates. Errores: ${result.errors.slice(0, 3).join('; ')}`
-                  : '',
-              );
-              if (!result.errors.length) {
-                alert(
-                  `Importados: ${result.created} nuevos, ${result.updated} actualizados`,
-                );
-              }
-              await load();
-            } catch (err) {
-              setError(err instanceof Error ? err.message : 'Error CSV');
-            }
-            e.target.value = '';
-          }}
-        />
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => void onDownloadTemplate()}
+            disabled={downloadingTemplate || importing}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {downloadingTemplate
+              ? t('admin.socios.downloadingTemplate')
+              : t('admin.socios.downloadTemplate')}
+          </button>
+          <input
+            type="file"
+            accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            disabled={importing || downloadingTemplate}
+            className="block text-sm"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (!file) return;
+              void onImport(file);
+            }}
+          />
+        </div>
+        {importing && (
+          <p className="mt-2 text-sm text-slate-500">{t('admin.socios.importing')}</p>
+        )}
+        {importResult && (
+          <div className="mt-3 text-sm">
+            <p className="text-emerald-700">
+              {t('admin.socios.importOk')
+                .replace('{created}', String(importResult.created))
+                .replace('{updated}', String(importResult.updated))}
+            </p>
+            {importResult.errors.length > 0 && (
+              <ul className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-red-200 bg-red-50 p-2 text-red-700">
+                {importResult.errors.map((msg, i) => (
+                  <li key={`${i}-${msg}`}>{msg}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-8">
@@ -150,6 +219,21 @@ export default function SociosPage() {
         aria-label={t('admin.socios.createSocio')}
         title={t('admin.socios.createSocio')}
       />
+      {upgrade && (
+        <PlanUpgradeModal
+          data={upgrade}
+          busy={importing}
+          onCancel={() => {
+            setUpgrade(null);
+            setPendingFile(null);
+          }}
+          onAccept={() => {
+            const file = pendingFile;
+            setUpgrade(null);
+            if (file) void onImport(file, true);
+          }}
+        />
+      )}
     </div>
   );
 }

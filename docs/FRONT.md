@@ -133,7 +133,8 @@ apps/api/
 | `platform/` | `GET\|POST /platform/clubs`, admins, `GET\|PATCH /platform/solicitudes` |
 | `solicitudes/` | `POST /solicitudes` (público, landing) |
 | `clubs/` | `GET /clubs/buscar`, `GET /clubs/slug/:slug`, `GET\|PATCH /clubs/me` |
-| `socios/` | `GET\|POST /socios`, `POST /socios/import-csv`, `PATCH\|DELETE /socios/:id` |
+| `socios/` | `GET\|POST /socios`, `POST /socios/import-csv`, `GET /socios/import-template`, `PATCH\|DELETE /socios/:id` |
+| `categorias-cuota/` | `GET\|POST /categorias-cuota`, `PATCH\|DELETE /categorias-cuota/:id` |
 | `admins/` | `GET\|POST /admins`, `PATCH\|DELETE /admins/:id` |
 | `pagos/` | `GET /pagos/resumen`, `POST /pagos/cobrar-mes`, `PATCH /pagos/:id/marcar-manual`, `POST /api/webhook/mp` |
 | `reportes/` | `GET /reportes/hoy`, `GET /reportes/alerta-fuga`, cumpleaños |
@@ -209,8 +210,8 @@ apps/web/
 | `/` y `/landing` | `app/page.tsx`, `app/landing/page.tsx` | `POST /solicitudes` (público) |
 | `/platform/usuarios` | `app/platform/usuarios/page.tsx` | `/platform/admins` |
 | `/admin` | `app/admin/page.tsx` | `GET /reportes/hoy` |
-| `/admin/socios` | `admin/socios/page.tsx` | `/socios`, `/socios/import-csv` |
-| `/admin/cobros` | `admin/cobros/page.tsx` | `/pagos/resumen`, `/pagos/cobrar-mes`, marcar-manual |
+| `/admin/socios` | `admin/socios/page.tsx` | `/socios`, `/socios/import-csv` (CSV o Excel), plantilla `/socios/import-template` |
+| `/admin/cobros` | `admin/cobros/page.tsx` | `/pagos/resumen`, `/pagos/cobrar-mes`, marcar-manual, `/categorias-cuota` |
 | `/admin/usuarios` | `admin/usuarios/page.tsx` | `/admins` |
 | `/admin/config` | `admin/config/page.tsx` | `GET\|PATCH /clubs/me` |
 | `/admin/espacios` | `admin/espacios/page.tsx` | `/espacios` |

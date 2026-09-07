@@ -25,8 +25,9 @@ forbidNonWhitelisted: true })`, así que cualquier campo enviado que no esté en
 | `email` | `email` | ✅ |
 | `telefono?` | `telefono` | ✅ |
 | `password?` | `password` | ✅ |
-| `rol?` | `rol` | ✅ |
-| `fecha_nacimiento?` | `fecha_nacimiento` | ✅ |
+| `rol` | `rol` | ✅ |
+| `fecha_nacimiento` | `fecha_nacimiento` | ✅ |
+| `categoria_id?` | `categoria_id` | ✅ |
 
 ## socios/nuevo (editar) → `PATCH /socios/:id` (`UpdateSocioDto`)
 
@@ -39,6 +40,7 @@ forbidNonWhitelisted: true })`, así que cualquier campo enviado que no esté en
 | `estado?` | `estado` | ✅ |
 | `rol?` | `rol` | ✅ |
 | `fecha_nacimiento?` | `fecha_nacimiento` | ✅ |
+| `categoria_id?` | `categoria_id` | ✅ |
 
 `dni` y `password` no existen en `UpdateSocioDto` y correctamente **no se envían** en el PATCH (el campo DNI
 queda `disabled` en el form cuando se edita).
@@ -80,8 +82,9 @@ queda `disabled` en el form cuando se edita).
 | DTO | Frontend | ¿Coincide? |
 |---|---|---|
 | `nombre` | `nombre` | ✅ |
-| `titular_id` | `titular_id` | ✅ |
-| `socio_ids?` | `socio_ids` | ✅ |
+| `titular_id` **o** `titular` | radio existente / persona nueva | ✅ |
+| `socio_ids?` | checkboxes de socios | ✅ |
+| `socios_nuevos?` | “Agregar persona” | ✅ |
 
 ## 7. espacios/nuevo → `POST /espacios` (`CreateEspacioDto`)
 

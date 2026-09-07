@@ -4,6 +4,25 @@ import { apiFetch, requireSession } from '@/lib/api';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
+type PlanUso = {
+  socios_activos: number;
+  plan: string;
+  plan_hasta: number;
+  precio_usd_mes: number;
+  pct: number;
+  alerta: 'ok' | 'alto' | 'lleno' | 'pendiente';
+  siguiente: {
+    nombre: string;
+    precio_usd: number;
+    faltan: number;
+  } | null;
+  pendiente: {
+    precio: number;
+    confirmado: boolean;
+    aplica_desde: string | null;
+  } | null;
+};
+
 type HoyData = {
   mes: string;
   cobranza: {
@@ -38,6 +57,7 @@ type HoyData = {
 
 export default function AdminHomePage() {
   const [data, setData] = useState<HoyData | null>(null);
+  const [plan, setPlan] = useState<PlanUso | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -47,11 +67,18 @@ export default function AdminHomePage() {
     setLoading(true);
     setError('');
     try {
-      const res = await apiFetch<HoyData>('/reportes/hoy', {
-        token: session.access_token,
-        clubSlug: session.club.slug,
-      });
+      const [res, planUso] = await Promise.all([
+        apiFetch<HoyData>('/reportes/hoy', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }),
+        apiFetch<PlanUso>('/clubs/me/plan', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }),
+      ]);
       setData(res);
+      setPlan(planUso);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar');
     } finally {
@@ -69,6 +96,58 @@ export default function AdminHomePage() {
       <p className="mt-1 text-sm text-slate-600">
         Resumen del día: cobranza, reservas, horarios y alertas.
       </p>
+
+      {plan && (
+        <div
+          className={`mt-4 rounded-xl border p-4 ${
+            plan.alerta === 'pendiente' || plan.alerta === 'lleno'
+              ? 'border-red-200 bg-red-50'
+              : plan.alerta === 'alto'
+                ? 'border-amber-200 bg-amber-50'
+                : 'border-slate-200 bg-white'
+          }`}
+        >
+          <p className="text-sm font-semibold text-slate-900">
+            Plan: {plan.plan} · USD {plan.precio_usd_mes}/mes
+          </p>
+          <p className="mt-1 text-sm text-slate-700">
+            {plan.socios_activos} / {plan.plan_hasta} socios
+          </p>
+          {plan.siguiente && plan.siguiente.faltan > 0 && (
+            <p className="mt-1 text-xs text-slate-600">
+              Si agregás {plan.siguiente.faltan} más, el próximo ciclo sería{' '}
+              {plan.siguiente.nombre} (USD {plan.siguiente.precio_usd}/mes).
+            </p>
+          )}
+          {plan.pendiente && !plan.pendiente.confirmado && (
+            <div className="mt-3">
+              <p className="text-xs text-red-700">
+                Upgrade pendiente: todavía no confirmaron el nuevo precio.
+              </p>
+              <button
+                type="button"
+                className="mt-2 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white"
+                onClick={() => {
+                  const session = requireSession();
+                  if (!session) return;
+                  void apiFetch('/clubs/me/plan/confirmar', {
+                    method: 'POST',
+                    token: session.access_token,
+                    clubSlug: session.club.slug,
+                  }).then((uso) => setPlan(uso as PlanUso));
+                }}
+              >
+                Confirmar upgrade
+              </button>
+            </div>
+          )}
+          {plan.pendiente?.confirmado && (
+            <p className="mt-1 text-xs text-slate-600">
+              Confirmado. Aplica desde {plan.pendiente.aplica_desde?.slice(0, 10)}.
+            </p>
+          )}
+        </div>
+      )}
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {loading && <p className="mt-4 text-slate-500">Cargando…</p>}

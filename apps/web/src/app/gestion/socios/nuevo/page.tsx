@@ -1,10 +1,17 @@
 'use client';
 
-import { apiFetch, requireSession } from '@/lib/api';
+import { apiFetch, isPlanUpgradeRequired, requireSession, type PlanUpgradeBody } from '@/lib/api';
+import { PlanUpgradeModal } from '@/components/PlanUpgradeModal';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
+import {
+  AltaCobrosFields,
+  altaCobrosPayload,
+  EMPTY_ALTA_COBROS,
+  type AltaCobrosValue,
+} from '../../_components/AltaCobrosFields';
 
 type Socio = {
   id: number;
@@ -16,6 +23,14 @@ type Socio = {
   rol: string;
   estado: string;
   fecha_nacimiento: string | null;
+  categoria_id: number | null;
+};
+
+type CategoriaCuota = {
+  id: number;
+  nombre: string;
+  monto: number;
+  es_default: boolean;
 };
 
 const EMPTY_FORM = {
@@ -25,9 +40,10 @@ const EMPTY_FORM = {
   email: '',
   telefono: '',
   fecha_nacimiento: '',
-  rol: 'socio',
+  rol: '',
   estado: 'activo',
   password: '',
+  categoria_id: '',
 };
 
 function NuevoSocioForm() {
@@ -39,6 +55,29 @@ function NuevoSocioForm() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(Boolean(editingId));
+  const [categorias, setCategorias] = useState<CategoriaCuota[]>([]);
+  const [upgrade, setUpgrade] = useState<PlanUpgradeBody | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [altaCobros, setAltaCobros] = useState<AltaCobrosValue>(EMPTY_ALTA_COBROS);
+
+  useEffect(() => {
+    const session = requireSession();
+    if (!session) return;
+    apiFetch<CategoriaCuota[]>('/categorias-cuota', {
+      token: session.access_token,
+      clubSlug: session.club.slug,
+    })
+      .then((rows) => {
+        setCategorias(rows);
+        if (!editingId) {
+          const def = rows.find((c) => c.es_default) ?? rows[0];
+          if (def) {
+            setForm((f) => ({ ...f, categoria_id: String(def.id) }));
+          }
+        }
+      })
+      .catch(() => undefined);
+  }, [editingId]);
 
   useEffect(() => {
     if (!editingId) return;
@@ -62,16 +101,17 @@ function NuevoSocioForm() {
           rol: socio.rol,
           estado: socio.estado,
           password: '',
+          categoria_id: socio.categoria_id ? String(socio.categoria_id) : '',
         }),
       )
       .catch((err) => setError(err instanceof Error ? err.message : 'Error al cargar'))
       .finally(() => setLoading(false));
   }, [editingId]);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  async function saveSocio(aceptaUpgrade = false) {
     const session = requireSession();
     if (!session) return;
+    setSaving(true);
     try {
       if (editingId) {
         await apiFetch(`/socios/${editingId}`, {
@@ -83,9 +123,10 @@ function NuevoSocioForm() {
             apellido: form.apellido,
             email: form.email,
             telefono: form.telefono || undefined,
-            fecha_nacimiento: form.fecha_nacimiento || undefined,
+            fecha_nacimiento: form.fecha_nacimiento,
             rol: form.rol,
             estado: form.estado,
+            categoria_id: form.categoria_id ? Number(form.categoria_id) : undefined,
           }),
         });
       } else {
@@ -99,33 +140,71 @@ function NuevoSocioForm() {
             apellido: form.apellido,
             email: form.email,
             telefono: form.telefono || undefined,
-            fecha_nacimiento: form.fecha_nacimiento || undefined,
+            fecha_nacimiento: form.fecha_nacimiento,
             rol: form.rol,
             password: form.password || undefined,
+            categoria_id: form.categoria_id ? Number(form.categoria_id) : undefined,
+            ...altaCobrosPayload(altaCobros),
+            ...(aceptaUpgrade ? { acepta_upgrade: true } : {}),
           }),
         });
       }
       router.push('/gestion/socios');
     } catch (err) {
+      if (isPlanUpgradeRequired(err)) {
+        setUpgrade(err.body as unknown as PlanUpgradeBody);
+        return;
+      }
       setError(err instanceof Error ? err.message : 'Error al guardar');
+    } finally {
+      setSaving(false);
     }
+  }
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setError('');
+    await saveSocio(false);
   }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">
-        {editingId ? t('admin.socios.editSocio', 'Editar socio') : t('admin.socios.quickCreate')}
-      </h2>
-
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
       {loading ? (
-        <p className="mt-6 text-sm text-slate-500">{t('common.loading', 'Cargando...')}</p>
+        <>
+          <h2 className="text-2xl font-bold">
+            {editingId ? t('admin.socios.editSocio', 'Editar socio') : t('admin.socios.quickCreate')}
+          </h2>
+          <p className="mt-6 text-sm text-slate-500">{t('common.loading', 'Cargando...')}</p>
+        </>
       ) : (
         <form
           onSubmit={onSubmit}
-          className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
+          className="grid gap-3 sm:grid-cols-2"
         >
+          <div className="col-span-2 flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-2xl font-bold">
+              {editingId ? t('admin.socios.editSocio', 'Editar socio') : t('admin.socios.quickCreate')}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="submit"
+                className="rounded-lg bg-[var(--club-primary,#2563eb)] px-4 py-2 font-semibold text-white"
+              >
+                {editingId ? t('common.save', 'Guardar') : t('admin.socios.createSocio')}
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/gestion/socios')}
+                className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700"
+              >
+                {t('newClub.cancel', 'Cancelar')}
+              </button>
+            </div>
+          </div>
+
+          {error && <p className="col-span-2 text-sm text-red-600">{error}</p>}
+
+          <div className="col-span-2 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2">
           <FormField
             label={t('admin.socios.dni')}
             value={form.dni}
@@ -162,15 +241,31 @@ function NuevoSocioForm() {
             label={t('admin.socios.fechaNacimiento', 'Fecha de nacimiento')}
             value={form.fecha_nacimiento}
             onChange={(fecha_nacimiento) => setForm((f) => ({ ...f, fecha_nacimiento }))}
+            required
           />
           <FormField
             as="select"
             label={t('admin.socios.rol', 'Rol')}
             value={form.rol}
             onChange={(rol) => setForm((f) => ({ ...f, rol }))}
+            required
           >
+            <option value="">{t('admin.socios.rolPlaceholder', 'Elegí un rol')}</option>
             <option value="socio">{t('admin.socios.rolSocio', 'Socio')}</option>
             <option value="profe">{t('admin.socios.rolProfe', 'Profe')}</option>
+          </FormField>
+          <FormField
+            as="select"
+            label={t('admin.socios.categoria', 'Categoría')}
+            value={form.categoria_id}
+            onChange={(categoria_id) => setForm((f) => ({ ...f, categoria_id }))}
+            required
+          >
+            {categorias.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.nombre} (${c.monto})
+              </option>
+            ))}
           </FormField>
           {editingId && (
             <FormField
@@ -187,28 +282,34 @@ function NuevoSocioForm() {
           {!editingId && (
             <FormField
               type="password"
-              label={t('admin.socios.passwordOpcional', 'Contraseña inicial (opcional)')}
+              label={t(
+                'admin.socios.passwordOpcional',
+                'Contraseña inicial (si falta: socio + DNI)',
+              )}
               value={form.password}
               onChange={(password) => setForm((f) => ({ ...f, password }))}
-              minLength={4}
             />
           )}
-          <div className="sm:col-span-2 flex gap-2">
-            <button
-              type="submit"
-              className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
-            >
-              {editingId ? t('common.save', 'Guardar') : t('admin.socios.createSocio')}
-            </button>
-            <button
-              type="button"
-              onClick={() => router.push('/gestion/socios')}
-              className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700"
-            >
-              {t('newClub.cancel', 'Cancelar')}
-            </button>
           </div>
+          {!editingId && (
+            <AltaCobrosFields
+              value={altaCobros}
+              onChange={setAltaCobros}
+              t={t}
+            />
+          )}
         </form>
+      )}
+      {upgrade && (
+        <PlanUpgradeModal
+          data={upgrade}
+          busy={saving}
+          onCancel={() => setUpgrade(null)}
+          onAccept={() => {
+            setUpgrade(null);
+            void saveSocio(true);
+          }}
+        />
       )}
     </div>
   );
