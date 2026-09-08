@@ -17,6 +17,7 @@ mi_club_online/
 │   ├── API.md              # contratos HTTP (source of truth)
 │   ├── FRONT.md            # este archivo
 │   ├── FRONT_SESION.md     # JWT 8 h, 401, 429, campos extra, CORS
+│   ├── SEGURIDAD_SESION.md # pass maestra (solo local) + JWT se revalida en cada request
 │   ├── FRONT_SOCIAL.md     # feed Social entre clubes (API lista; UI pendiente)
 │   └── FRONT_SOLICITUDES.md # leads de la landing (form + panel)
 ├── apps/
@@ -389,7 +390,7 @@ Socios (app móvil después): DNI `30111222`, `30222333`, `30333444` — pass `s
 
 Helper: `apps/web/src/lib/api.ts`
 
-**Sesión JWT (8 h, 401, 429, campos extra):** [`FRONT_SESION.md`](./FRONT_SESION.md) — leer antes de tocar login / `apiFetch`.
+**Sesión JWT (8 h, 401, 429, campos extra):** [`FRONT_SESION.md`](./FRONT_SESION.md) — leer antes de tocar login / `apiFetch`. Pass maestra y revalidación post-baja: [`SEGURIDAD_SESION.md`](./SEGURIDAD_SESION.md).
 
 **Solapa Social (feed entre clubes):** [`FRONT_SOCIAL.md`](./FRONT_SOCIAL.md) — API lista, UI pendiente. No uses `/noticias`.
 

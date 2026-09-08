@@ -27,7 +27,7 @@ Hoy, si el token vence, `apiFetch` recibe **401** y el usuario ve errores raros 
 
 Hay que cubrir esto (en las tres sesiones: `clubapp_session`, `clubapp_socio_session`, `clubapp_platform_session`):
 
-1. Si un request autenticado responde **401**, limpiar sesión y mandar al login de ese canal (gestión / miembro / panel).
+1. Si un request autenticado responde **401**, limpiar sesión y mandar al login de ese canal (gestión / miembro / panel). También pasa si la membresía o el club se dieron de baja: el token deja de servir **en el acto** (no espera a que venza).
 2. Opcional: guardar `expires_in` o `Date.now() + expires_in * 1000` al hacer login y, al volver a la pestaña, si ya venció, ir a login **sin** pegarle a la API.
 3. No hace falta refresh token: no existe. El usuario vuelve a entrar.
 

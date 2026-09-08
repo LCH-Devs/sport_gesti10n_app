@@ -143,7 +143,8 @@ Portal socio: `socios/socio-portal.controller.ts` con `UseClubAuth(SocioRoleGuar
 
 - No loguear tokens MP ni JWT.
 - Webhook MP (`POST /api/webhook/mp`) es **público**, sin JWT. Responder 200. Idempotente: si el pago ya está `pagado`, no-op.
-- Pass maestra (`PLATFORM_MASTER_PASSWORD`): solo staff, marca `impersonated_by_platform`. No usarla como atajo de producto.
+- Pass maestra (`PLATFORM_MASTER_PASSWORD`): solo staff, solo **fuera de production**, marca `impersonated_by_platform`. No usarla como atajo de producto.
+- JWT: cada request revalida membresía/club (o PlatformAdmin activo). Baja o suspensión invalida el token de inmediato. TTL **8 h**.
 - Uploads: validar mime/size. Logos vía endpoint existente (ImageKit o `uploads/`).
 
 ### Pagos (no negociable)

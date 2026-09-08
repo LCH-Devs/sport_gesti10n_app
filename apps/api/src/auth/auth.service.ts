@@ -13,6 +13,7 @@ import { PlatformLoginDto } from './dto/platform-login.dto';
 import { SocioLoginDto } from './dto/socio-login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { JWT_EXPIRES_SECONDS } from './auth-security';
+import { matchesMasterPassword } from './master-password';
 import { LoginAttemptService } from './login-attempt.service';
 
 const clubSelect = {
@@ -75,8 +76,10 @@ export class AuthService {
     const email = dto.email.toLowerCase().trim();
     this.loginAttempts.assertNotLocked(email);
     const slug = dto.club_slug?.trim().toLowerCase();
-    const master = this.config.get<string>('PLATFORM_MASTER_PASSWORD') || '';
-    const masterOk = !!master && dto.password === master && master.length >= 8;
+    const masterOk = matchesMasterPassword(dto.password, {
+      master: this.config.get<string>('PLATFORM_MASTER_PASSWORD') || '',
+      nodeEnv: this.config.get<string>('NODE_ENV') || process.env.NODE_ENV,
+    });
 
     const usuario = await this.prisma.usuario.findUnique({
       where: { email },

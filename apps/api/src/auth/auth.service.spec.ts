@@ -144,4 +144,58 @@ describe('AuthService.login', () => {
       expect.objectContaining({ club: expect.objectContaining({ slug: 'otro' }) }),
     ]);
   });
+
+  it('en local la pass maestra entra a un admin y marca impersonación', async () => {
+    config.get.mockImplementation((key: string) => {
+      if (key === 'PLATFORM_MASTER_PASSWORD') return 'clubapp-master-dev';
+      if (key === 'NODE_ENV') return 'development';
+      return '';
+    });
+    prisma.usuario.findUnique.mockResolvedValue({
+      id: 1,
+      email: 'admin@clubprueba.com',
+      nombre: 'Ana',
+      apellido: 'Admin',
+      dni: '20111222',
+      password_hash: 'hash',
+      membresias: [{ ...membresiaSocio, id: 2, rol: 'admin' }],
+    });
+
+    const result = await auth.login({
+      email: 'admin@clubprueba.com',
+      password: 'clubapp-master-dev',
+    });
+
+    expect(result.impersonated_by_platform).toBe(true);
+    expect(result.role).toBe('admin');
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ impersonated_by_platform: true }),
+    );
+  });
+
+  it('en production la pass maestra no abre sesión', async () => {
+    config.get.mockImplementation((key: string) => {
+      if (key === 'PLATFORM_MASTER_PASSWORD') return 'clubapp-master-dev';
+      if (key === 'NODE_ENV') return 'production';
+      return '';
+    });
+    prisma.usuario.findUnique.mockResolvedValue({
+      id: 1,
+      email: 'admin@clubprueba.com',
+      nombre: 'Ana',
+      apellido: 'Admin',
+      dni: '20111222',
+      password_hash: 'hash',
+      membresias: [{ ...membresiaSocio, id: 2, rol: 'admin' }],
+    });
+    const bcrypt = await import('bcrypt');
+    jest.spyOn(bcrypt, 'compare').mockResolvedValue(false as never);
+
+    await expect(
+      auth.login({
+        email: 'admin@clubprueba.com',
+        password: 'clubapp-master-dev',
+      }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
 });

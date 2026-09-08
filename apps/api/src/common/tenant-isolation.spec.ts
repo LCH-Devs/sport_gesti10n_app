@@ -7,6 +7,7 @@ import * as request from 'supertest';
 import { JwtStrategy } from '../auth/jwt.strategy';
 import { SociosController } from '../socios/socios.controller';
 import { SociosService } from '../socios/socios.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 const JWT_SECRET = 'tenant-isolation-test-secret';
 
@@ -39,6 +40,22 @@ describe('Aislamiento multi-tenant (Club A vs Club B)', () => {
       providers: [
         JwtStrategy,
         { provide: SociosService, useValue: socios },
+        {
+          provide: PrismaService,
+          useValue: {
+            membresia: {
+              findFirst: jest.fn().mockImplementation(async ({ where }) => ({
+                id: where.id,
+                rol: where.id === 9 ? 'socio' : 'admin',
+                estado: 'activo',
+                club_id: where.club?.id ?? 1,
+              })),
+            },
+            platformAdmin: {
+              findFirst: jest.fn().mockResolvedValue({ id: 1, activo: true }),
+            },
+          },
+        },
       ],
     }).compile();
 

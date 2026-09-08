@@ -1,4 +1,4 @@
-# Ayuda memoria — Planes por cantidad de socios
+ v# Ayuda memoria — Planes por cantidad de socios
 
 Para leerla en voz alta. **No cobramos todavía.** Esto es tope + aviso + confirmación.
 

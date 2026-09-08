@@ -9,7 +9,7 @@ Headers tipicos (rutas autenticadas):
 - `Authorization: Bearer <token>`
 - `X-Club-Slug: club-prueba` (opcional si el JWT ya trae `club_id`)
 
-El JWT dura **8 horas**. Login y switch devuelven `expires_in` (segundos). Ver [`FRONT_SESION.md`](./FRONT_SESION.md).
+El JWT dura **8 horas**. Login y switch devuelven `expires_in` (segundos). En cada request se revalida la membresía/club (o el PlatformAdmin): baja, suspensión o club inactivo → **401**. Ver [`FRONT_SESION.md`](./FRONT_SESION.md).
 
 Body con campos que el DTO no declara → **400**. Login público (`/auth/login` y aliases): **429** si hay demasiados intentos.
 
@@ -18,7 +18,7 @@ Body con campos que el DTO no declara → **400**. Login público (`/auth/login`
 - **Plataforma (superadmin):** `platform@clubapp.com` / `platform123` → web `/platform/login`
 - Slug club: `club-prueba` → web `/login/club-prueba`
 - Admin club: `admin@clubprueba.com` / `admin123`
-- Pass maestra (soporte): `clubapp-master-dev` (env `PLATFORM_MASTER_PASSWORD`)
+- Pass maestra (soporte, **solo no-prod**): `clubapp-master-dev` (env `PLATFORM_MASTER_PASSWORD`). En `NODE_ENV=production` no funciona.
 - Socios: DNI `30111222|30222333|30333444` / pass `socio123`
 
 ## Health / Auth / Clubs
@@ -28,7 +28,7 @@ Body con campos que el DTO no declara → **400**. Login público (`/auth/login`
   Respuesta: `access_token`, **`expires_in`** (28800), `role`, `cuentas`, `must_complete_onboarding`, `must_change_password`, `impersonated_by_platform`, `admin` o `socio`, `club`  
   **401** credenciales inválidas · **429** demasiados intentos
 - `POST /auth/admin/login` · `POST /auth/socio/login` — aliases del anterior  
-  Acepta la pass del admin **o** `PLATFORM_MASTER_PASSWORD`
+  Acepta la pass del admin **o**, fuera de production, `PLATFORM_MASTER_PASSWORD` (solo staff)
 - `POST /auth/switch` — Bearer, `{ membresia_id }` (emite JWT nuevo, otras 8 h). Sin rate limit de login.
 - `POST /auth/platform/login` — `{ email, password }` (superadmin ClubApp). También `expires_in` y 429.
 - `GET /clubs/buscar?q=`
