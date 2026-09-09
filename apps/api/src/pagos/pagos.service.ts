@@ -11,6 +11,7 @@ import { AltaCobrosFields } from './dto/alta-cobros.dto';
 import {
   addMonthsYm,
   armarLotesCuota,
+  estadoCuotaMes,
   mesActualYm,
   PAGO_TIPO_CUOTA,
   PAGO_TIPO_INSCRIPCION,
@@ -74,6 +75,156 @@ export class PagosService {
       monto_pendiente: pendientes.reduce((s, p) => s + p.monto, 0),
       pagos: mapped,
     };
+  }
+
+  /** Snapshot de cuota del mes para el padrón (un pago por familia, al titular). */
+  async estadoMes(clubId: number, mes?: string) {
+    const m = mes || this.mesActual();
+    const db = cobrosDb(this.prisma);
+    const [socios, pagos, bonos] = await Promise.all([
+      this.prisma.membresia.findMany({
+        where: {
+          club_id: clubId,
+          rol: { in: [...MEMBER_ROLES] },
+          ...NOT_DELETED,
+        },
+        select: {
+          id: true,
+          grupo_familiar_id: true,
+          grupo_familiar: {
+            select: { id: true, titular_id: true, eliminado: true },
+          },
+        },
+      }),
+      db.pago.findMany({
+        where: { club_id: clubId, mes: m, tipo: PAGO_TIPO_CUOTA },
+        select: {
+          socio_id: true,
+          monto: true,
+          estado: true,
+        },
+      }),
+      db.bonificacionCuota.findMany({
+        where: { club_id: clubId, mes: m },
+        select: { socio_id: true },
+      }),
+    ]);
+
+    const pagoBySocio = new Map(
+      pagos.map((p) => [p.socio_id as number, p]),
+    );
+    const bonoSet = new Set(bonos.map((b) => b.socio_id));
+
+    const items = socios.map((s) => {
+      const grupo =
+        s.grupo_familiar && !s.grupo_familiar.eliminado
+          ? s.grupo_familiar
+          : null;
+      const pagadorId = grupo ? grupo.titular_id : s.id;
+      const pago = pagoBySocio.get(pagadorId);
+      return {
+        socio_id: s.id,
+        grupo_familiar_id: grupo?.id ?? null,
+        pagador_id: pagadorId,
+        cuota_estado: estadoCuotaMes({
+          pagoEstado: pago?.estado ?? null,
+          bonificado: bonoSet.has(s.id),
+        }),
+        cuota_monto: pago?.monto ?? null,
+      };
+    });
+
+    return { mes: m, items };
+  }
+
+  async cuenta(
+    clubId: number,
+    opts: { socioId?: number; familiaId?: number },
+  ) {
+    const socioId = opts.socioId;
+    const familiaId = opts.familiaId;
+    if ((socioId == null) === (familiaId == null)) {
+      throw new BadRequestException(
+        'Indicá socio_id o familia_id, no ambos',
+      );
+    }
+
+    if (familiaId != null) {
+      const grupo = await this.prisma.grupoFamiliar.findFirst({
+        where: { id: familiaId, club_id: clubId, ...NOT_DELETED },
+        include: {
+          titular: { include: personInclude },
+          socios: { where: NOT_DELETED, select: { id: true } },
+        },
+      });
+      if (!grupo) throw new NotFoundException('Familia no encontrada');
+      const memberIds = grupo.socios.map((m) => m.id);
+      const pagos = await this.pagosDeCuenta(clubId, {
+        grupoId: grupo.id,
+        socioIds: memberIds,
+      });
+      return {
+        tipo: 'familia' as const,
+        familia: {
+          id: grupo.id,
+          nombre: grupo.nombre,
+          titular: flattenPerson(grupo.titular),
+        },
+        pagos,
+      };
+    }
+
+    const socio = await this.prisma.membresia.findFirst({
+      where: { id: socioId, club_id: clubId, ...NOT_DELETED },
+      include: {
+        ...personInclude,
+        grupo_familiar: {
+          select: { id: true, nombre: true, titular_id: true, eliminado: true },
+        },
+      },
+    });
+    if (!socio) throw new NotFoundException('Socio no encontrado');
+    const grupo =
+      socio.grupo_familiar && !socio.grupo_familiar.eliminado
+        ? socio.grupo_familiar
+        : null;
+    const pagos = await this.pagosDeCuenta(clubId, {
+      grupoId: grupo?.id,
+      socioIds: [socio.id],
+    });
+    return {
+      tipo: 'socio' as const,
+      socio: flattenPerson(socio),
+      familia: grupo
+        ? { id: grupo.id, nombre: grupo.nombre, titular_id: grupo.titular_id }
+        : null,
+      pagos,
+    };
+  }
+
+  private async pagosDeCuenta(
+    clubId: number,
+    opts: { grupoId?: number; socioIds: number[] },
+  ) {
+    const or: Array<Record<string, unknown>> = [];
+    if (opts.grupoId != null) {
+      or.push({ grupo_familiar_id: opts.grupoId });
+    }
+    if (opts.socioIds.length) {
+      or.push({ socio_id: { in: opts.socioIds } });
+    }
+    const pagos = await cobrosDb(this.prisma).pago.findMany({
+      where: { club_id: clubId, OR: or },
+      include: {
+        socio: { include: personInclude },
+        grupo_familiar: { select: { id: true, nombre: true } },
+      },
+      orderBy: [{ mes: 'desc' }, { id: 'desc' }],
+    });
+    return pagos.map((p) => ({
+      ...p,
+      socio: flattenPerson(p.socio),
+    }));
   }
 
   /**

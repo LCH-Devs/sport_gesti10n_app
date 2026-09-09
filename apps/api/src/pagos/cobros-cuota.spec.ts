@@ -2,6 +2,7 @@ import {
   addMonthsYm,
   aplicarDescuentoFamiliar,
   armarLotesCuota,
+  estadoCuotaMes,
   splitMonto,
 } from './cobros-cuota';
 
@@ -115,5 +116,20 @@ describe('cobros-cuota', () => {
     expect(lotes).toHaveLength(1);
     expect(lotes[0].monto).toBe(5000);
     expect(lotes[0].concepto).toBe('Pérez · 1 socio');
+  });
+
+  it('resuelve el estado de cuota del mes', () => {
+    expect(estadoCuotaMes({ pagoEstado: 'pagado', bonificado: true })).toBe(
+      'pagado',
+    );
+    expect(estadoCuotaMes({ pagoEstado: 'pendiente', bonificado: false })).toBe(
+      'pendiente',
+    );
+    expect(estadoCuotaMes({ pagoEstado: null, bonificado: true })).toBe(
+      'bonificado',
+    );
+    expect(estadoCuotaMes({ pagoEstado: null, bonificado: false })).toBe(
+      'sin_generar',
+    );
   });
 });

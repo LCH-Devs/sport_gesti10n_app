@@ -1,7 +1,8 @@
 'use client';
 
 import { apiFetch, requireSession } from '@/lib/api';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 
 type PagoRow = {
@@ -39,16 +40,37 @@ type CategoriaCuota = {
   es_default: boolean;
 };
 
+type Cuenta = {
+  tipo: 'socio' | 'familia';
+  socio?: {
+    id: number;
+    dni: string;
+    nombre: string;
+    apellido: string;
+  };
+  familia?: {
+    id: number;
+    nombre: string;
+    titular?: { nombre: string; apellido: string };
+  };
+  pagos: PagoRow[];
+};
+
 function mesDefault() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-export default function CobrosPage() {
+function CobrosPageInner() {
   const { t } = useTranslation();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const socioId = searchParams.get('socio');
+  const familiaId = searchParams.get('familia');
   const [mes, setMes] = useState(mesDefault());
   const [monto, setMonto] = useState('');
   const [resumen, setResumen] = useState<Resumen | null>(null);
+  const [cuenta, setCuenta] = useState<Cuenta | null>(null);
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -85,9 +107,35 @@ export default function CobrosPage() {
     }
   }, [mes]);
 
+  const loadCuenta = useCallback(async () => {
+    const session = requireSession();
+    if (!session) return;
+    if (!socioId && !familiaId) {
+      setCuenta(null);
+      return;
+    }
+    const qs = socioId
+      ? `socio_id=${encodeURIComponent(socioId)}`
+      : `familia_id=${encodeURIComponent(familiaId || '')}`;
+    try {
+      const data = await apiFetch<Cuenta>(`/pagos/cuenta?${qs}`, {
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+      setCuenta(data);
+    } catch (err) {
+      setCuenta(null);
+      setError(err instanceof Error ? err.message : 'Error al cargar la cuenta');
+    }
+  }, [socioId, familiaId]);
+
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    void loadCuenta();
+  }, [loadCuenta]);
 
   useEffect(() => {
     void loadCategorias();
@@ -115,6 +163,7 @@ export default function CobrosPage() {
         `${data.message} Socios procesados: ${data.socios_procesados}.`,
       );
       await load();
+      await loadCuenta();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al generar');
     } finally {
@@ -191,6 +240,7 @@ export default function CobrosPage() {
         clubSlug: session.club.slug,
       });
       await load();
+      await loadCuenta();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error');
     }
@@ -202,6 +252,88 @@ export default function CobrosPage() {
       <p className="mt-1 text-sm text-slate-600">
         {t('admin.cobros.subtitle')}
       </p>
+
+      {cuenta && (
+        <div className="mt-6 rounded-xl border border-blue-100 bg-white p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-semibold">
+                {t('admin.cobros.estadoCuenta', 'Estado de cuenta')}
+              </h3>
+              <p className="mt-1 text-sm text-slate-600">
+                {cuenta.tipo === 'familia' && cuenta.familia
+                  ? `${cuenta.familia.nombre}${
+                      cuenta.familia.titular
+                        ? ` · ${cuenta.familia.titular.apellido}, ${cuenta.familia.titular.nombre}`
+                        : ''
+                    }`
+                  : cuenta.socio
+                    ? `${cuenta.socio.apellido}, ${cuenta.socio.nombre}`
+                    : ''}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="text-sm text-slate-600 hover:underline"
+              onClick={() => router.push('/cobros')}
+            >
+              {t('admin.cobros.cerrarCuenta', 'Ver todos los cobros')}
+            </button>
+          </div>
+          <div className="mt-4 overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="border-b bg-slate-50">
+                <tr>
+                  <th className="px-3 py-2">{t('admin.cobros.mes')}</th>
+                  <th className="px-3 py-2">{t('admin.cobros.concepto', 'Concepto')}</th>
+                  <th className="px-3 py-2">{t('dashboard.member')}</th>
+                  <th className="px-3 py-2">{t('admin.cobros.monto')}</th>
+                  <th className="px-3 py-2">{t('dashboard.status')}</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {cuenta.pagos.map((p) => (
+                  <tr key={p.id} className="border-b last:border-0">
+                    <td className="px-3 py-2 font-mono">{p.mes}</td>
+                    <td className="px-3 py-2">
+                      <span className="text-xs uppercase text-slate-500">
+                        {p.tipo === 'inscripcion'
+                          ? t('admin.cobros.tipoInscripcion', 'Inscripción')
+                          : t('admin.cobros.tipoCuota', 'Cuota')}
+                      </span>
+                      {p.concepto && (
+                        <span className="mt-0.5 block">{p.concepto}</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {p.socio.apellido}, {p.socio.nombre}
+                    </td>
+                    <td className="px-3 py-2">${p.monto}</td>
+                    <td className="px-3 py-2">{p.estado}</td>
+                    <td className="px-3 py-2 text-right">
+                      {p.estado !== 'pagado' && (
+                        <button
+                          type="button"
+                          className="text-green-700 hover:underline"
+                          onClick={() => void marcarPagado(p.id)}
+                        >
+                          {t('admin.cobros.marcarPagado')}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {cuenta.pagos.length === 0 && (
+              <p className="p-3 text-sm text-slate-500">
+                {t('admin.cobros.cuentaVacia', 'Sin movimientos en esta cuenta.')}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 rounded-xl border bg-white p-4">
         <h3 className="font-semibold">{t('admin.cobros.categoriasTitle')}</h3>
@@ -423,5 +555,13 @@ export default function CobrosPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function CobrosPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-500">Cargando…</p>}>
+      <CobrosPageInner />
+    </Suspense>
   );
 }

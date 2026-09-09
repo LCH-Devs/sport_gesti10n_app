@@ -1,2 +1,9 @@
 export { DataTable } from './DataTable';
-export type { Column, DataTableProps, DataTableMode, SortDirection, SortState } from './types';
+export type {
+  Column,
+  DataTableProps,
+  DataTableMode,
+  SortDirection,
+  SortState,
+  RowGroup,
+} from './types';

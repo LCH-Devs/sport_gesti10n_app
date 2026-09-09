@@ -12,4 +12,5 @@ export type {
   DataTableMode,
   SortDirection,
   SortState,
+  RowGroup,
 } from './DataTable';

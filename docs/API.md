@@ -94,6 +94,8 @@ JWT con `role: platform` (sin `club_id`).
 ## Pagos
 
 - `GET /pagos/resumen?mes=YYYY-MM` — incluye `tipo` (`cuota` | `inscripcion`), `concepto`, `grupo_familiar`
+- `GET /pagos/estado-mes?mes=YYYY-MM` — snapshot de cuota del mes por socio (`pagado` | `pendiente` | `bonificado` | `sin_generar`). En familia, el cobro es el del titular
+- `GET /pagos/cuenta?socio_id=` **o** `familia_id=` — historial de la cuenta (cuota familiar + inscripciones propias)
 - `POST /pagos/cobrar-mes` · `POST /api/cuotas/generar-links` — un pago de cuota por socio suelto; si hay familia, **un solo cobro al titular** (suma de categorías − `%` familiar). Idempotente por `(socio_id, mes, tipo)`
 - `PATCH /pagos/:id/marcar-manual`
 - `POST /api/webhook/mp` (público)

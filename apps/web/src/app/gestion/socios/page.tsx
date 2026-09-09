@@ -2,11 +2,13 @@
 
 import { apiDownload, apiFetch, apiUpload, isPlanUpgradeRequired, requireSession, type PlanUpgradeBody } from '@/lib/api';
 import { PlanUpgradeModal } from '@/components/PlanUpgradeModal';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { DataTable, type Column, FloatingActionButton } from '@/components/common';
 import { SociosFamiliasTabs } from '../_components/SociosFamiliasTabs';
+import { CuotaMesCell, type EstadoMesItem } from '../_components/CuotaMesCell';
+import { UserGroupIcon, UserIcon } from '@heroicons/react/24/outline';
 
 type Socio = {
   id: number;
@@ -17,7 +19,19 @@ type Socio = {
   telefono: string;
   estado: string;
   rol: string;
+  grupo_familiar_id?: number | null;
   categoria?: { nombre: string; monto: number } | null;
+};
+
+type FamiliaMini = {
+  id: number;
+  nombre: string;
+  titular_id: number;
+};
+
+type SocioRow = Socio & {
+  familia_nombre: string;
+  es_titular: boolean;
 };
 
 type ImportResult = {
@@ -30,6 +44,8 @@ export default function SociosPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [socios, setSocios] = useState<Socio[]>([]);
+  const [familias, setFamilias] = useState<FamiliaMini[]>([]);
+  const [cuotaMes, setCuotaMes] = useState<Map<number, EstadoMesItem>>(new Map());
   const [error, setError] = useState('');
   const [importing, setImporting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
@@ -44,11 +60,23 @@ export default function SociosPage() {
     setLoading(true);
     setError('');
     try {
-      const data = await apiFetch<Socio[]>('/socios', {
-        token: session.access_token,
-        clubSlug: session.club.slug,
-      });
-      setSocios(data);
+      const [people, groups, estado] = await Promise.all([
+        apiFetch<Socio[]>('/socios', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }),
+        apiFetch<FamiliaMini[]>('/familias', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }),
+        apiFetch<{ items: EstadoMesItem[] }>('/pagos/estado-mes', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }).catch(() => ({ items: [] as EstadoMesItem[] })),
+      ]);
+      setSocios(people);
+      setFamilias(groups);
+      setCuotaMes(new Map(estado.items.map((i) => [i.socio_id, i])));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar');
     } finally {
@@ -60,7 +88,19 @@ export default function SociosPage() {
     void load();
   }, [load]);
 
-  async function onDelete(socio: Socio) {
+  const rows = useMemo<SocioRow[]>(() => {
+    const byId = new Map(familias.map((f) => [f.id, f]));
+    return socios.map((s) => {
+      const fam = s.grupo_familiar_id ? byId.get(s.grupo_familiar_id) : undefined;
+      return {
+        ...s,
+        familia_nombre: fam?.nombre ?? '',
+        es_titular: fam ? fam.titular_id === s.id : false,
+      };
+    });
+  }, [socios, familias]);
+
+  async function onDelete(socio: SocioRow) {
     const session = requireSession();
     if (!session) return;
     try {
@@ -121,13 +161,53 @@ export default function SociosPage() {
     }
   }
 
-  const columns: Column<Socio>[] = [
+  const columns: Column<SocioRow>[] = [
+    {
+      key: 'grupo',
+      header: '',
+      sortable: false,
+      filterable: false,
+      width: '3rem',
+      render: (s) =>
+        s.grupo_familiar_id ? (
+          <button
+            type="button"
+            onClick={() => router.push(`/familias?id=${s.grupo_familiar_id}`)}
+            className="rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
+            aria-label={t('admin.socios.verFamilia', 'Ver grupo familiar')}
+            title={
+              s.familia_nombre || t('admin.socios.verFamilia', 'Ver grupo familiar')
+            }
+          >
+            <UserGroupIcon className="h-5 w-5" />
+          </button>
+        ) : (
+          <span
+            className="inline-flex rounded p-1 text-slate-400"
+            title={t('admin.socios.sinFamilia', 'Sin familia')}
+            aria-label={t('admin.socios.sinFamilia', 'Sin familia')}
+          >
+            <UserIcon className="h-5 w-5" />
+          </span>
+        ),
+    },
     { key: 'dni', header: t('admin.socios.dni'), sortable: true },
     {
       key: 'apellido',
       header: t('admin.socios.nombre'),
       sortable: true,
-      render: (s) => `${s.apellido}, ${s.nombre}`,
+      accessor: (s) =>
+        `${s.apellido}, ${s.nombre} ${s.telefono || ''} ${s.familia_nombre}`,
+      render: (s) => (
+        <span>
+          {s.apellido}, {s.nombre}
+          {s.es_titular && (
+            <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
+              {t('admin.familias.titular')}
+            </span>
+          )}
+        </span>
+      ),
     },
     { key: 'email', header: t('admin.socios.email'), sortable: true },
     { key: 'estado', header: t('admin.socios.estado'), sortable: true },
@@ -135,7 +215,25 @@ export default function SociosPage() {
     {
       key: 'categoria',
       header: t('admin.socios.categoria', 'Categoría'),
+      sortable: true,
+      accessor: (s) => s.categoria?.nombre || 'Socio pleno',
       render: (s) => s.categoria?.nombre || 'Socio pleno',
+    },
+    {
+      key: 'cuota_mes',
+      header: t('admin.cobros.cuotaMes', 'Cuota mes'),
+      sortable: true,
+      accessor: (s) => cuotaMes.get(s.id)?.cuota_estado || 'sin_generar',
+      render: (s) => (
+        <CuotaMesCell
+          item={cuotaMes.get(s.id)}
+          href={
+            s.grupo_familiar_id
+              ? `/cobros?familia=${s.grupo_familiar_id}`
+              : `/cobros?socio=${s.id}`
+          }
+        />
+      ),
     },
   ];
 
@@ -205,12 +303,18 @@ export default function SociosPage() {
       <div className="mt-8">
         <DataTable
           columns={columns}
-          data={socios}
+          data={rows}
           getRowId={(s) => s.id}
           loading={loading}
           onEdit={(s) => router.push(`/gestion/socios/nuevo?id=${s.id}`)}
           onDelete={onDelete}
-          deleteConfirmMessage={(s) => `${t('admin.socios.eliminar')} ${s.nombre} ${s.apellido}?`}
+          deleteConfirmMessage={(s) =>
+            `${t('admin.socios.eliminar')} ${s.nombre} ${s.apellido}?`
+          }
+          searchPlaceholder={t(
+            'admin.socios.searchHint',
+            'Buscar por nombre, DNI, mail o familia…',
+          )}
         />
       </div>
 

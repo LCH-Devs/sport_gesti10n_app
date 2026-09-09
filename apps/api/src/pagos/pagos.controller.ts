@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -15,6 +16,15 @@ import { ClubId } from '../common/club-id.decorator';
 import { UseClubAuth } from '../common/use-club-auth';
 import { GenerarCobrosDto } from './dto/generar-cobros.dto';
 
+function parseOptionalId(raw?: string): number | undefined {
+  if (raw == null || raw.trim() === '') return undefined;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new BadRequestException('id inválido');
+  }
+  return n;
+}
+
 @Controller()
 export class PagosController {
   constructor(private readonly pagos: PagosService) {}
@@ -23,6 +33,25 @@ export class PagosController {
   @UseClubAuth(ClubStaffGuard)
   resumen(@ClubId() clubId: number, @Query('mes') mes?: string) {
     return this.pagos.resumen(clubId, mes);
+  }
+
+  @Get('pagos/estado-mes')
+  @UseClubAuth(ClubStaffGuard)
+  estadoMes(@ClubId() clubId: number, @Query('mes') mes?: string) {
+    return this.pagos.estadoMes(clubId, mes);
+  }
+
+  @Get('pagos/cuenta')
+  @UseClubAuth(ClubStaffGuard)
+  cuenta(
+    @ClubId() clubId: number,
+    @Query('socio_id') socioId?: string,
+    @Query('familia_id') familiaId?: string,
+  ) {
+    return this.pagos.cuenta(clubId, {
+      socioId: parseOptionalId(socioId),
+      familiaId: parseOptionalId(familiaId),
+    });
   }
 
   @Post('pagos/cobrar-mes')
@@ -55,4 +84,3 @@ export class PagosController {
     );
   }
 }
-

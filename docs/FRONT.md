@@ -137,7 +137,7 @@ apps/api/
 | `socios/` | `GET\|POST /socios`, `POST /socios/import-csv`, `GET /socios/import-template`, `PATCH\|DELETE /socios/:id` |
 | `categorias-cuota/` | `GET\|POST /categorias-cuota`, `PATCH\|DELETE /categorias-cuota/:id` |
 | `admins/` | `GET\|POST /admins`, `PATCH\|DELETE /admins/:id` |
-| `pagos/` | `GET /pagos/resumen`, `POST /pagos/cobrar-mes`, `PATCH /pagos/:id/marcar-manual`, `POST /api/webhook/mp` |
+| `pagos/` | `GET /pagos/resumen`, `GET /pagos/estado-mes`, `GET /pagos/cuenta`, `POST /pagos/cobrar-mes`, `PATCH /pagos/:id/marcar-manual`, `POST /api/webhook/mp` |
 | `reportes/` | `GET /reportes/hoy`, `GET /reportes/alerta-fuga`, cumpleaños |
 | `espacios/` | CRUD `/espacios`, `GET /espacios/:id/disponibilidad` |
 | `reservas/` | `GET\|POST /reservas`, `PATCH /reservas/:id/cancelar` |
@@ -212,7 +212,7 @@ apps/web/
 | `/platform/usuarios` | `app/platform/usuarios/page.tsx` | `/platform/admins` |
 | `/admin` | `app/admin/page.tsx` | `GET /reportes/hoy` |
 | `/admin/socios` | `admin/socios/page.tsx` | `/socios`, `/socios/import-csv` (CSV o Excel), plantilla `/socios/import-template` |
-| `/admin/cobros` | `admin/cobros/page.tsx` | `/pagos/resumen`, `/pagos/cobrar-mes`, marcar-manual, `/categorias-cuota` |
+| `/admin/cobros` | `admin/cobros/page.tsx` | `/pagos/resumen`, `/pagos/estado-mes`, `/pagos/cuenta`, `/pagos/cobrar-mes`, marcar-manual, `/categorias-cuota` |
 | `/admin/usuarios` | `admin/usuarios/page.tsx` | `/admins` |
 | `/admin/config` | `admin/config/page.tsx` | `GET\|PATCH /clubs/me` |
 | `/admin/espacios` | `admin/espacios/page.tsx` | `/espacios` |

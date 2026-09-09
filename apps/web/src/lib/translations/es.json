@@ -9,7 +9,10 @@
     "page": "Página",
     "edit": "Editar",
     "delete": "Eliminar",
-    "confirmDelete": "¿Eliminar este registro?"
+    "confirmDelete": "¿Eliminar este registro?",
+    "ungrouped": "Sin grupo",
+    "expand": "Desplegar",
+    "collapse": "Contraer"
   },
   "common": {
     "loading": "Cargando...",
@@ -261,7 +264,14 @@
       "rolPlaceholder": "Elegí un rol",
       "categoria": "Categoría",
       "eliminar": "Eliminar",
-      "socios": "Socios"
+      "socios": "Socios",
+      "sinFamilia": "Sin familia",
+      "verFamilia": "Ver grupo familiar",
+      "searchHint": "Buscar por nombre, DNI, mail o familia…",
+      "filtroFamilia": "Filtro de familia",
+      "filtroTodos": "Todos",
+      "filtroEnFamilia": "En familia",
+      "filtroSinFamilia": "Sin familia"
     },
     "espacios": {
       "title": "Espacios",
@@ -340,6 +350,8 @@
       "personaN": "Persona",
       "enOtraFamilia": "en otra familia",
       "confirmDelete": "¿Borrar este grupo familiar?",
+      "searchHint": "Buscar por grupo, titular o miembro…",
+      "grupoCompleto": "Grupo familiar",
       "altaCobrosHint": "Se aplica a las personas nuevas (titular nuevo y altas). Los socios que ya estaban no cambian."
     },
     "noticias": {
@@ -422,7 +434,16 @@
       "addCategoria": "Agregar categoría",
       "savingCategoria": "Guardando…",
       "defaultBadge": "Por defecto",
-      "cannotDeleteDefault": "No se puede borrar Socio pleno"
+      "cannotDeleteDefault": "No se puede borrar Socio pleno",
+      "cuotaMes": "Cuota mes",
+      "cuotaPagada": "Pagó",
+      "cuotaDebe": "Debe",
+      "cuotaBonificada": "Bonificado",
+      "cuotaSinGenerar": "Sin generar",
+      "verCuenta": "Ver estado de cuenta",
+      "estadoCuenta": "Estado de cuenta",
+      "cerrarCuenta": "Ver todos los cobros",
+      "cuentaVacia": "Sin movimientos en esta cuenta."
     },
     "liquidaciones": {
       "title": "Liquidaciones",

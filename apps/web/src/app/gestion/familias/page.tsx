@@ -1,17 +1,20 @@
 'use client';
 
 import { apiFetch, requireSession } from '@/lib/api';
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useTranslation } from '@/lib/useTranslation';
 import { SociosFamiliasTabs } from '../_components/SociosFamiliasTabs';
-import { FloatingActionButton } from '@/components/common';
+import { DataTable, type Column, FloatingActionButton } from '@/components/common';
+import { CuotaMesCell, type EstadoMesItem } from '../_components/CuotaMesCell';
 
 type SocioMini = {
   id: number;
   dni: string;
   nombre: string;
   apellido: string;
+  email?: string;
 };
 
 type Familia = {
@@ -22,12 +25,16 @@ type Familia = {
   socios: SocioMini[];
 };
 
-export default function FamiliasPage() {
+function FamiliasPageInner() {
   const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const focusId = Number(searchParams.get('id') || '') || null;
   const [items, setItems] = useState<Familia[]>([]);
+  const [cuotaMes, setCuotaMes] = useState<Map<number, EstadoMesItem>>(new Map());
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<number | null>(focusId);
 
   const load = useCallback(async () => {
     const session = requireSession();
@@ -35,11 +42,18 @@ export default function FamiliasPage() {
     setLoading(true);
     setError('');
     try {
-      const familias = await apiFetch<Familia[]>('/familias', {
-        token: session.access_token,
-        clubSlug: session.club.slug,
-      });
+      const [familias, estado] = await Promise.all([
+        apiFetch<Familia[]>('/familias', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }),
+        apiFetch<{ items: EstadoMesItem[] }>('/pagos/estado-mes', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }).catch(() => ({ items: [] as EstadoMesItem[] })),
+      ]);
       setItems(familias);
+      setCuotaMes(new Map(estado.items.map((i) => [i.socio_id, i])));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar');
     } finally {
@@ -51,18 +65,21 @@ export default function FamiliasPage() {
     void load();
   }, [load]);
 
-  async function removeFamilia(id: number) {
+  useEffect(() => {
+    if (focusId) setExpandedId(focusId);
+  }, [focusId]);
+
+  useEffect(() => {
+    if (!focusId || loading) return;
+    const el = document.getElementById(`datatable-row-${focusId}`);
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [focusId, loading, items, expandedId]);
+
+  async function removeFamilia(row: Familia) {
     const session = requireSession();
     if (!session) return;
-    if (
-      !window.confirm(
-        t('admin.familias.confirmDelete', '¿Borrar este grupo familiar?'),
-      )
-    ) {
-      return;
-    }
     try {
-      await apiFetch(`/familias/${id}`, {
+      await apiFetch(`/familias/${row.id}`, {
         method: 'DELETE',
         token: session.access_token,
         clubSlug: session.club.slug,
@@ -72,6 +89,39 @@ export default function FamiliasPage() {
       setError(err instanceof Error ? err.message : 'Error al borrar');
     }
   }
+
+  const columns: Column<Familia>[] = [
+    { key: 'nombre', header: t('admin.familias.nombre'), sortable: true },
+    {
+      key: 'titular',
+      header: t('admin.familias.titular'),
+      sortable: true,
+      accessor: (f) => `${f.titular.apellido}, ${f.titular.nombre} ${f.titular.dni}`,
+      render: (f) => `${f.titular.apellido}, ${f.titular.nombre}`,
+    },
+    {
+      key: 'miembros',
+      header: t('admin.familias.miembros'),
+      sortable: true,
+      accessor: (f) =>
+        `${String(f.socios.length).padStart(4, '0')} ${f.socios
+          .map((s) => `${s.apellido} ${s.nombre} ${s.dni} ${s.email || ''}`)
+          .join(' ')}`,
+      render: (f) => f.socios.length,
+    },
+    {
+      key: 'cuota_mes',
+      header: t('admin.cobros.cuotaMes', 'Cuota mes'),
+      sortable: true,
+      accessor: (f) => cuotaMes.get(f.titular_id)?.cuota_estado || 'sin_generar',
+      render: (f) => (
+        <CuotaMesCell
+          item={cuotaMes.get(f.titular_id)}
+          href={`/cobros?familia=${f.id}`}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="relative">
@@ -85,57 +135,71 @@ export default function FamiliasPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        {loading ? (
-          <p className="p-4 text-slate-500">{t('common.loading')}</p>
-        ) : (
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3">{t('admin.familias.nombre')}</th>
-                <th className="px-4 py-3">{t('admin.familias.titular')}</th>
-                <th className="px-4 py-3">{t('admin.familias.miembros')}</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((f) => (
-                <tr key={f.id} className="border-b last:border-0">
-                  <td className="px-4 py-3">{f.nombre}</td>
-                  <td className="px-4 py-3">
-                    {f.titular.apellido}, {f.titular.nombre}
-                  </td>
-                  <td className="px-4 py-3">{f.socios.length}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      type="button"
-                      className="mr-3 text-sm font-semibold text-[var(--club-primary)]"
-                      onClick={() =>
-                        router.push(`/gestion/familias/nuevo?id=${f.id}`)
-                      }
+      <div className="mt-4">
+        <DataTable
+          columns={columns}
+          data={items}
+          getRowId={(f) => f.id}
+          loading={loading}
+          searchPlaceholder={t(
+            'admin.familias.searchHint',
+            'Buscar por grupo, titular o miembro…',
+          )}
+          expandedRowId={expandedId}
+          onExpandedChange={(id) =>
+            setExpandedId(id == null ? null : Number(id))
+          }
+          renderExpanded={(f) => {
+            const members = [...f.socios].sort((a, b) => {
+              if (a.id === f.titular_id) return -1;
+              if (b.id === f.titular_id) return 1;
+              return `${a.apellido} ${a.nombre}`.localeCompare(
+                `${b.apellido} ${b.nombre}`,
+                'es',
+                { sensitivity: 'base' },
+              );
+            });
+            return (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  {t('admin.familias.grupoCompleto', 'Grupo familiar')}
+                </p>
+                <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+                  {members.map((s) => (
+                    <li
+                      key={s.id}
+                      className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
                     >
-                      {t('admin.familias.editFamilia')}
-                    </button>
-                    <button
-                      type="button"
-                      className="text-sm text-red-600"
-                      onClick={() => void removeFamilia(f.id)}
-                    >
-                      {t('admin.socios.eliminar')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-4 text-slate-500">
-                    {t('messages.noData')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+                      <span>
+                        {s.apellido}, {s.nombre}
+                        {s.id === f.titular_id && (
+                          <span className="ml-2 rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
+                            {t('admin.familias.titular')}
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-slate-500">
+                        {s.dni}
+                        {s.email ? ` · ${s.email}` : ''}
+                      </span>
+                      <Link
+                        href={`/cobros?socio=${s.id}`}
+                        className="text-xs font-semibold text-blue-600 hover:underline"
+                      >
+                        {t('admin.cobros.verCuenta', 'Ver estado de cuenta')}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          }}
+          onEdit={(f) => router.push(`/gestion/familias/nuevo?id=${f.id}`)}
+          onDelete={removeFamilia}
+          deleteConfirmMessage={() =>
+            t('admin.familias.confirmDelete', '¿Borrar este grupo familiar?')
+          }
+        />
       </div>
 
       <FloatingActionButton
@@ -144,5 +208,13 @@ export default function FamiliasPage() {
         title={t('admin.familias.createFamilia')}
       />
     </div>
+  );
+}
+
+export default function FamiliasPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-slate-500">Cargando…</p>}>
+      <FamiliasPageInner />
+    </Suspense>
   );
 }

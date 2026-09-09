@@ -26,6 +26,22 @@ export function aplicarDescuentoFamiliar(monto: number, pct: number): number {
   return Math.round(monto * (1 - p / 100) * 100) / 100;
 }
 
+export type CuotaMesEstado =
+  | 'pagado'
+  | 'pendiente'
+  | 'bonificado'
+  | 'sin_generar';
+
+export function estadoCuotaMes(opts: {
+  pagoEstado?: string | null;
+  bonificado: boolean;
+}): CuotaMesEstado {
+  if (opts.pagoEstado === 'pagado') return 'pagado';
+  if (opts.pagoEstado === 'pendiente') return 'pendiente';
+  if (opts.bonificado) return 'bonificado';
+  return 'sin_generar';
+}
+
 export type SocioParaCuota = {
   id: number;
   email: string;

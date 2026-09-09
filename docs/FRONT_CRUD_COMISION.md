@@ -114,6 +114,8 @@ No es un padrón: son cuotas del mes.
 | Método | Ruta | Body / query |
 |--------|------|----------------|
 | `GET` | `/pagos/resumen?mes=YYYY-MM` | mes opcional (default mes actual) |
+| `GET` | `/pagos/estado-mes?mes=YYYY-MM` | snapshot padrón: cuota del mes (en familia = cobro del titular) |
+| `GET` | `/pagos/cuenta?socio_id=` o `familia_id=` | historial de esa cuenta |
 | `POST` | `/pagos/cobrar-mes` | `{ mes?, monto? }` |
 | `POST` | `/api/cuotas/generar-links` | alias de cobrar-mes |
 | `PATCH` | `/pagos/:id/marcar-manual` | — |
@@ -121,7 +123,7 @@ No es un padrón: son cuotas del mes.
 `estado` del pago: `pendiente` | `pagado`.  
 Sin `MP_ACCESS_TOKEN` el link es mock.
 
-**UI hoy:** listar mes, generar cobros, marcar pagado. También alta/edición de **categorías de cuota** (`/categorias-cuota`). Sin `monto` en cobrar-mes, cada socio paga el monto de su categoría. `monto` opcional pisa a todos.
+**UI hoy:** listar mes, generar cobros, marcar pagado. Socios/Familias muestran badge de cuota del mes y link a `/cobros?socio=` o `/cobros?familia=` (estado de cuenta). También alta/edición de **categorías de cuota** (`/categorias-cuota`). Sin `monto` en cobrar-mes, cada socio paga el monto de su categoría. `monto` opcional pisa a todos.
 
 ---
 

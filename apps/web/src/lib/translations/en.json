@@ -9,7 +9,10 @@
     "page": "Page",
     "edit": "Edit",
     "delete": "Delete",
-    "confirmDelete": "Delete this record?"
+    "confirmDelete": "Delete this record?",
+    "ungrouped": "Ungrouped",
+    "expand": "Expand",
+    "collapse": "Collapse"
   },
   "common": {
     "loading": "Loading...",
@@ -261,7 +264,14 @@
       "rolPlaceholder": "Choose a role",
       "categoria": "Category",
       "eliminar": "Delete",
-      "socios": "Members"
+      "socios": "Members",
+      "sinFamilia": "No family",
+      "verFamilia": "View family group",
+      "searchHint": "Search by name, ID, email or family…",
+      "filtroFamilia": "Family filter",
+      "filtroTodos": "All",
+      "filtroEnFamilia": "In a family",
+      "filtroSinFamilia": "No family"
     },
     "espacios": {
       "title": "Spaces",
@@ -340,6 +350,8 @@
       "personaN": "Person",
       "enOtraFamilia": "in another family",
       "confirmDelete": "Delete this family group?",
+      "searchHint": "Search by group, holder or member…",
+      "grupoCompleto": "Family group",
       "altaCobrosHint": "Applies to new people (new holder and new members). Existing members are unchanged."
     },
     "noticias": {
@@ -422,7 +434,16 @@
       "addCategoria": "Add category",
       "savingCategoria": "Saving…",
       "defaultBadge": "Default",
-      "cannotDeleteDefault": "Socio pleno cannot be deleted"
+      "cannotDeleteDefault": "Socio pleno cannot be deleted",
+      "cuotaMes": "This month",
+      "cuotaPagada": "Paid",
+      "cuotaDebe": "Due",
+      "cuotaBonificada": "Waived",
+      "cuotaSinGenerar": "Not generated",
+      "verCuenta": "View account",
+      "estadoCuenta": "Account statement",
+      "cerrarCuenta": "View all charges",
+      "cuentaVacia": "No movements on this account."
     },
     "liquidaciones": {
       "title": "Settlements",

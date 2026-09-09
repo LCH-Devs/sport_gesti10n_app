@@ -7,6 +7,12 @@ export interface SortState {
   direction: SortDirection;
 }
 
+export interface RowGroup {
+  key: string;
+  label: ReactNode;
+  order?: string | number;
+}
+
 export interface Column<T> {
   key: string;
   header: string;
@@ -38,6 +44,16 @@ export interface DataTableProps<T> {
   onFilterChange?: (filter: string) => void;
   searchPlaceholder?: string;
 
+  /** Agrupa filas (p. ej. por familia). `null` va al grupo vacío. */
+  groupBy?: (row: T) => RowGroup | null;
+  groupEmptyLabel?: string;
+  groupSortKey?: string;
+
+  /** Fila desplegable (p. ej. miembros de un grupo). */
+  renderExpanded?: (row: T) => ReactNode;
+  expandedRowId?: string | number | null;
+  onExpandedChange?: (id: string | number | null) => void;
+
   /** Pagination. Uncontrolled (client mode) if page/onPageChange are omitted. */
   page?: number;
   pageSize?: number;
@@ -54,4 +70,6 @@ export interface DataTableProps<T> {
 
   rowClassName?: (row: T) => string;
   className?: string;
+  toolbar?: ReactNode;
 }
+
