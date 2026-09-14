@@ -52,6 +52,10 @@ model Club {
   deportes              String[] @default([])
   /// % de descuento familiar (0–100). Se persiste; aún no se aplica en cobros.
   descuento_familiar_pct Float   @default(0)
+  /// Verificación de tarjeta real (cobro de $1 + reembolso) hecha en onboarding. Opcional, no bloquea el alta.
+  tarjeta_verificada    Boolean  @default(false)
+  tarjeta_verificada_at DateTime?
+  tarjeta_verificacion_payment_id String?
 
   categorias_cuota  CategoriaCuota[]
   membresias        Membresia[]
@@ -69,6 +73,7 @@ model Club {
   torneos           Torneo[]
   partidos          Partido[]
   asistencias       Asistencia[]
+  eventos           Evento[]
 
   @@index([eliminado])
   @@index([plan_pendiente_confirmado_at])
@@ -107,6 +112,13 @@ model Usuario {
   telefono         String       @default("")
   fecha_nacimiento DateTime?
   created_at       DateTime     @default(now())
+  /// Se actualiza en cada cambio de contraseña (propio, reset o admin).
+  /// Un JWT firmado antes de esta fecha (iat < password_changed_at) se
+  /// rechaza en session-viva.ts: cambiar la clave invalida sesiones viejas.
+  password_changed_at DateTime  @default(now())
+  reset_token_hash String?
+  reset_expires_at DateTime?
+  reset_used_at    DateTime?
   membresias       Membresia[]
 }
 
@@ -300,6 +312,10 @@ model Espacio {
   @@index([club_id, eliminado])
 }
 
+/// Reserva.inicio/fin de dos filas "confirmada" del mismo espacio nunca
+/// pueden solaparse: lo garantiza un EXCLUDE USING gist a nivel de Postgres
+/// (migración 20260910172437_reserva_no_solape), no representable en este
+/// DSL. No tocar esa migración sin actualizar el constraint a mano.
 model Reserva {
   id         Int      @id @default(autoincrement())
   club_id    Int
@@ -397,6 +413,7 @@ model Torneo {
   deporte  String
   estado   String    @default("activo")
   partidos Partido[]
+  evento   Evento?
 
   @@index([club_id])
 }
@@ -416,6 +433,41 @@ model Partido {
 
   @@index([club_id])
   @@index([torneo_id])
+}
+
+enum EventoTipo {
+  seminario
+  torneo
+  social
+}
+
+enum EventoVisibilidad {
+  publico
+  privado
+}
+
+/// Evento del club (seminario, torneo o social). Si tipo=torneo, puede
+/// vincularse a un Torneo (fixture/tabla) opcional.
+model Evento {
+  id          Int               @id @default(autoincrement())
+  club_id     Int
+  club        Club              @relation(fields: [club_id], references: [id])
+  titulo      String
+  tipo        EventoTipo
+  visibilidad EventoVisibilidad @default(privado)
+  fecha       DateTime
+  lugar       String?
+  descripcion String?
+  publicado   Boolean           @default(false)
+  torneo_id   Int?              @unique
+  torneo      Torneo?           @relation(fields: [torneo_id], references: [id])
+  eliminado   Boolean           @default(false)
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+
+  @@index([club_id, fecha])
+  @@index([club_id, eliminado])
+  @@index([visibilidad, publicado, fecha])
 }
 
 /// Lead comercial (landing). No es tenant: el club todavía no existe.

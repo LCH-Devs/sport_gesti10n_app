@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { EspaciosReservasTabs } from '../_components/EspaciosReservasTabs';
-import { FloatingActionButton } from '@/components/common';
+import { FloatingActionButton, StatusMessage } from '@/components/common';
 
 type Espacio = {
   id: number;
@@ -38,7 +38,7 @@ export default function EspaciosPage() {
       });
       setItems(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -63,7 +63,7 @@ export default function EspaciosPage() {
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">{t('common.loading')}</p>
+          <StatusMessage>{t('common.loading')}</StatusMessage>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">

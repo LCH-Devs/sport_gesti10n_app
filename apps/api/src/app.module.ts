@@ -16,12 +16,14 @@ import { CategoriasCuotaModule } from './categorias-cuota/categorias-cuota.modul
 import { ActividadesModule } from './actividades/actividades.module';
 import { LiquidacionesModule } from './liquidaciones/liquidaciones.module';
 import { TorneosModule } from './torneos/torneos.module';
+import { EventosModule } from './eventos/eventos.module';
 import { PlatformModule } from './platform/platform.module';
 import { SocialModule } from './social/social.module';
 import { SolicitudesModule } from './solicitudes/solicitudes.module';
 import { PlanSaaSModule } from './plan-saas/plan-saas.module';
 import { HealthController } from './health.controller';
 import { TenantMiddleware } from './common/tenant.middleware';
+import { RequestIdMiddleware } from './common/request-id.middleware';
 import { RequestLoggerMiddleware } from './common/request-logger.middleware';
 
 @Module({
@@ -43,17 +45,22 @@ import { RequestLoggerMiddleware } from './common/request-logger.middleware';
     ActividadesModule,
     LiquidacionesModule,
     TorneosModule,
+    EventosModule,
     PlatformModule,
     SocialModule,
     SolicitudesModule,
     PlanSaaSModule,
   ],
   controllers: [HealthController],
-  providers: [TenantMiddleware, RequestLoggerMiddleware],
+  providers: [TenantMiddleware, RequestIdMiddleware, RequestLoggerMiddleware],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer.apply(RequestLoggerMiddleware, TenantMiddleware).forRoutes('*');
+    // RequestId primero: RequestLogger y cualquier handler dependen de
+    // req.requestId ya seteado.
+    consumer
+      .apply(RequestIdMiddleware, RequestLoggerMiddleware, TenantMiddleware)
+      .forRoutes('*');
   }
 }
 

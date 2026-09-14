@@ -5,6 +5,8 @@ import { ReactNode } from 'react';
 type BaseProps = {
   label: ReactNode;
   colSpan?: boolean;
+  /** Mensaje de ayuda mostrado debajo del campo (rojo) cuando el dato ingresado no es válido. */
+  error?: string;
 };
 
 type InputProps = BaseProps & {
@@ -16,7 +18,12 @@ type InputProps = BaseProps & {
   disabled?: boolean;
   placeholder?: string;
   min?: number;
+  max?: number;
   minLength?: number;
+  maxLength?: number;
+  pattern?: string;
+  inputMode?: 'text' | 'numeric' | 'tel' | 'email' | 'url' | 'decimal' | 'search' | 'none';
+  title?: string;
 };
 
 type TextareaProps = BaseProps & {
@@ -72,6 +79,7 @@ export function FormField(props: FormFieldProps) {
           onChange={(e) => props.onChange(e.target.value)}
           required={props.required}
         />
+        {props.error && <p className="mt-1 text-xs text-red-600">{props.error}</p>}
       </label>
     );
   }
@@ -104,8 +112,14 @@ export function FormField(props: FormFieldProps) {
         disabled={props.disabled}
         placeholder={props.placeholder}
         min={props.min}
+        max={props.max}
         minLength={props.minLength}
+        maxLength={props.maxLength}
+        pattern={props.pattern}
+        inputMode={props.inputMode}
+        title={props.title}
       />
+      {props.error && <p className="mt-1 text-xs text-red-600">{props.error}</p>}
     </label>
   );
 }

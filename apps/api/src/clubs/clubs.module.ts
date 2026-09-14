@@ -3,9 +3,10 @@ import { ClubsService } from './clubs.service';
 import { ClubsController } from './clubs.controller';
 import { MediaModule } from '../media/media.module';
 import { PlanSaaSModule } from '../plan-saas/plan-saas.module';
+import { PagosModule } from '../pagos/pagos.module';
 
 @Module({
-  imports: [MediaModule, PlanSaaSModule],
+  imports: [MediaModule, PlanSaaSModule, PagosModule],
   controllers: [ClubsController],
   providers: [ClubsService],
   exports: [ClubsService],

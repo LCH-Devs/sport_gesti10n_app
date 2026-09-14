@@ -2,6 +2,7 @@
 
 import { apiFetch, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from '@/lib/useTranslation';
 
 type Alerta = {
   id: number;
@@ -20,6 +21,7 @@ type AlertaFuga = {
 };
 
 export default function FugaPage() {
+  const { t } = useTranslation();
   const [data, setData] = useState<AlertaFuga | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -36,11 +38,11 @@ export default function FugaPage() {
       });
       setData(res);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -48,29 +50,27 @@ export default function FugaPage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Alerta de fuga</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Socios en riesgo por deuda o baja asistencia.
-      </p>
+      <h2 className="text-2xl font-bold">{t('fuga.title')}</h2>
+      <p className="mt-1 text-sm text-slate-600">{t('fuga.subtitle')}</p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 rounded-xl border bg-white p-4">
-        <p className="text-xs text-slate-500">Total alertas</p>
+        <p className="text-xs text-slate-500">{t('fuga.totalAlertas')}</p>
         <p className="text-2xl font-bold">{data?.total ?? '—'}</p>
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">Cargando…</p>
+          <p className="p-4 text-slate-500">{t('common.loading')}</p>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">
               <tr>
-                <th className="px-4 py-3">Socio</th>
-                <th className="px-4 py-3">DNI</th>
-                <th className="px-4 py-3">Cuotas pend.</th>
-                <th className="px-4 py-3">Asistencia</th>
-                <th className="px-4 py-3">Motivo</th>
+                <th className="px-4 py-3">{t('fuga.socio')}</th>
+                <th className="px-4 py-3">{t('fuga.dni')}</th>
+                <th className="px-4 py-3">{t('fuga.cuotasPend')}</th>
+                <th className="px-4 py-3">{t('fuga.asistencia')}</th>
+                <th className="px-4 py-3">{t('fuga.motivo')}</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
@@ -107,7 +107,7 @@ export default function FugaPage() {
               {data && data.socios.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-4 py-4 text-slate-500">
-                    Sin alertas.
+                    {t('fuga.sinAlertas')}
                   </td>
                 </tr>
               )}

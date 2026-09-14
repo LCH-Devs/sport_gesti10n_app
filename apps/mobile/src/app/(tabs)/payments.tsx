@@ -1,132 +1,118 @@
-import { Badge, Body, Button, Card, Heading } from "@/components/common";
+import { Badge, Body, Card, Heading } from "@/components/common";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { useSocioPortal } from "@/hooks/useSocioPortal";
+import type { Pago } from "@/lib/api";
+
+const ESTADO_LABEL: Record<string, string> = {
+  pendiente: "Pendiente",
+  pagado: "Pagado",
+  cancelado: "Cancelado",
+  rechazado: "Rechazado",
+  reembolsado: "Reembolsado",
+};
+
+const ESTADO_VARIANT: Record<string, "success" | "warning" | "error" | "info"> = {
+  pendiente: "warning",
+  pagado: "success",
+  cancelado: "info",
+  rechazado: "error",
+  reembolsado: "info",
+};
+
+function formatMes(mes: string) {
+  return new Date(mes).toLocaleDateString("es-AR", { year: "numeric", month: "long" });
+}
+
+function formatMonto(monto: number) {
+  return `$${monto.toLocaleString("es-AR")}`;
+}
 
 export default function PaymentsScreen() {
-  const insets = useSafeAreaInsets();
-  const { t } = useLanguage();
+  const { session, isStaff } = useAuth();
+  const { portal, loading, error, reload } = useSocioPortal();
 
-  const transactions = [
-    {
-      date: "Sep 01",
-      description: t("monthlyMembership"),
-      amount: "$150.00",
-      status: "PAID",
-      method: "Visa ending in 4242",
-    },
-    {
-      date: "Aug 15",
-      description: t("personalTrainingSession"),
-      amount: "$75.00",
-      status: "PAID",
-      method: "Apple Pay",
-    },
-    {
-      date: "Aug 01",
-      description: t("monthlyMembership"),
-      amount: "$150.00",
-      status: "PAID",
-      method: "Visa ending in 4242",
-    },
-  ];
+  if (isStaff) {
+    return (
+      <View style={{ flex: 1 }}>
+        <ScreenHeader />
+        <View style={styles.center}>
+          <Body>Esta vista es para socios. Entrá en modo administración para ver las finanzas del club.</Body>
+        </View>
+      </View>
+    );
+  }
+
+  const pagos: Pago[] = portal?.pagos ?? [];
+  const pendientes = pagos.filter((p) => p.estado === "pendiente");
+  const totalPendiente = pendientes.reduce((acc, p) => acc + p.monto, 0);
 
   return (
     <View style={{ flex: 1 }}>
       <ScreenHeader />
       <ScrollView
-        style={[styles.container]}
+        style={styles.container}
         contentContainerStyle={{ paddingBottom: 100 }}
-    >
-      {/* Club Info */}
-      <Card style={styles.clubCard}>
-        <View style={styles.clubIconBig}>
-          <Ionicons name="barbell" size={48} color="#00288e" />
-        </View>
-        <Heading level={2} style={styles.clubName}>{t("eliteFitnessCenter")}</Heading>
-        <View style={styles.infoRow}>
-          <Ionicons name="location" size={18} color="#444653" />
-          <Body size="sm" style={styles.address}>
-            123 Wellness Blvd, Fit City, FC 90210
-          </Body>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="call" size={18} color="#444653" />
-          <Body size="sm" style={styles.address}>
-            (555) 123-4567
-          </Body>
-        </View>
-        <View style={styles.infoRow}>
-          <Ionicons name="mail" size={18} color="#444653" />
-          <Body size="sm" style={styles.address}>
-            contact@elitefitness.com
-          </Body>
-        </View>
-      </Card>
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} />}
+      >
+        <Card style={styles.clubCard}>
+          <View style={styles.clubIconBig}>
+            <Ionicons name="barbell" size={48} color="#00288e" />
+          </View>
+          <Heading level={2} style={styles.clubName}>{session?.club.nombre}</Heading>
+        </Card>
 
-      {/* Outstanding Balance */}
-      <Card style={styles.balanceCard}>
-        <View style={styles.balanceHeader}>
-          <Heading level={3}>{t("outstandingBalance")}</Heading>
-          <Badge label="!" variant="error" />
-        </View>
-        <Heading level={1} style={styles.amount}>
-          $150.00
-        </Heading>
-        <Body size="sm" style={styles.dueDate}>
-          Due by Oct 15, 2023
-        </Body>
-        <Button
-          label={t("payNow")}
-          variant="primary"
-          onPress={() => console.log("Pay Now pressed!")}
-        />
-      </Card>
-
-      {/* Payment Button */}
-      <View style={styles.paymentButton}>
-        <Ionicons name="lock-closed" size={20} color="#ffffff" />
-        <Text style={styles.payText}>{t("payNow")}</Text>
-        <Text style={styles.payAmount}>$150.00</Text>
-      </View>
-
-      {/* Transaction History */}
-      <View style={styles.section}>
-        <Heading level={3}>{t("transactionHistory")}</Heading>
-        {transactions.map((tx, index) => (
-          <Card key={index} style={styles.transactionItem}>
-            <View style={styles.txHeader}>
-              <Text style={styles.txDate}>{tx.date}</Text>
-              <Body style={styles.txAmount}>{tx.amount}</Body>
+        {error ? (
+          <Card style={styles.errorCard}><Body>{error}</Body></Card>
+        ) : (
+          <Card style={styles.balanceCard}>
+            <View style={styles.balanceHeader}>
+              <Heading level={3}>Saldo pendiente</Heading>
+              {pendientes.length > 0 && <Badge label={String(pendientes.length)} variant="error" />}
             </View>
-            <Heading level={3} style={styles.txDescription}>
-              {tx.description}
-            </Heading>
-            <Body size="sm" style={styles.txMethod}>
-              {tx.method}
+            <Heading level={1} style={styles.amount}>{formatMonto(totalPendiente)}</Heading>
+            <Body size="sm" style={styles.dueDate}>
+              {pendientes.length === 0 ? "No tenés cuotas pendientes" : `${pendientes.length} cuota(s) sin pagar`}
             </Body>
-            <Badge label={tx.status} variant="success" />
           </Card>
-        ))}
+        )}
 
-        <Button
-          label={t("viewAllTransactions")}
-          variant="ghost"
-          onPress={() => console.log("View All Transactions pressed!")}
-        />
-      </View>
+        <View style={styles.section}>
+          <Heading level={3}>Mis cuotas</Heading>
+          {loading && pagos.length === 0 ? (
+            <ActivityIndicator color="#00288e" style={{ marginTop: 12 }} />
+          ) : pagos.length === 0 ? (
+            <Body size="sm" style={styles.empty}>Todavía no hay cuotas registradas.</Body>
+          ) : (
+            pagos.map((p) => (
+              <Card key={p.id} style={styles.transactionItem}>
+                <View style={styles.txHeader}>
+                  <Text style={styles.txDate}>{formatMes(p.mes)}</Text>
+                  <Body style={styles.txAmount}>{formatMonto(p.monto)}</Body>
+                </View>
+                <Heading level={3} style={styles.txDescription}>
+                  {p.concepto || (p.tipo === "inscripcion" ? "Inscripción" : "Cuota")}
+                </Heading>
+                {p.fecha_pago && (
+                  <Body size="sm" style={styles.txMethod}>
+                    Pagada el {new Date(p.fecha_pago).toLocaleDateString("es-AR")}
+                  </Body>
+                )}
+                <Badge label={ESTADO_LABEL[p.estado] || p.estado} variant={ESTADO_VARIANT[p.estado] || "info"} />
+              </Card>
+            ))
+          )}
+        </View>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9ff",
-  },
+  container: { flex: 1, backgroundColor: "#f8f9ff" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   clubCard: {
     marginHorizontal: 16,
     marginVertical: 12,
@@ -142,74 +128,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 16,
   },
-  clubName: {
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 8,
-    marginHorizontal: 16,
-    width: "100%",
-  },
-  address: {
-    color: "#444653",
-  },
-  balanceCard: {
-    marginHorizontal: 16,
-    marginVertical: 12,
-  },
+  clubName: { marginBottom: 0, textAlign: "center" },
+  errorCard: { marginHorizontal: 16, marginVertical: 12, backgroundColor: "#fee2e2" },
+  balanceCard: { marginHorizontal: 16, marginVertical: 12 },
   balanceHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 12,
   },
-  amount: {
-    color: "#00288e",
-    marginBottom: 8,
-  },
-  dueDate: {
-    color: "#444653",
-    marginBottom: 16,
-  },
-  paymentButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    backgroundColor: "#00288e",
-    marginHorizontal: 16,
-    marginVertical: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  payText: {
-    color: "#ffffff",
-    fontWeight: "600",
-    fontSize: 16,
-    flex: 1,
-  },
-  payAmount: {
-    color: "#ffffff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
-  section: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  transactionItem: {
-    marginBottom: 8,
-  },
-  txHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 4,
-  },
+  amount: { color: "#00288e", marginBottom: 8 },
+  dueDate: { color: "#444653" },
+  section: { paddingHorizontal: 16, paddingVertical: 12 },
+  empty: { marginTop: 8, color: "#444653" },
+  transactionItem: { marginBottom: 8 },
+  txHeader: { flexDirection: "row", justifyContent: "space-between", marginBottom: 4 },
   txDate: {
     backgroundColor: "#e5eeff",
     color: "#00288e",
@@ -218,17 +151,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     fontSize: 12,
     fontWeight: "500",
+    textTransform: "capitalize",
   },
-  txAmount: {
-    fontWeight: "600",
-    color: "#00288e",
-  },
-  txDescription: {
-    fontSize: 16,
-    marginBottom: 4,
-  },
-  txMethod: {
-    color: "#444653",
-    marginBottom: 8,
-  },
+  txAmount: { fontWeight: "600", color: "#00288e" },
+  txDescription: { fontSize: 16, marginBottom: 4 },
+  txMethod: { color: "#444653", marginBottom: 8 },
 });

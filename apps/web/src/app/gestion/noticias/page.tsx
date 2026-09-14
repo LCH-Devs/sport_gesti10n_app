@@ -4,7 +4,7 @@ import { apiFetch, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
-import { FloatingActionButton } from '@/components/common';
+import { FloatingActionButton, StatusMessage } from '@/components/common';
 
 type Noticia = {
   id: number;
@@ -34,7 +34,7 @@ export default function NoticiasPage() {
       });
       setItems(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export default function NoticiasPage() {
 
       <div className="mt-8 space-y-3">
         {loading ? (
-          <p className="text-slate-500">{t('common.loading')}</p>
+          <StatusMessage>{t('common.loading')}</StatusMessage>
         ) : items.length === 0 ? (
           <p className="text-slate-500">{t('messages.noData')}</p>
         ) : (

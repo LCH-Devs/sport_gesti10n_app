@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: '20'
+  PNPM_VERSION: '9.0.0'
+
+jobs:
+  api:
+    name: API — type-check, tests (Postgres real), build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: clubapp
+          POSTGRES_PASSWORD: clubapp
+          POSTGRES_DB: clubapp
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U clubapp -d clubapp"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://clubapp:clubapp@localhost:5432/clubapp?schema=public
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      # Instalación reproducible: mismo lockfile que en local, sin resolver
+      # versiones nuevas (R02/R03 del roadmap de lanzamiento).
+      - name: Instalar dependencias (workspace completo)
+        run: pnpm install --frozen-lockfile
+
+      - name: Generar Prisma Client
+        run: pnpm --filter @clubapp/api run prisma:generate
+
+      # Aplica TODAS las migraciones (incluida la del EXCLUDE constraint de
+      # reservas) contra el Postgres real del job, igual que en producción.
+      - name: Aplicar migraciones
+        run: pnpm --filter @clubapp/api run prisma:deploy
+
+      - name: Type-check
+        run: pnpm --filter @clubapp/api type-check
+
+      # --runInBand: varias specs pegan contra el mismo Postgres real
+      # (concurrencia de reservas, aislamiento de tenant) y comparten
+      # filas/fixtures — correrlas en paralelo con workers distintos
+      # pisaría datos entre sí.
+      - name: Tests (incluye specs con Postgres real, no mocks)
+        run: pnpm --filter @clubapp/api test -- --runInBand
+
+      - name: Build
+        run: pnpm --filter @clubapp/api build
+
+  web:
+    name: Web — type-check, build standalone (Linux)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Instalar dependencias (workspace completo)
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm --filter web type-check
+
+      # El empaquetado "standalone" falla con EPERM en symlinks en Windows
+      # (ver docs/ROADMAP_LANZAMIENTO.md §2) pero nunca se había validado en
+      # Linux. Este runner es Linux: si vuelve a fallar acá, es un problema
+      # real, no una limitación de Windows.
+      - name: Build (valida el empaquetado standalone en Linux)
+        run: pnpm --filter web build

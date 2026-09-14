@@ -43,7 +43,7 @@ export default function NuevoEspacioPage() {
       });
       router.push('/espacios');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     }
   }
 
@@ -104,21 +104,23 @@ export default function NuevoEspacioPage() {
           }
         />
         <FormField
+          type="time"
           label={t('admin.espacios.apertura')}
           value={form.hora_apertura}
           onChange={(hora_apertura) => setForm((f) => ({ ...f, hora_apertura }))}
-          placeholder="08:00"
+          required
         />
         <FormField
+          type="time"
           label={t('admin.espacios.cierre')}
           value={form.hora_cierre}
           onChange={(hora_cierre) => setForm((f) => ({ ...f, hora_cierre }))}
-          placeholder="23:00"
+          required
         />
         <div className="sm:col-span-2 flex gap-2">
           <button
             type="submit"
-            className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
           >
             {t('admin.espacios.createEspacio')}
           </button>

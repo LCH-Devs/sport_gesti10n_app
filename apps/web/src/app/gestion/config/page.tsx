@@ -18,8 +18,10 @@ import {
   splitDeportes,
 } from '@/lib/deportes-catalogo';
 import { useLanguageContext } from '@/lib/LanguageContext';
+import { NAME_HELP, NAME_PATTERN, PHONE_PATTERN, filterPersonName, filterPhone } from '@/lib/validation';
 import { FormEvent, Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useTranslation } from '@/lib/useTranslation';
 
 type Tab = 'perfil' | 'club' | 'preferencias';
 
@@ -76,6 +78,7 @@ function loadNotifPrefs(): NotifPrefs {
 
 function PerfilSection() {
   type Mode = 'staff' | 'member';
+  const { t } = useTranslation();
   const router = useRouter();
   const [mode, setMode] = useState<Mode | null>(null);
   const [staffProfile, setStaffProfile] = useState<StaffProfile | null>(null);
@@ -90,6 +93,8 @@ function PerfilSection() {
   const [msg, setMsg] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [nombreError, setNombreError] = useState('');
+  const [apellidoError, setApellidoError] = useState('');
 
   const load = useCallback(async () => {
     const clubSession = getSession();
@@ -107,7 +112,7 @@ function PerfilSection() {
         setStaffProfile(data);
         setNombre(data.nombre);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar');
+        setError(err instanceof Error ? err.message : t('config.errorCargar'));
       } finally {
         setLoading(false);
       }
@@ -128,7 +133,7 @@ function PerfilSection() {
         setApellido(data.socio.apellido);
         setTelefono(data.socio.telefono);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al cargar');
+        setError(err instanceof Error ? err.message : t('config.errorCargar'));
       } finally {
         setLoading(false);
       }
@@ -145,7 +150,7 @@ function PerfilSection() {
   async function onSave(e: FormEvent) {
     e.preventDefault();
     if (newPassword && newPassword !== confirmPassword) {
-      setError('Las contraseñas nuevas no coinciden');
+      setError(t('config.passwordNoCoincide'));
       return;
     }
 
@@ -195,9 +200,9 @@ function PerfilSection() {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setMsg('Perfil actualizado.');
+      setMsg(t('config.perfilActualizado'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar');
+      setError(err instanceof Error ? err.message : t('config.errorGuardar'));
     } finally {
       setSaving(false);
     }
@@ -207,7 +212,7 @@ function PerfilSection() {
     return error ? (
       <p className="text-sm text-red-600">{error}</p>
     ) : (
-      <p className="text-slate-500">Cargando…</p>
+      <p className="text-slate-500">{t('common.loading')}</p>
     );
   }
 
@@ -215,8 +220,8 @@ function PerfilSection() {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold">Perfil</h3>
-      <p className="mt-1 text-sm text-slate-600">Tus datos personales y contraseña.</p>
+      <h3 className="text-lg font-semibold">{t('config.perfilTitle')}</h3>
+      <p className="mt-1 text-sm text-slate-600">{t('config.perfilSubtitle')}</p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {msg && <p className="mt-4 text-sm text-green-700">{msg}</p>}
 
@@ -225,7 +230,7 @@ function PerfilSection() {
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
         <label className="text-sm">
-          Email
+          {t('config.email')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-500"
             value={email || ''}
@@ -234,51 +239,70 @@ function PerfilSection() {
         </label>
         {mode === 'staff' ? (
           <label className="text-sm">
-            Rol
+            {t('config.rol')}
             <input
               className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-slate-500"
-              value={staffProfile?.rol === 'admin' ? 'Administrador' : 'Entrada'}
+              value={staffProfile?.rol === 'admin' ? t('config.administrador') : t('config.entrada')}
               disabled
             />
           </label>
         ) : (
           <label className="text-sm">
-            Teléfono
+            {t('config.telefono')}
             <input
+              type="tel"
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
               value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
+              onChange={(e) => setTelefono(filterPhone(e.target.value))}
+              inputMode="tel"
+              pattern={PHONE_PATTERN}
+              maxLength={20}
+              title="Solo números, espacios, + y -"
             />
           </label>
         )}
         <label className="text-sm sm:col-span-2">
-          Nombre
+          {t('config.nombre')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
+            onChange={(e) => {
+              const filtered = filterPersonName(e.target.value);
+              setNombre(filtered);
+              setNombreError(e.target.value !== filtered ? NAME_HELP : '');
+            }}
             required
+            pattern={NAME_PATTERN}
+            title={NAME_HELP}
           />
+          {nombreError && <p className="mt-1 text-xs text-red-600">{nombreError}</p>}
         </label>
         {mode === 'member' && (
           <label className="text-sm sm:col-span-2">
-            Apellido
+            {t('config.apellido')}
             <input
               className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
               value={apellido}
-              onChange={(e) => setApellido(e.target.value)}
+              onChange={(e) => {
+                const filtered = filterPersonName(e.target.value);
+                setApellido(filtered);
+                setApellidoError(e.target.value !== filtered ? NAME_HELP : '');
+              }}
               required
+              pattern={NAME_PATTERN}
+              title={NAME_HELP}
             />
+            {apellidoError && <p className="mt-1 text-xs text-red-600">{apellidoError}</p>}
           </label>
         )}
 
         <hr className="sm:col-span-2 my-2 border-slate-200" />
         <p className="sm:col-span-2 text-sm font-medium text-slate-700">
-          Cambiar contraseña (opcional)
+          {t('config.cambiarPasswordTitle')}
         </p>
 
         <label className="text-sm">
-          Contraseña actual
+          {t('config.currentPassword')}
           <input
             type="password"
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -288,7 +312,7 @@ function PerfilSection() {
         </label>
         <div />
         <label className="text-sm">
-          Nueva contraseña
+          {t('config.newPassword')}
           <input
             type="password"
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -298,7 +322,7 @@ function PerfilSection() {
           />
         </label>
         <label className="text-sm">
-          Confirmar nueva contraseña
+          {t('config.confirmPassword')}
           <input
             type="password"
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
@@ -311,9 +335,9 @@ function PerfilSection() {
         <button
           type="submit"
           disabled={saving}
-          className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
+          className="sm:col-span-2 rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
         >
-          {saving ? 'Guardando…' : 'Guardar'}
+          {saving ? t('config.guardando') : t('config.guardar')}
         </button>
       </form>
     </div>
@@ -321,6 +345,7 @@ function PerfilSection() {
 }
 
 function ClubSection() {
+  const { t } = useTranslation();
   const [form, setForm] = useState<ClubConfig | null>(null);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
@@ -339,7 +364,7 @@ function ClubSection() {
       });
       setForm(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('config.errorCargar'));
     } finally {
       setLoading(false);
     }
@@ -392,9 +417,9 @@ function ClubSection() {
           deportes: updated.deportes,
         },
       });
-      setMsg('Configuración guardada.');
+      setMsg(t('config.clubGuardado'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al guardar');
+      setError(err instanceof Error ? err.message : t('config.errorGuardar'));
     } finally {
       setSaving(false);
     }
@@ -404,7 +429,7 @@ function ClubSection() {
     return error ? (
       <p className="text-sm text-red-600">{error}</p>
     ) : (
-      <p className="text-slate-500">Cargando…</p>
+      <p className="text-slate-500">{t('common.loading')}</p>
     );
   }
 
@@ -412,10 +437,8 @@ function ClubSection() {
 
   return (
     <div>
-      <h3 className="text-lg font-semibold">Club</h3>
-      <p className="mt-1 text-sm text-slate-600">
-        Datos y reglas del club (solo tu tenant).
-      </p>
+      <h3 className="text-lg font-semibold">{t('config.clubTitle')}</h3>
+      <p className="mt-1 text-sm text-slate-600">{t('config.clubSubtitle')}</p>
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {msg && <p className="mt-4 text-sm text-green-700">{msg}</p>}
 
@@ -424,12 +447,13 @@ function ClubSection() {
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
         <label className="text-sm">
-          Nombre
+          {t('config.nombre')}
           <input
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.nombre}
             onChange={(e) => setForm((f) => f && { ...f, nombre: e.target.value })}
             required
+            maxLength={80}
           />
         </label>
         <ClubColorFields
@@ -495,11 +519,11 @@ function ClubSection() {
                 };
               })
             }
-            hint="Los espacios se cargan aparte, en Espacios."
+            hint={t('config.espaciosHint')}
           />
         </div>
         <label className="text-sm">
-          Cuota monto
+          {t('config.cuotaMonto')}
           <input
             type="number"
             min={0}
@@ -512,10 +536,11 @@ function ClubSection() {
           />
         </label>
         <label className="text-sm">
-          Regla moroso (cuotas)
+          {t('config.reglaMoroso')}
           <input
             type="number"
             min={1}
+            max={24}
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.regla_moroso_cuotas}
             onChange={(e) =>
@@ -528,10 +553,11 @@ function ClubSection() {
           />
         </label>
         <label className="text-sm">
-          Máx. reservas activas
+          {t('config.maxReservas')}
           <input
             type="number"
             min={1}
+            max={100}
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.max_reservas_activas}
             onChange={(e) =>
@@ -544,10 +570,11 @@ function ClubSection() {
           />
         </label>
         <label className="text-sm">
-          Cancelar reserva (horas)
+          {t('config.cancelarReservaHoras')}
           <input
             type="number"
             min={0}
+            max={168}
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2"
             value={form.cancelar_reserva_horas}
             onChange={(e) =>
@@ -565,9 +592,9 @@ function ClubSection() {
 
         {(
           [
-            ['bloquear_reservas', 'Bloquear reservas si debe'],
-            ['bloquear_entrada', 'Bloquear entrada si debe'],
-            ['cumples_auto', 'Cumpleaños automáticos'],
+            ['bloquear_reservas', t('config.bloquearReservas')],
+            ['bloquear_entrada', t('config.bloquearEntrada')],
+            ['cumples_auto', t('config.cumplesAuto')],
           ] as const
         ).map(([key, label]) => (
           <label key={key} className="flex items-center gap-2 text-sm">
@@ -585,9 +612,9 @@ function ClubSection() {
         <button
           type="submit"
           disabled={saving}
-          className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
+          className="sm:col-span-2 rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
         >
-          {saving ? 'Guardando…' : 'Guardar'}
+          {saving ? t('config.guardando') : t('config.guardar')}
         </button>
       </form>
     </div>
@@ -595,14 +622,17 @@ function ClubSection() {
 }
 
 function PreferenciasSection() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { lang, setLanguage, mounted } = useLanguageContext();
   const [allowed, setAllowed] = useState(false);
+  const [draftLang, setDraftLang] = useState<'es' | 'en'>('es');
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({
     email: true,
     app: true,
   });
   const [saved, setSaved] = useState(false);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     if (!getSession() && !getSocioSession()) {
@@ -613,37 +643,51 @@ function PreferenciasSection() {
     setNotifPrefs(loadNotifPrefs());
   }, [router]);
 
+  useEffect(() => {
+    setDraftLang(lang);
+  }, [lang]);
+
+  function updateDraftLang(option: 'es' | 'en') {
+    setDraftLang(option);
+    setDirty(true);
+    setSaved(false);
+  }
+
   function updateNotif(key: keyof NotifPrefs, value: boolean) {
-    const next = { ...notifPrefs, [key]: value };
-    setNotifPrefs(next);
-    localStorage.setItem(NOTIF_KEY, JSON.stringify(next));
+    setNotifPrefs((prev) => ({ ...prev, [key]: value }));
+    setDirty(true);
+    setSaved(false);
+  }
+
+  function onGuardar() {
+    setLanguage(draftLang);
+    localStorage.setItem(NOTIF_KEY, JSON.stringify(notifPrefs));
+    setDirty(false);
     setSaved(true);
-    setTimeout(() => setSaved(false), 1500);
+    setTimeout(() => setSaved(false), 2000);
   }
 
   if (!allowed) return null;
 
   return (
     <div>
-      <h3 className="text-lg font-semibold">Preferencias</h3>
-      <p className="mt-1 text-sm text-slate-600">
-        Idioma y notificaciones de tu cuenta.
-      </p>
-      {saved && <p className="mt-4 text-sm text-green-700">Preferencias guardadas.</p>}
+      <h3 className="text-lg font-semibold">{t('config.preferenciasTitle')}</h3>
+      <p className="mt-1 text-sm text-slate-600">{t('config.preferenciasSubtitle')}</p>
+      {saved && <p className="mt-4 text-sm text-green-700">{t('config.preferenciasGuardadas')}</p>}
 
       <div className="mt-6 grid gap-6 rounded-xl border border-slate-200 bg-white p-4">
         <div>
-          <p className="text-sm font-medium text-slate-700">Idioma</p>
+          <p className="text-sm font-medium text-slate-700">{t('config.idioma')}</p>
           <div className="mt-2 flex gap-2">
             {(['es', 'en'] as const).map((option) => (
               <button
                 key={option}
                 type="button"
                 disabled={!mounted}
-                onClick={() => setLanguage(option)}
+                onClick={() => updateDraftLang(option)}
                 className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                  lang === option
-                    ? 'border-[var(--club-primary)] bg-[var(--club-primary)] text-white'
+                  draftLang === option
+                    ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
                     : 'border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
               >
@@ -654,14 +698,14 @@ function PreferenciasSection() {
         </div>
 
         <div>
-          <p className="text-sm font-medium text-slate-700">Notificaciones</p>
+          <p className="text-sm font-medium text-slate-700">{t('config.notificaciones')}</p>
           <label className="mt-2 flex items-center gap-2 text-sm">
             <input
               type="checkbox"
               checked={notifPrefs.email}
               onChange={(e) => updateNotif('email', e.target.checked)}
             />
-            Recibir notificaciones por email
+            {t('config.notifEmail')}
           </label>
           <label className="mt-2 flex items-center gap-2 text-sm">
             <input
@@ -669,44 +713,52 @@ function PreferenciasSection() {
               checked={notifPrefs.app}
               onChange={(e) => updateNotif('app', e.target.checked)}
             />
-            Recibir notificaciones en la app
+            {t('config.notifApp')}
           </label>
         </div>
+
+        <button
+          type="button"
+          onClick={onGuardar}
+          disabled={!dirty}
+          className="justify-self-start rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
+        >
+          {t('config.guardarCambios')}
+        </button>
       </div>
     </div>
   );
 }
 
 function ConfigContent() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const isStaff = Boolean(getSession());
   const initialTab = (searchParams.get('tab') as Tab | null) || (isStaff ? 'club' : 'perfil');
   const [tab, setTab] = useState<Tab>(initialTab);
 
   const categories: { key: Tab; label: string }[] = [
-    ...(isStaff ? [{ key: 'club' as Tab, label: 'Club' }] : []),
-    { key: 'perfil', label: 'Perfil' },
-    { key: 'preferencias', label: 'Preferencias' },
+    ...(isStaff ? [{ key: 'club' as Tab, label: t('config.tabClub') }] : []),
+    { key: 'perfil', label: t('config.tabPerfil') },
+    { key: 'preferencias', label: t('config.tabPreferencias') },
   ];
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">Configuración</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Todas las opciones de tu cuenta y del club en un solo lugar.
-      </p>
+      <h2 className="text-2xl font-bold">{t('config.title')}</h2>
+      <p className="mt-1 text-sm text-slate-600">{t('config.subtitle')}</p>
 
-      <div className="mt-6 flex flex-col gap-6 sm:flex-row">
-        <nav className="flex shrink-0 gap-1 overflow-x-auto sm:w-48 sm:flex-col sm:gap-0.5 sm:overflow-visible">
+      <div className="mt-6">
+        <nav className="flex flex-wrap gap-1">
           {categories.map((c) => (
             <button
               key={c.key}
               type="button"
               onClick={() => setTab(c.key)}
-              className={`whitespace-nowrap rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors ${
+              className={`whitespace-nowrap rounded-t-lg border-x border-t px-4 py-2 text-sm font-medium transition-colors ${
                 tab === c.key
-                  ? 'bg-slate-200 text-slate-900'
-                  : 'text-slate-600 hover:bg-slate-100'
+                  ? 'border-slate-200 bg-white text-slate-900'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
               {c.label}
@@ -714,7 +766,7 @@ function ConfigContent() {
           ))}
         </nav>
 
-        <div className="min-w-0 flex-1">
+        <div className="-mt-px min-w-0 rounded-b-lg rounded-tr-lg border border-slate-200 bg-white p-4 sm:p-6">
           {tab === 'club' && isStaff && <ClubSection />}
           {tab === 'perfil' && <PerfilSection />}
           {tab === 'preferencias' && <PreferenciasSection />}

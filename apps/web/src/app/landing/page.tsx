@@ -74,17 +74,17 @@ export default function LandingPage() {
                 <h4 className="font-bold mb-4 text-sm">Producto</h4>
                 <ul className="space-y-2 text-slate-400 text-sm">
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#caracteristicas" className="hover:text-white">
                       Características
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#precios" className="hover:text-white">
                       Precios
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#seguridad" className="hover:text-white">
                       Seguridad
                     </a>
                   </li>
@@ -94,17 +94,17 @@ export default function LandingPage() {
                 <h4 className="font-bold mb-4 text-sm">Empresa</h4>
                 <ul className="space-y-2 text-slate-400 text-sm">
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#nosotros" className="hover:text-white">
                       Nosotros
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#blog" className="hover:text-white">
                       Blog
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#contacto" className="hover:text-white">
                       Contacto
                     </a>
                   </li>
@@ -114,17 +114,17 @@ export default function LandingPage() {
                 <h4 className="font-bold mb-4 text-sm">Legal</h4>
                 <ul className="space-y-2 text-slate-400 text-sm">
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#privacidad" className="hover:text-white">
                       Privacidad
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#terminos" className="hover:text-white">
                       Términos
                     </a>
                   </li>
                   <li>
-                    <a href="#" className="hover:text-white">
+                    <a href="/landing#api" className="hover:text-white">
                       Documentación de la API
                     </a>
                   </li>

@@ -1,7 +1,7 @@
 'use client';
 
-import { resolveClubTheme } from '@/lib/api';
-import { useEffect } from 'react';
+import { resolveClubGradient, resolveClubTheme } from '@/lib/api';
+import { useEffect, useState } from 'react';
 
 export const SUGGEST_SECONDARY = '#0f172a';
 export const SUGGEST_TERTIARY = '#f59e0b';
@@ -65,6 +65,28 @@ export function ClubColorFields({
     color_terciario: terciario,
   });
 
+  const [prefersDark, setPrefersDark] = useState(false);
+  useEffect(() => {
+    setPrefersDark(window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
+  }, []);
+
+  const gradient = resolveClubGradient(
+    { color_primario: primario, color_secundario: secundario, color_terciario: terciario },
+    prefersDark,
+  );
+  const gradientInverted = resolveClubGradient(
+    { color_primario: primario, color_secundario: secundario, color_terciario: terciario },
+    prefersDark,
+    true,
+  );
+  const gradientDescription = terciario
+    ? secundario
+      ? 'primario → secundario → terciario'
+      : 'primario → terciario'
+    : secundario
+    ? 'primario → secundario'
+    : `primario → ${prefersDark ? 'negro (tema oscuro)' : 'blanco (tema claro)'}`;
+
   useEffect(() => {
     if (!livePreview) return;
     // Runtime: la UI siempre necesita vars; fallbacks solo acá, no en la preview visual
@@ -72,7 +94,16 @@ export function ClubColorFields({
     root.style.setProperty('--club-primary', resolved.primary);
     root.style.setProperty('--club-secondary', resolved.secondary);
     root.style.setProperty('--club-tertiary', resolved.tertiary);
-  }, [livePreview, resolved.primary, resolved.secondary, resolved.tertiary]);
+    root.style.setProperty('--club-bg-gradient', gradient);
+    root.style.setProperty('--club-bg-gradient-inverted', gradientInverted);
+  }, [
+    livePreview,
+    resolved.primary,
+    resolved.secondary,
+    resolved.tertiary,
+    gradient,
+    gradientInverted,
+  ]);
 
   return (
     <div className="sm:col-span-2 space-y-4">
@@ -92,7 +123,7 @@ export function ClubColorFields({
             }
           />
           <span className="mt-1 block text-xs text-slate-500">
-            CTAs, nav, acentos
+            Inicio del fondo degradado de la app
           </span>
         </label>
 
@@ -137,8 +168,8 @@ export function ClubColorFields({
                 Sin definir
               </p>
               <p className="mt-0.5 text-xs text-slate-600">
-                Este club no tiene color secundario. En la UI se reutiliza el
-                primario (branding monocromático).
+                Sin este color, el fondo degradado termina en el terciario (si
+                lo definiste) o en blanco/negro según el tema.
               </p>
               <button
                 type="button"
@@ -198,8 +229,8 @@ export function ClubColorFields({
                 Sin definir
               </p>
               <p className="mt-0.5 text-xs text-slate-600">
-                Este club no tiene color terciario. Badges reutilizan el
-                primario.
+                Si lo definís, el fondo degradado termina en este color en
+                lugar del secundario.
               </p>
               <button
                 type="button"
@@ -221,12 +252,36 @@ export function ClubColorFields({
 
       <div className="rounded-xl border border-slate-200 bg-white p-4">
         <p className="text-sm font-semibold text-slate-900">
-          Vista previa — colores del club
+          Vista previa — fondo de la app
         </p>
         <p className="mt-0.5 text-xs text-slate-500">
-          Solo se muestran los colores que configuraste. Si no definís
-          secundario/terciario, aparecen como “No se usa”.
+          Estos colores no se usan en botones: definen el fondo degradado de
+          toda la app ({gradientDescription}).
         </p>
+
+        <div
+          className="mt-3 overflow-hidden rounded-xl border border-slate-300 shadow-sm"
+          style={{ background: gradient }}
+        >
+          <div className="flex items-center gap-2 border-b border-white/20 bg-black/10 px-3 py-2 backdrop-blur-sm">
+            <span className="h-2.5 w-2.5 rounded-full bg-white/70" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/70" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/70" />
+            <span className="ml-2 text-xs font-medium text-white/90">
+              Así se vería la app
+            </span>
+          </div>
+          <div className="space-y-2 p-4">
+            <div className="w-2/3 rounded-lg bg-white/90 p-3 shadow-sm">
+              <div className="h-2 w-1/3 rounded bg-slate-300" />
+              <div className="mt-2 h-2 w-2/3 rounded bg-slate-200" />
+            </div>
+            <div className="w-1/2 rounded-lg bg-white/70 p-3 shadow-sm">
+              <div className="h-2 w-1/2 rounded bg-slate-300" />
+            </div>
+          </div>
+        </div>
+
         <div className="mt-3 flex gap-3">
           <SwatchDefined label="Primario" hex={primario} />
           {secundario ? (
@@ -238,38 +293,6 @@ export function ClubColorFields({
             <SwatchDefined label="Terciario" hex={terciario} />
           ) : (
             <SwatchUnused label="Terciario" />
-          )}
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <span
-            className="rounded-lg px-3 py-1.5 font-medium text-white"
-            style={{ background: primario }}
-          >
-            Botón primario
-          </span>
-          {secundario ? (
-            <span
-              className="rounded-lg px-3 py-1.5 font-medium text-white"
-              style={{ background: secundario }}
-            >
-              Header / contraste
-            </span>
-          ) : (
-            <span className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-slate-400">
-              Header: sin color secundario
-            </span>
-          )}
-          {terciario ? (
-            <span
-              className="rounded-lg px-3 py-1.5 font-medium text-slate-900"
-              style={{ background: terciario }}
-            >
-              Badge highlight
-            </span>
-          ) : (
-            <span className="rounded-lg border border-dashed border-slate-300 px-3 py-1.5 text-slate-400">
-              Badge: sin color terciario
-            </span>
           )}
         </div>
       </div>

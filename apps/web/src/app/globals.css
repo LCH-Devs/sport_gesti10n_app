@@ -11,6 +11,8 @@
   --club-primary: #2563eb;
   --club-secondary: #2563eb;
   --club-tertiary: #2563eb;
+  --club-bg-gradient: linear-gradient(135deg, #2563eb 0%, #ffffff 100%);
+  --club-bg-gradient-inverted: linear-gradient(135deg, #ffffff 0%, #2563eb 100%);
 
   --secondary: #fd761a;
   --secondary-dark: #9d4300;

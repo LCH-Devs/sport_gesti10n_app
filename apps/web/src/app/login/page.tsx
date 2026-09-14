@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { apiFetch, isStaffRole, LoginResult } from "@/lib/api";
+import { apiFetch, LoginResult } from "@/lib/api";
 import { enterAfterLogin } from "@/lib/apply-login";
 import { useTranslation } from "@/lib/useTranslation";
 
@@ -22,20 +22,10 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     try {
-      const data = await apiFetch<LoginResult>("/auth/admin/login", {
+      const data = await apiFetch<LoginResult>("/auth/login", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      if (!isStaffRole(data.role) || !data.admin) {
-        throw new Error("Este acceso es solo para la comisión del club.");
-      }
-      window.dispatchEvent(new Event("club-session-changed"));
-      const next = data.must_complete_onboarding
-        ? "/gestion/onboarding"
-        : data.must_change_password
-          ? "/gestion/cambiar-clave"
-          : "/dashboard";
-      router.push(next);
       enterAfterLogin(data, (href) => router.push(href));
     } catch (err) {
       setError(
@@ -109,7 +99,7 @@ export default function LoginPage() {
             />
             {t("login.rememberMe")}
           </label>
-          <a href="#" className="font-medium text-blue-600 hover:text-blue-700">
+          <a href="/recuperar-clave" className="font-medium text-blue-600 hover:text-blue-700">
             {t("login.forgotPassword")}
           </a>
         </div>

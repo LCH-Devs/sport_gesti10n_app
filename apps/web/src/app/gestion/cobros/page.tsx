@@ -88,7 +88,7 @@ function CobrosPageInner() {
       });
       setCategorias(rows);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar categorías');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
   }, []);
 
@@ -103,7 +103,7 @@ function CobrosPageInner() {
       setResumen(data);
       setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
   }, [mes]);
 
@@ -125,7 +125,7 @@ function CobrosPageInner() {
       setCuenta(data);
     } catch (err) {
       setCuenta(null);
-      setError(err instanceof Error ? err.message : 'Error al cargar la cuenta');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
   }, [socioId, familiaId]);
 
@@ -165,7 +165,7 @@ function CobrosPageInner() {
       await load();
       await loadCuenta();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al generar');
+      setError(err instanceof Error ? err.message : t('messages.errorGenerating'));
     } finally {
       setLoading(false);
     }
@@ -191,7 +191,7 @@ function CobrosPageInner() {
       setNuevaCategoria({ nombre: '', monto: '' });
       await loadCategorias();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear categoría');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     } finally {
       setSavingCategoria(false);
     }
@@ -211,7 +211,7 @@ function CobrosPageInner() {
       });
       await loadCategorias();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al actualizar');
+      setError(err instanceof Error ? err.message : t('messages.errorUpdating'));
     }
   }
 
@@ -226,7 +226,7 @@ function CobrosPageInner() {
       });
       await loadCategorias();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al borrar');
+      setError(err instanceof Error ? err.message : t('messages.errorDeleting'));
     }
   }
 
@@ -242,7 +242,7 @@ function CobrosPageInner() {
       await load();
       await loadCuenta();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error');
+      setError(err instanceof Error ? err.message : t('common.error'));
     }
   }
 
@@ -441,7 +441,7 @@ function CobrosPageInner() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
         >
           {loading ? t('admin.cobros.generando') : t('admin.cobros.generarYEnviar')}
         </button>
@@ -559,8 +559,9 @@ function CobrosPageInner() {
 }
 
 export default function CobrosPage() {
+  const { t } = useTranslation();
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Cargando…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t('common.loading')}</p>}>
       <CobrosPageInner />
     </Suspense>
   );

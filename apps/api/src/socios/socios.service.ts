@@ -8,11 +8,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSocioDto, UpdateSelfSocioDto, UpdateSocioDto } from './dto/socio.dto';
 import {
   flattenPerson,
+  hasActiveMembershipElsewhere,
   MEMBER_ROLES,
   NOT_DELETED,
   personInclude,
 } from '../common/club-users';
-import { parseSocioImportSource } from './socios-import';
+import { buildSocioExportCsv, parseSocioImportSource } from './socios-import';
 import { defaultSocioPassword, normalizeDni } from '../common/dto-constraints';
 import {
   ensureDefaultCategoriaCuota,
@@ -48,6 +49,25 @@ export class SociosService {
       orderBy: [{ usuario: { apellido: 'asc' } }, { usuario: { nombre: 'asc' } }],
     });
     return rows.map(flattenPerson);
+  }
+
+  async exportCsv(clubId: number): Promise<string> {
+    const rows = await this.list(clubId);
+    return buildSocioExportCsv(
+      rows.map((r) => ({
+        dni: r.dni,
+        nombre: r.nombre,
+        apellido: r.apellido,
+        email: r.email,
+        fecha_nacimiento: r.fecha_nacimiento
+          ? new Date(r.fecha_nacimiento).toISOString()
+          : null,
+        rol: r.rol,
+        telefono: r.telefono,
+        categoria: r.categoria?.nombre ?? '',
+        estado: r.estado,
+      })),
+    );
   }
 
   async getOne(clubId: number, id: number) {
@@ -113,16 +133,26 @@ export class SociosService {
         throw new BadRequestException('Ese usuario ya está en este club');
       }
       if (already?.eliminado) {
-        await db.usuario.update({
-          where: { id: existingUser.id },
-          data: {
-            nombre: dto.nombre.trim(),
-            apellido: dto.apellido.trim(),
-            dni,
-            telefono: dto.telefono || existingUser.telefono,
-            fecha_nacimiento: new Date(dto.fecha_nacimiento),
-          },
-        });
+        // Si esta identidad ya es socio/admin activo en otro club, no le
+        // pisamos nombre/dni/teléfono/etc. desde acá: solo reactivamos la
+        // membresía de este club con los datos ya existentes.
+        const crossClub = await hasActiveMembershipElsewhere(
+          db,
+          existingUser.id,
+          clubId,
+        );
+        if (!crossClub) {
+          await db.usuario.update({
+            where: { id: existingUser.id },
+            data: {
+              nombre: dto.nombre.trim(),
+              apellido: dto.apellido.trim(),
+              dni,
+              telefono: dto.telefono || existingUser.telefono,
+              fecha_nacimiento: new Date(dto.fecha_nacimiento),
+            },
+          });
+        }
         const restored = await db.membresia.update({
           where: { id: already.id },
           data: { eliminado: false, rol, estado: 'activo', categoria_id },
@@ -140,17 +170,23 @@ export class SociosService {
           10,
         );
 
+    const existingUserCrossClub = existingUser
+      ? await hasActiveMembershipElsewhere(db, existingUser.id, clubId)
+      : false;
+
     const usuario = existingUser
-      ? await db.usuario.update({
-          where: { id: existingUser.id },
-          data: {
-            nombre: dto.nombre.trim(),
-            apellido: dto.apellido.trim(),
-            dni,
-            telefono: dto.telefono || existingUser.telefono,
-            fecha_nacimiento: new Date(dto.fecha_nacimiento),
-          },
-        })
+      ? existingUserCrossClub
+        ? existingUser
+        : await db.usuario.update({
+            where: { id: existingUser.id },
+            data: {
+              nombre: dto.nombre.trim(),
+              apellido: dto.apellido.trim(),
+              dni,
+              telefono: dto.telefono || existingUser.telefono,
+              fecha_nacimiento: new Date(dto.fecha_nacimiento),
+            },
+          })
       : await db.usuario.create({
           data: {
             email,
@@ -163,6 +199,11 @@ export class SociosService {
           },
         });
 
+    // "socio"+DNI es adivinable a partir de un dato semi-público: si no se
+    // fijó una contraseña propia para esta persona nueva, se la obliga a
+    // cambiarla en el primer login (mismo criterio que ya rige para admins).
+    const usaPasswordPorDefecto = !existingUser && !dto.password?.trim();
+
     const created = await db.membresia.create({
       data: {
         usuario_id: usuario.id,
@@ -170,6 +211,7 @@ export class SociosService {
         rol,
         estado: 'activo',
         categoria_id,
+        must_change_password: usaPasswordPorDefecto,
       },
       include: personInclude,
     });
@@ -184,34 +226,64 @@ export class SociosService {
       dto.categoria_id !== undefined
         ? await this.resolveCategoriaId(this.prisma, clubId, dto.categoria_id)
         : undefined;
-    const updated = await this.prisma.$transaction(async (tx) => {
-      if (
-        dto.nombre !== undefined ||
-        dto.apellido !== undefined ||
-        dto.email !== undefined ||
-        dto.telefono !== undefined ||
-        dto.fecha_nacimiento !== undefined
-      ) {
-        if (dto.email !== undefined) {
-          const email = dto.email.toLowerCase();
-          const taken = await tx.usuario.findFirst({
-            where: { email, NOT: { id: membresia.usuario_id } },
-          });
-          if (taken) {
-            throw new BadRequestException('Ese email ya está en uso');
-          }
+
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: membresia.usuario_id },
+    });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    const identityData: Record<string, unknown> = {};
+    if (dto.nombre !== undefined && dto.nombre !== usuario.nombre) {
+      identityData.nombre = dto.nombre;
+    }
+    if (dto.apellido !== undefined && dto.apellido !== usuario.apellido) {
+      identityData.apellido = dto.apellido;
+    }
+    if (
+      dto.email !== undefined &&
+      dto.email.toLowerCase() !== usuario.email
+    ) {
+      identityData.email = dto.email.toLowerCase();
+    }
+    if (dto.telefono !== undefined && dto.telefono !== usuario.telefono) {
+      identityData.telefono = dto.telefono;
+    }
+    if (dto.fecha_nacimiento !== undefined) {
+      const incoming = new Date(dto.fecha_nacimiento).getTime();
+      if (incoming !== usuario.fecha_nacimiento?.getTime()) {
+        identityData.fecha_nacimiento = new Date(dto.fecha_nacimiento);
+      }
+    }
+
+    if (Object.keys(identityData).length > 0) {
+      const crossClub = await hasActiveMembershipElsewhere(
+        this.prisma,
+        usuario.id,
+        clubId,
+      );
+      if (crossClub) {
+        throw new BadRequestException(
+          'Esta persona también es socio/admin activo en otro club: nombre, apellido, email, teléfono y fecha de nacimiento son datos compartidos y no se pueden editar desde acá.',
+        );
+      }
+      if (identityData.email) {
+        const taken = await this.prisma.usuario.findFirst({
+          where: {
+            email: identityData.email as string,
+            NOT: { id: membresia.usuario_id },
+          },
+        });
+        if (taken) {
+          throw new BadRequestException('Ese email ya está en uso');
         }
+      }
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (Object.keys(identityData).length > 0) {
         await tx.usuario.update({
           where: { id: membresia.usuario_id },
-          data: {
-            ...(dto.nombre !== undefined && { nombre: dto.nombre }),
-            ...(dto.apellido !== undefined && { apellido: dto.apellido }),
-            ...(dto.email !== undefined && { email: dto.email.toLowerCase() }),
-            ...(dto.telefono !== undefined && { telefono: dto.telefono }),
-            ...(dto.fecha_nacimiento !== undefined && {
-              fecha_nacimiento: new Date(dto.fecha_nacimiento),
-            }),
-          },
+          data: identityData,
         });
       }
 
@@ -310,21 +382,33 @@ export class SociosService {
             );
             continue;
           }
+          const crossClub = await hasActiveMembershipElsewhere(
+            this.prisma,
+            existing.usuario_id,
+            clubId,
+          );
           await this.prisma.$transaction(async (tx) => {
-            await tx.usuario.update({
-              where: { id: existing.usuario_id },
-              data: {
-                nombre: row.nombre,
-                apellido: row.apellido,
-                telefono: row.telefono,
-                fecha_nacimiento: new Date(row.fecha_nacimiento),
-              },
-            });
+            if (!crossClub) {
+              await tx.usuario.update({
+                where: { id: existing.usuario_id },
+                data: {
+                  nombre: row.nombre,
+                  apellido: row.apellido,
+                  telefono: row.telefono,
+                  fecha_nacimiento: new Date(row.fecha_nacimiento),
+                },
+              });
+            }
             await tx.membresia.update({
               where: { id: existing.id },
               data: { rol: row.rol, categoria_id: categoria.id },
             });
           });
+          if (crossClub) {
+            errors.push(
+              `Fila ${row.line}: es socio/admin activo en otro club — se actualizó rol/categoría pero no sus datos personales compartidos`,
+            );
+          }
           updated++;
           continue;
         }
@@ -381,9 +465,16 @@ export class SociosService {
         ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
         ...(dto.apellido !== undefined && { apellido: dto.apellido.trim() }),
         ...(dto.telefono !== undefined && { telefono: dto.telefono.trim() }),
-        ...(password_hash && { password_hash }),
+        ...(password_hash && { password_hash, password_changed_at: new Date() }),
       },
     });
+
+    if (password_hash && membresia.must_change_password) {
+      await this.prisma.membresia.update({
+        where: { id: membresia.id },
+        data: { must_change_password: false },
+      });
+    }
 
     return flattenPerson({ ...membresia, usuario: updated });
   }

@@ -8,6 +8,7 @@ import {
   getSession,
   requireSession,
   saveSession,
+  type ClubSession,
 } from '@/lib/api';
 import { useChrome } from '@/lib/ChromeContext';
 import { ClubColorFields } from '@/components/ClubColorFields';
@@ -18,18 +19,18 @@ import {
   type GeoRefCalle,
 } from '@/components/PlaceAutocomplete';
 import { DeportesPicker } from '@/components/DeportesPicker';
+import { VerificarTarjetaCard } from '@/components/VerificarTarjetaCard';
 import { deporteKey, mergeDeportes } from '@/lib/deportes-catalogo';
+import { NAME_HELP, NAME_PATTERN, PHONE_PATTERN, filterPersonName, filterPhone } from '@/lib/validation';
 
 const STEPS = [
   { id: 1, label: 'Titular' },
   { id: 2, label: 'Club' },
   { id: 3, label: 'Deportes y espacios' },
   { id: 4, label: 'Seguridad' },
-  { id: 5, label: 'Suscripción' },
-  { id: 6, label: 'Verificación' },
+  { id: 5, label: 'Verificación' },
 ] as const;
 
-const NAME_REGEX = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ\s]*$/;
 const PASSWORD_REGEX =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%&*_\-+=]).{8,}$/;
 
@@ -53,12 +54,15 @@ export default function OnboardingPage() {
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [titularNombreError, setTitularNombreError] = useState('');
+  const [titularApellidoError, setTitularApellidoError] = useState('');
   const [form, setForm] = useState({
     titular_nombre: '',
     titular_apellido: '',
     cuit_cuil: '',
     provincia: '',
     ciudad: '',
+    pais: '',
     telefono_club: '',
     logo_url: '',
     color_primario: '#2563eb',
@@ -72,24 +76,21 @@ export default function OnboardingPage() {
     provincia?: { id: string; nombre: string };
     localidad?: { id: string; nombre: string };
     calle?: { id: string; nombre: string };
+    pais?: string;
   } | null>(null);
-  const [calleNombre, setCalleNombre] = useState('');
-  const [altura, setAltura] = useState('');
+  const [direccionTexto, setDireccionTexto] = useState('');
+  const [ciudadDisplay, setCiudadDisplay] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [deportesSeleccionados, setDeportesSeleccionados] = useState<string[]>([]);
   const [deportesExtras, setDeportesExtras] = useState<string[]>([]);
   const [espacios, setEspacios] = useState<EspacioBorrador[]>([]);
   const [extrasCategoria, setExtrasCategoria] = useState<ExtraCategoria[]>([]);
-  const [espacioNombre, setEspacioNombre] = useState('');
-  const [espacioTipo, setEspacioTipo] = useState<string>(ESPACIO_TIPOS[0].value);
+  const [espacioExtraDraft, setEspacioExtraDraft] = useState('');
   const [espaciosWarning, setEspaciosWarning] = useState('');
-  const [tarjeta, setTarjeta] = useState({
-    titular: '',
-    numero: '',
-    vencimiento: '',
-    cvv: '',
-  });
+  const [session, setSession] = useState<ClubSession | null>(null);
+  const [tarjetaVerificada, setTarjetaVerificada] = useState(false);
+  const [tarjetaPortal, setTarjetaPortal] = useState<HTMLDivElement | null>(null);
 
   const { setHideChrome } = useChrome();
 
@@ -108,6 +109,7 @@ export default function OnboardingPage() {
       router.replace('/dashboard');
       return;
     }
+    setSession(s);
     setForm((f) => ({
       ...f,
       color_primario: s.club.color_primario,
@@ -120,10 +122,10 @@ export default function OnboardingPage() {
   }, [router]);
 
   function validateStep1(): string | null {
-    if (NAME_REGEX.test(form.titular_nombre) === false || !form.titular_nombre.trim()) {
+    if (!form.titular_nombre.trim()) {
       return 'Ingresá un nombre válido (solo letras y espacios)';
     }
-    if (NAME_REGEX.test(form.titular_apellido) === false || !form.titular_apellido.trim()) {
+    if (!form.titular_apellido.trim()) {
       return 'Ingresá un apellido válido (solo letras y espacios)';
     }
     const cuitCuilDigits = form.cuit_cuil.replace(/\D/g, '');
@@ -161,10 +163,38 @@ export default function OnboardingPage() {
     setDeportesExtras((prev) => prev.filter((d) => deporteKey(d) !== key));
   }
 
-  function addEspacio() {
-    if (!espacioNombre.trim()) return;
-    setEspacios((prev) => [...prev, { nombre: espacioNombre.trim(), tipo: espacioTipo }]);
-    setEspacioNombre('');
+  function isPredefinedEspacio(esp: EspacioBorrador) {
+    return ESPACIO_TIPOS.some((t) => t.value === esp.tipo && t.label === esp.nombre);
+  }
+
+  function toggleEspacioTipo(tipo: (typeof ESPACIO_TIPOS)[number]) {
+    setEspacios((prev) => {
+      const exists = prev.some((e) => e.tipo === tipo.value && e.nombre === tipo.label);
+      if (exists) {
+        return prev.filter((e) => !(e.tipo === tipo.value && e.nombre === tipo.label));
+      }
+      return [...prev, { nombre: tipo.label, tipo: tipo.value }];
+    });
+  }
+
+  function addEspaciosExtra() {
+    const names = espacioExtraDraft
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean);
+    if (!names.length) return;
+    setEspacios((prev) => {
+      const existingKeys = new Set(prev.map((e) => e.nombre.toLowerCase()));
+      const additions: EspacioBorrador[] = [];
+      for (const nombre of names) {
+        const key = nombre.toLowerCase();
+        if (existingKeys.has(key)) continue;
+        existingKeys.add(key);
+        additions.push({ nombre, tipo: 'otro' });
+      }
+      return [...prev, ...additions];
+    });
+    setEspacioExtraDraft('');
   }
 
   function removeEspacio(idx: number) {
@@ -218,7 +248,7 @@ export default function OnboardingPage() {
     }
 
     const cuitCuilDigits = form.cuit_cuil.replace(/\D/g, '');
-    const direccionCompleta = `${calleNombre}${altura ? ' ' + altura : ''}`.trim();
+    const direccionCompleta = direccionTexto.trim();
     const deportes = mergeDeportes(deportesSeleccionados, deportesExtras);
 
     setSaving(true);
@@ -317,7 +347,7 @@ export default function OnboardingPage() {
         <button
           type="button"
           onClick={() => router.replace('/dashboard')}
-          className="mt-6 rounded-lg bg-[var(--club-primary)] px-4 py-2.5 font-semibold text-white"
+          className="mt-6 rounded-lg bg-[var(--primary)] px-4 py-2.5 font-semibold text-white"
         >
           Ir al panel
         </button>
@@ -339,7 +369,7 @@ export default function OnboardingPage() {
             <span
               className={`flex h-7 w-7 items-center justify-center rounded-full font-semibold ${
                 s.id === step
-                  ? 'bg-[var(--club-primary)] text-white'
+                  ? 'bg-[var(--primary)] text-white'
                   : s.id < step
                     ? 'bg-emerald-100 text-emerald-700'
                     : 'bg-slate-100 text-slate-500'
@@ -369,14 +399,18 @@ export default function OnboardingPage() {
                 className="mt-1 w-full rounded-lg border px-3 py-2"
                 value={form.titular_nombre}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  if (NAME_REGEX.test(val)) {
-                    setForm({ ...form, titular_nombre: val });
-                  }
+                  const filtered = filterPersonName(e.target.value);
+                  setForm({ ...form, titular_nombre: filtered });
+                  setTitularNombreError(e.target.value !== filtered ? NAME_HELP : '');
                 }}
                 placeholder="Ej: Juan"
                 required
+                pattern={NAME_PATTERN}
+                title={NAME_HELP}
               />
+              {titularNombreError && (
+                <p className="mt-1 text-xs text-red-600">{titularNombreError}</p>
+              )}
             </label>
             <label className="text-sm">
               Apellido del titular
@@ -384,14 +418,18 @@ export default function OnboardingPage() {
                 className="mt-1 w-full rounded-lg border px-3 py-2"
                 value={form.titular_apellido}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  if (NAME_REGEX.test(val)) {
-                    setForm({ ...form, titular_apellido: val });
-                  }
+                  const filtered = filterPersonName(e.target.value);
+                  setForm({ ...form, titular_apellido: filtered });
+                  setTitularApellidoError(e.target.value !== filtered ? NAME_HELP : '');
                 }}
                 placeholder="Ej: Pérez"
                 required
+                pattern={NAME_PATTERN}
+                title={NAME_HELP}
               />
+              {titularApellidoError && (
+                <p className="mt-1 text-xs text-red-600">{titularApellidoError}</p>
+              )}
             </label>
             <label className="text-sm">
               CUIT/CUIL
@@ -420,12 +458,17 @@ export default function OnboardingPage() {
             <label className="text-sm">
               Teléfono del club
               <input
+                type="tel"
                 className="mt-1 w-full rounded-lg border px-3 py-2"
                 value={form.telefono_club}
                 onChange={(e) =>
-                  setForm({ ...form, telefono_club: e.target.value })
+                  setForm({ ...form, telefono_club: filterPhone(e.target.value) })
                 }
                 placeholder="Ej: 11 2345-6789"
+                inputMode="tel"
+                pattern={PHONE_PATTERN}
+                maxLength={20}
+                title="Solo números, espacios, + y -"
               />
             </label>
           </>
@@ -513,8 +556,11 @@ export default function OnboardingPage() {
             </div>
             <PlaceAutocomplete<GeoRefLocalidad>
               label="Ciudad/Provincia"
-              value={form.ciudad}
-              onChange={(val) => setForm({ ...form, ciudad: val })}
+              value={ciudadDisplay}
+              onChange={(val) => {
+                setCiudadDisplay(val);
+                setForm((f) => ({ ...f, ciudad: val }));
+              }}
               onSelect={(localidad) => {
                 setUbicacion((prev) => ({
                   ...prev,
@@ -526,8 +572,17 @@ export default function OnboardingPage() {
                     id: localidad.id,
                     nombre: localidad.nombre,
                   },
+                  pais: 'Argentina',
                 }));
-                setForm({ ...form, provincia: localidad.provincia.nombre });
+                setCiudadDisplay(
+                  `${localidad.nombre}, ${localidad.provincia.nombre}, Argentina`,
+                );
+                setForm((f) => ({
+                  ...f,
+                  ciudad: localidad.nombre,
+                  provincia: localidad.provincia.nombre,
+                  pais: 'Argentina',
+                }));
               }}
               fetchUrl={(query) =>
                 `https://apis.datos.gob.ar/georef/api/localidades?nombre=${encodeURIComponent(
@@ -539,10 +594,13 @@ export default function OnboardingPage() {
               placeholder="Escribí el nombre de la ciudad..."
             />
             <PlaceAutocomplete<GeoRefCalle>
-              label="Calle"
-              value={calleNombre}
-              onChange={setCalleNombre}
+              label="Calle y altura"
+              value={direccionTexto}
+              onChange={setDireccionTexto}
               onSelect={(calle) => {
+                const alturaMatch = direccionTexto.match(/(\d+)\s*$/);
+                const altura = alturaMatch ? alturaMatch[1] : '';
+                setDireccionTexto(`${calle.nombre}${altura ? ' ' + altura : ''}`);
                 setUbicacion((prev) => ({
                   ...prev,
                   calle: {
@@ -550,35 +608,25 @@ export default function OnboardingPage() {
                     nombre: calle.nombre,
                   },
                 }));
-                setCalleNombre(calle.nombre);
               }}
               fetchUrl={(query) => {
+                const calleQuery = query.replace(/\d+\s*$/, '').trim();
                 const params = new URLSearchParams({
-                  nombre: query,
+                  nombre: calleQuery,
                   max: '10',
                 });
                 if (ubicacion?.provincia?.id) {
                   params.append('provincia', ubicacion.provincia.id);
                 }
                 if (ubicacion?.localidad?.id) {
-                  params.append('localidad', ubicacion.localidad.id);
+                  params.append('localidad_censal', ubicacion.localidad.id);
                 }
                 return `https://apis.datos.gob.ar/georef/api/calles?${params.toString()}`;
               }}
               resultsKey="calles"
               formatOption={(item) => item.nombre}
-              placeholder="Escribí el nombre de la calle..."
+              placeholder="Ej: Pellegrini 1234"
             />
-            <label className="text-sm">
-              Altura (número)
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={altura}
-                onChange={(e) => setAltura(e.target.value.replace(/\D/g, ''))}
-                placeholder="Ej: 1234"
-                inputMode="numeric"
-              />
-            </label>
             <div />
             <ClubLogoField
               value={form.logo_url}
@@ -617,56 +665,66 @@ export default function OnboardingPage() {
 
             <div className="sm:col-span-2">
               <p className="text-sm font-medium">Espacios para reserva (opcional)</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <input
-                  className="flex-1 rounded-lg border px-3 py-2 text-sm"
-                  value={espacioNombre}
-                  onChange={(e) => setEspacioNombre(e.target.value)}
-                  placeholder="Ej: Cancha 1"
-                />
-                <select
-                  className="select-field rounded-lg border px-3 py-2 text-sm"
-                  value={espacioTipo}
-                  onChange={(e) => setEspacioTipo(e.target.value)}
-                >
-                  {ESPACIO_TIPOS.map((t) => (
-                    <option key={t.value} value={t.value}>
-                      {t.label}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={addEspacio}
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
-                >
-                  Agregar
-                </button>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {ESPACIO_TIPOS.map((tipo) => (
+                  <label key={tipo.value} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={espacios.some(
+                        (e) => e.tipo === tipo.value && e.nombre === tipo.label,
+                      )}
+                      onChange={() => toggleEspacioTipo(tipo)}
+                    />
+                    {tipo.label}
+                  </label>
+                ))}
               </div>
-              {espacios.length > 0 && (
-                <ul className="mt-3 space-y-1">
-                  {espacios.map((esp, idx) => (
-                    <li
-                      key={`${esp.nombre}-${idx}`}
-                      className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-sm"
-                    >
-                      <span>
-                        {esp.nombre}{' '}
-                        <span className="text-slate-400">
-                          ({ESPACIO_TIPOS.find((t) => t.value === esp.tipo)?.label})
-                        </span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeEspacio(idx)}
-                        className="text-xs text-red-600"
-                      >
-                        Quitar
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+
+              <div className="mt-3">
+                <p className="text-sm">Otro espacio</p>
+                <div className="mt-1 flex flex-wrap gap-2">
+                  <input
+                    className="min-w-[12rem] flex-1 rounded-lg border px-3 py-2 text-sm"
+                    value={espacioExtraDraft}
+                    onChange={(e) => setEspacioExtraDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addEspaciosExtra();
+                      }
+                    }}
+                    placeholder="Ej: Cancha 1, Cancha 2"
+                  />
+                  <button
+                    type="button"
+                    onClick={addEspaciosExtra}
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
+                  >
+                    Agregar
+                  </button>
+                </div>
+                {espacios.some((e) => !isPredefinedEspacio(e)) && (
+                  <ul className="mt-3 flex flex-wrap gap-2">
+                    {espacios.map((esp, idx) =>
+                      isPredefinedEspacio(esp) ? null : (
+                        <li
+                          key={`${esp.nombre}-${idx}`}
+                          className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm"
+                        >
+                          {esp.nombre}
+                          <button
+                            type="button"
+                            onClick={() => removeEspacio(idx)}
+                            className="text-xs text-red-600"
+                          >
+                            Quitar
+                          </button>
+                        </li>
+                      ),
+                    )}
+                  </ul>
+                )}
+              </div>
               <p className="mt-2 text-xs text-slate-400">
                 Podés agregar más espacios en cualquier momento desde Espacios.
               </p>
@@ -745,76 +803,6 @@ export default function OnboardingPage() {
         )}
 
         {step === 5 && (
-          <>
-            <div className="sm:col-span-2">
-              <p className="font-semibold text-slate-700">
-                Medio de pago de la suscripción
-              </p>
-              <p className="mt-1 text-sm text-slate-500">
-                Estos datos son solo de referencia por ahora: todavía no
-                procesamos el pago desde este formulario. Vas a poder
-                completarlo más adelante sin que esto interrumpa el uso del
-                club.
-              </p>
-            </div>
-            <label className="text-sm sm:col-span-2">
-              Nombre del titular de la tarjeta
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={tarjeta.titular}
-                onChange={(e) => setTarjeta({ ...tarjeta, titular: e.target.value })}
-                placeholder="Como figura en la tarjeta"
-                autoComplete="cc-name"
-              />
-            </label>
-            <label className="text-sm sm:col-span-2">
-              Número de tarjeta
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={tarjeta.numero}
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 16);
-                  const grouped = digits.replace(/(.{4})/g, '$1 ').trim();
-                  setTarjeta({ ...tarjeta, numero: grouped });
-                }}
-                placeholder="•••• •••• •••• ••••"
-                inputMode="numeric"
-                autoComplete="cc-number"
-              />
-            </label>
-            <label className="text-sm">
-              Vencimiento (MM/AA)
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={tarjeta.vencimiento}
-                onChange={(e) => {
-                  const digits = e.target.value.replace(/\D/g, '').slice(0, 4);
-                  const formatted =
-                    digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
-                  setTarjeta({ ...tarjeta, vencimiento: formatted });
-                }}
-                placeholder="MM/AA"
-                inputMode="numeric"
-                autoComplete="cc-exp"
-              />
-            </label>
-            <label className="text-sm">
-              CVV
-              <input
-                className="mt-1 w-full rounded-lg border px-3 py-2"
-                value={tarjeta.cvv}
-                onChange={(e) =>
-                  setTarjeta({ ...tarjeta, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) })
-                }
-                placeholder="•••"
-                inputMode="numeric"
-                autoComplete="cc-csc"
-              />
-            </label>
-          </>
-        )}
-
-        {step === 6 && (
           <div className="sm:col-span-2 space-y-4">
             <p className="text-sm text-slate-600">
               Revisá los datos antes de finalizar. Podés volver atrás para
@@ -839,10 +827,10 @@ export default function OnboardingPage() {
                 <dt className="text-slate-500">Cuota Socio pleno</dt>
                 <dd>${form.cuota_monto || '—'}</dd>
                 <dt className="text-slate-500">Ciudad</dt>
-                <dd>{form.ciudad || '—'}</dd>
+                <dd>{ciudadDisplay || '—'}</dd>
                 <dt className="text-slate-500">Dirección</dt>
                 <dd>
-                  {calleNombre ? `${calleNombre}${altura ? ' ' + altura : ''}` : '—'}
+                  {direccionTexto.trim() || '—'}
                 </dd>
                 {extrasCategoria.filter((c) => c.nombre.trim()).length > 0 && (
                   <>
@@ -870,14 +858,16 @@ export default function OnboardingPage() {
               </dl>
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-4">
-              <p className="text-sm font-semibold text-slate-700">Medio de pago</p>
-              <p className="mt-2 text-sm text-slate-600">
-                {tarjeta.numero
-                  ? `Tarjeta terminada en ${tarjeta.numero.replace(/\s/g, '').slice(-4)}`
-                  : 'No se cargó una tarjeta (podés hacerlo más adelante)'}
-              </p>
-            </div>
+            {session && (
+              <VerificarTarjetaCard
+                token={session.access_token}
+                clubSlug={session.club.slug}
+                email={session.admin.email}
+                verified={tarjetaVerificada}
+                onVerified={() => setTarjetaVerificada(true)}
+                portalTarget={tarjetaPortal}
+              />
+            )}
           </div>
         )}
 
@@ -893,7 +883,7 @@ export default function OnboardingPage() {
           {step < STEPS.length ? (
             <button
               type="submit"
-              className="rounded-lg bg-[var(--club-primary)] px-4 py-2.5 font-semibold text-white"
+              className="rounded-lg bg-[var(--primary)] px-4 py-2.5 font-semibold text-white"
             >
               Siguiente
             </button>
@@ -901,13 +891,17 @@ export default function OnboardingPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-[var(--club-primary)] px-4 py-2.5 font-semibold text-white disabled:opacity-60"
+              className="rounded-lg bg-[var(--primary)] px-4 py-2.5 font-semibold text-white disabled:opacity-60"
             >
               {saving ? 'Guardando…' : 'Confirmar y finalizar'}
             </button>
           )}
         </div>
       </form>
+
+      {/* Fuera del <form> del wizard: acá se porta el <form> de MercadoPago
+          (no se puede anidar un <form> dentro de otro). */}
+      {step === 5 && <div ref={setTarjetaPortal} />}
     </div>
   );
 }

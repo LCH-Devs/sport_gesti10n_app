@@ -49,6 +49,7 @@ export default function SociosPage() {
   const [error, setError] = useState('');
   const [importing, setImporting] = useState(false);
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [upgrade, setUpgrade] = useState<PlanUpgradeBody | null>(null);
@@ -78,7 +79,7 @@ export default function SociosPage() {
       setFamilias(groups);
       setCuotaMes(new Map(estado.items.map((i) => [i.socio_id, i])));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -111,7 +112,7 @@ export default function SociosPage() {
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al eliminar');
+      setError(err instanceof Error ? err.message : t('messages.errorDeleting'));
     }
   }
 
@@ -131,6 +132,23 @@ export default function SociosPage() {
       );
     } finally {
       setDownloadingTemplate(false);
+    }
+  }
+
+  async function onExport() {
+    const session = requireSession();
+    if (!session) return;
+    setExporting(true);
+    setError('');
+    try {
+      await apiDownload('/socios/export-csv', 'socios.csv', {
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('messages.errorExporting'));
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -265,6 +283,16 @@ export default function SociosPage() {
             {downloadingTemplate
               ? t('admin.socios.downloadingTemplate')
               : t('admin.socios.downloadTemplate')}
+          </button>
+          <button
+            type="button"
+            onClick={() => void onExport()}
+            disabled={exporting || importing}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {exporting
+              ? t('admin.socios.exporting', 'Exportando…')
+              : t('admin.socios.exportCsv', 'Exportar CSV')}
           </button>
           <input
             type="file"

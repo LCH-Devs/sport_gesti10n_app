@@ -40,7 +40,7 @@ export default function NuevaReservaPage() {
       setEspacios(esp);
       setSocios(soc);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
   }, []);
 
@@ -67,7 +67,7 @@ export default function NuevaReservaPage() {
       });
       router.push('/reservas');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     }
   }
 
@@ -134,7 +134,7 @@ export default function NuevaReservaPage() {
         <div className="sm:col-span-2 flex gap-2">
           <button
             type="submit"
-            className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
           >
             {t('admin.reservas.createReserva')}
           </button>

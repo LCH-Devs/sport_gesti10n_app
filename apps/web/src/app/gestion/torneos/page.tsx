@@ -60,7 +60,7 @@ export default function TorneosPage() {
       });
       setItems(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -83,7 +83,7 @@ export default function TorneosPage() {
       setPartidos(ps);
       setTabla(tb.tabla || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar detalle');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
   }, []);
 
@@ -109,7 +109,7 @@ export default function TorneosPage() {
       setForm({ nombre: '', deporte: '' });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     }
   }
 
@@ -134,7 +134,7 @@ export default function TorneosPage() {
       await loadDetalle(selectedId);
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear partido');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     }
   }
 
@@ -173,7 +173,7 @@ export default function TorneosPage() {
         </label>
         <button
           type="submit"
-          className="sm:col-span-2 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
+          className="sm:col-span-2 rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
         >
           {t('admin.torneos.crear')}
         </button>
@@ -261,7 +261,7 @@ export default function TorneosPage() {
             </label>
             <button
               type="submit"
-              className="sm:col-span-3 rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
+              className="sm:col-span-3 rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
             >
               {t('admin.torneos.crearPartido')}
             </button>

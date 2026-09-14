@@ -11,51 +11,63 @@ import {
   BuildingLibraryIcon,
   ClockIcon,
   NewspaperIcon,
-  Cog6ToothIcon,
   BanknotesIcon,
   ChartBarIcon,
   UserGroupIcon,
-  TrophyIcon,
+  CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
-
-const clubMenuItems = [
-  { icon: HomeIcon, label: "Inicio", href: "/dashboard" },
-  { icon: UsersIcon, label: "Socios", href: "/socios" },
-  { icon: CurrencyDollarIcon, label: "Cobros", href: "/cobros" },
-  { icon: UserCircleIcon, label: "Usuarios", href: "/usuarios" },
-  { icon: BuildingLibraryIcon, label: "Espacios", href: "/espacios" },
-  { icon: ClockIcon, label: "Horarios", href: "/horarios" },
-  { icon: NewspaperIcon, label: "Noticias", href: "/noticias" },
-  { icon: TrophyIcon, label: "Torneos", href: "/torneos" },
-  { icon: Cog6ToothIcon, label: "Configuración", href: "/config" },
-  { icon: BanknotesIcon, label: "Liquidaciones", href: "/liquidaciones" },
-];
+import { useTranslation } from "@/lib/useTranslation";
 
 interface SidebarProps {
   isOpen?: boolean;
   variant?: "club" | "superadmin";
+  gradient?: boolean;
 }
 
-export function Sidebar({ isOpen = true, variant = "club" }: SidebarProps) {
+export function Sidebar({ isOpen = true, variant = "club", gradient }: SidebarProps) {
   const pathname = usePathname();
-  const prefix = "/supercalifragilisticoespiralidoso";
+  const { t } = useTranslation();
+
+  const clubMenuItems = [
+    { icon: HomeIcon, label: t("nav.home"), href: "/dashboard" },
+    { icon: UsersIcon, label: t("nav.socios"), href: "/socios" },
+    { icon: CurrencyDollarIcon, label: t("nav.cobros"), href: "/cobros" },
+    { icon: UserCircleIcon, label: t("nav.usuarios"), href: "/usuarios" },
+    { icon: BuildingLibraryIcon, label: t("nav.espacios"), href: "/espacios" },
+    { icon: ClockIcon, label: t("nav.horarios"), href: "/horarios" },
+    { icon: NewspaperIcon, label: t("nav.noticias"), href: "/noticias" },
+    { icon: CalendarDaysIcon, label: t("nav.eventos", "Eventos"), href: "/eventos" },
+    { icon: BanknotesIcon, label: t("nav.liquidaciones"), href: "/liquidaciones" },
+  ];
+
   const menuItems =
     variant === "superadmin"
       ? [
-          { icon: ChartBarIcon, label: "Overview", href: "/supercalifragilisticoespiralidoso/panel" },
-          { icon: BuildingLibraryIcon, label: "Clubs", href: "/supercalifragilisticoespiralidoso/entidades" },
-          { icon: UserGroupIcon, label: "Administradores", href: "/supercalifragilisticoespiralidoso/usuarios" },
-          { icon: BanknotesIcon, label: "Planes", href: "/supercalifragilisticoespiralidoso/panel/planes" },
+          { icon: ChartBarIcon, label: t("nav.superadmin.overview", "Overview"), href: "/supercalifragilisticoespiralidoso/panel" },
+          { icon: BuildingLibraryIcon, label: t("nav.superadmin.clubs", "Clubs"), href: "/supercalifragilisticoespiralidoso/entidades" },
+          { icon: UserGroupIcon, label: t("nav.superadmin.admins", "Administradores"), href: "/supercalifragilisticoespiralidoso/usuarios" },
+          { icon: BanknotesIcon, label: t("nav.superadmin.plans", "Planes"), href: "/supercalifragilisticoespiralidoso/panel/planes" },
         ]
       : clubMenuItems;
 
   return (
     <aside
-      className={`${isOpen ? "w-48" : "w-16"} mt-16 bg-slate-50 border-r border-slate-200 flex flex-col h-[calc(100vh-4rem)] overflow-y-auto transition-all duration-300`}
+      className={`${isOpen ? "w-48" : "w-16"} mt-16 border-r border-slate-200 flex flex-col h-[calc(100vh-4rem)] overflow-y-auto transition-all duration-300 ${gradient ? "" : "bg-slate-50"}`}
+      style={
+        gradient
+          ? {
+              backgroundImage: "var(--club-bg-gradient-inverted)",
+              backgroundAttachment: "fixed",
+              backgroundSize: "100vw 100vh",
+              backgroundPosition: "0 0",
+            }
+          : undefined
+      }
     >
       <nav className="flex-1 px-3 py-2">
         {menuItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive =
+            pathname === item.href || pathname.startsWith(`${item.href}/`);
           const Icon = item.icon;
           return (
             <Link
@@ -66,8 +78,11 @@ export function Sidebar({ isOpen = true, variant = "club" }: SidebarProps) {
               } ${
                 isActive
                   ? "bg-blue-600 text-white"
-                  : "text-slate-700 hover:bg-slate-200"
+                  : gradient
+                    ? "text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)] hover:bg-white/20"
+                    : "text-slate-700 hover:bg-slate-200"
               }`}
+              aria-current={isActive ? 'page' : undefined}
               title={isOpen ? undefined : item.label}
             >
               <Icon className="w-5 h-5 flex-shrink-0" />

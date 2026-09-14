@@ -1,5 +1,6 @@
 import { Body, Button, Card, Heading } from "@/components/common";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -10,11 +11,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "@/context/LanguageContext";
+import { useAuth } from "@/context/AuthContext";
+import { AccountSwitcherModal } from "@/components/AccountSwitcherModal";
 import { router } from "expo-router";
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
+  const { session, isStaff, signOut } = useAuth();
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const hasMultipleCuentas = (session?.cuentas?.length ?? 0) > 1;
 
   const menuItems = [
     { icon: "settings-outline", label: "accountSettings" },
@@ -55,14 +61,31 @@ export default function ProfileScreen() {
         style={[styles.container]}
         contentContainerStyle={{ paddingBottom: 100 }}
     >
-      <TouchableOpacity style={styles.adminEntry} onPress={() => router.push('/admin/' as never)} activeOpacity={0.8}>
-        <View style={styles.adminIcon}><Ionicons name="shield-checkmark-outline" size={20} color="#ffffff" /></View>
-        <View style={styles.adminCopy}>
-          <Text style={styles.adminTitle}>Modo administración</Text>
-          <Text style={styles.adminSubtitle}>Gestionar el club</Text>
-        </View>
-        <Text style={styles.adminArrow}>›</Text>
+      {isStaff && (
+        <TouchableOpacity style={styles.adminEntry} onPress={() => router.push('/admin/' as never)} activeOpacity={0.8}>
+          <View style={styles.adminIcon}><Ionicons name="shield-checkmark-outline" size={20} color="#ffffff" /></View>
+          <View style={styles.adminCopy}>
+            <Text style={styles.adminTitle}>Modo administración</Text>
+            <Text style={styles.adminSubtitle}>Gestionar el club</Text>
+          </View>
+          <Text style={styles.adminArrow}>›</Text>
+        </TouchableOpacity>
+      )}
+      {hasMultipleCuentas && (
+        <TouchableOpacity style={styles.switchEntry} onPress={() => setSwitcherOpen(true)} activeOpacity={0.8}>
+          <View style={styles.switchIcon}><Ionicons name="swap-horizontal-outline" size={20} color="#00288e" /></View>
+          <View style={styles.adminCopy}>
+            <Text style={styles.switchTitle}>Cambiar de club</Text>
+            <Text style={styles.switchSubtitle}>{session?.club.nombre}</Text>
+          </View>
+          <Text style={styles.switchArrow}>›</Text>
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity style={styles.logoutEntry} onPress={() => signOut()} activeOpacity={0.8}>
+        <Ionicons name="log-out-outline" size={18} color="#ba1a1a" />
+        <Text style={styles.logoutText}>Cerrar sesión</Text>
       </TouchableOpacity>
+      <AccountSwitcherModal visible={switcherOpen} onClose={() => setSwitcherOpen(false)} />
       {/* Profile Header */}
       <Card style={styles.profileCard}>
         <View style={styles.profileContent}>
@@ -150,6 +173,38 @@ const styles = StyleSheet.create({
   adminTitle: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
   adminSubtitle: { color: '#c9d3ff', fontSize: 12, marginTop: 3 },
   adminArrow: { color: '#ffffff', fontSize: 24, fontWeight: '300' },
+  switchEntry: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#eef2ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  switchIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  switchTitle: { color: '#00288e', fontSize: 15, fontWeight: '700' },
+  switchSubtitle: { color: '#5a6a9a', fontSize: 12, marginTop: 3 },
+  switchArrow: { color: '#00288e', fontSize: 24, fontWeight: '300' },
+  logoutEntry: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#fdeceb',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  logoutText: { color: '#ba1a1a', fontSize: 14, fontWeight: '700' },
   profileCard: {
     marginHorizontal: 16,
     marginVertical: 12,

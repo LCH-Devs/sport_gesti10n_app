@@ -10,6 +10,8 @@ import { JwtUser } from '../common/jwt-user.decorator';
 import { JwtPayload } from './jwt.strategy';
 import { LoginResponseDto } from './dto/login-response.dto';
 import { LOGIN_IP_LIMIT, LOGIN_IP_TTL_MS } from './auth-security';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
@@ -45,5 +47,15 @@ export class AuthController {
   @Post('platform/login')
   loginPlatform(@Body() dto: PlatformLoginDto) {
     return this.auth.loginPlatform(dto);
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.auth.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.auth.resetPassword(dto);
   }
 }

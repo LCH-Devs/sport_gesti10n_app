@@ -104,7 +104,7 @@ export default function LoginPage() {
             />
             {t("login.rememberMe")}
           </label>
-          <a href="#" className="font-medium text-blue-600 hover:text-blue-700">
+          <a href="/recuperar-clave" className="font-medium text-blue-600 hover:text-blue-700">
             {t("login.forgotPassword")}
           </a>
         </div>

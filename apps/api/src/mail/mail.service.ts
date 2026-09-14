@@ -23,6 +23,8 @@ export type Trial10dMail = {
   clubNombre: string;
 };
 
+export type PasswordResetMail = { to: string; resetUrl: string };
+
 export type PlanUpgradeMail = {
   to: string;
   adminNombre: string;
@@ -322,6 +324,15 @@ export class MailService {
       subject: `Quedan 10 días de prueba de ClubApp — ${payload.clubNombre}`,
       text: buildTrial10dText(payload),
       html: buildTrial10dHtml(payload),
+    });
+  }
+
+  sendPasswordReset(payload: PasswordResetMail) {
+    return this.deliver({
+      to: payload.to,
+      subject: 'Restablecer contraseña — ClubApp',
+      text: `Solicitaste restablecer tu contraseña de ClubApp.\n\nUsá este enlace (vence en 60 minutos y solo funciona una vez):\n${payload.resetUrl}\n\nSi no lo pediste, ignorá este correo.`,
+      html: wrapHtml('Restablecer contraseña', `<p>Solicitaste restablecer tu contraseña.</p><p><a href="${escapeHtml(payload.resetUrl)}">Restablecer contraseña</a></p><p>El enlace vence en 60 minutos y solo funciona una vez.</p>`),
     });
   }
 

@@ -40,6 +40,15 @@ export class SociosController {
     });
   }
 
+  @Get('export-csv')
+  async exportCsv(@ClubId() clubId: number) {
+    const csv = await this.socios.exportCsv(clubId);
+    return new StreamableFile(Buffer.from(csv, 'utf-8'), {
+      type: 'text/csv; charset=utf-8',
+      disposition: 'attachment; filename="socios.csv"',
+    });
+  }
+
   @Get(':id')
   getOne(@ClubId() clubId: number, @Param('id', ParseIntPipe) id: number) {
     return this.socios.getOne(clubId, id);

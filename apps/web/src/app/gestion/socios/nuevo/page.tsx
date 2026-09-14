@@ -7,6 +7,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
 import {
+  DNI_PATTERN,
+  NAME_HELP,
+  NAME_PATTERN,
+  PHONE_PATTERN,
+  filterDigits,
+  filterPersonName,
+  filterPhone,
+} from '@/lib/validation';
+import {
   AltaCobrosFields,
   altaCobrosPayload,
   EMPTY_ALTA_COBROS,
@@ -59,6 +68,7 @@ function NuevoSocioForm() {
   const [upgrade, setUpgrade] = useState<PlanUpgradeBody | null>(null);
   const [saving, setSaving] = useState(false);
   const [altaCobros, setAltaCobros] = useState<AltaCobrosValue>(EMPTY_ALTA_COBROS);
+  const [nameErrors, setNameErrors] = useState({ nombre: '', apellido: '' });
 
   useEffect(() => {
     const session = requireSession();
@@ -104,7 +114,7 @@ function NuevoSocioForm() {
           categoria_id: socio.categoria_id ? String(socio.categoria_id) : '',
         }),
       )
-      .catch((err) => setError(err instanceof Error ? err.message : 'Error al cargar'))
+      .catch((err) => setError(err instanceof Error ? err.message : t('messages.errorLoading')))
       .finally(() => setLoading(false));
   }, [editingId]);
 
@@ -155,7 +165,7 @@ function NuevoSocioForm() {
         setUpgrade(err.body as unknown as PlanUpgradeBody);
         return;
       }
-      setError(err instanceof Error ? err.message : 'Error al guardar');
+      setError(err instanceof Error ? err.message : t('messages.errorSaving'));
     } finally {
       setSaving(false);
     }
@@ -188,7 +198,7 @@ function NuevoSocioForm() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="submit"
-                className="rounded-lg bg-[var(--club-primary,#2563eb)] px-4 py-2 font-semibold text-white"
+                className="rounded-lg bg-[var(--primary,#003ec7)] px-4 py-2 font-semibold text-white"
               >
                 {editingId ? t('common.save', 'Guardar') : t('admin.socios.createSocio')}
               </button>
@@ -208,21 +218,39 @@ function NuevoSocioForm() {
           <FormField
             label={t('admin.socios.dni')}
             value={form.dni}
-            onChange={(dni) => setForm((f) => ({ ...f, dni }))}
+            onChange={(dni) => setForm((f) => ({ ...f, dni: filterDigits(dni) }))}
             required
             disabled={Boolean(editingId)}
+            inputMode="numeric"
+            pattern={DNI_PATTERN}
+            maxLength={10}
+            title="Solo números"
           />
           <FormField
             label={t('admin.socios.nombre')}
             value={form.nombre}
-            onChange={(nombre) => setForm((f) => ({ ...f, nombre }))}
+            onChange={(value) => {
+              const nombre = filterPersonName(value);
+              setForm((f) => ({ ...f, nombre }));
+              setNameErrors((n) => ({ ...n, nombre: value !== nombre ? NAME_HELP : '' }));
+            }}
             required
+            pattern={NAME_PATTERN}
+            title={NAME_HELP}
+            error={nameErrors.nombre}
           />
           <FormField
             label={t('admin.socios.apellido')}
             value={form.apellido}
-            onChange={(apellido) => setForm((f) => ({ ...f, apellido }))}
+            onChange={(value) => {
+              const apellido = filterPersonName(value);
+              setForm((f) => ({ ...f, apellido }));
+              setNameErrors((n) => ({ ...n, apellido: value !== apellido ? NAME_HELP : '' }));
+            }}
             required
+            pattern={NAME_PATTERN}
+            title={NAME_HELP}
+            error={nameErrors.apellido}
           />
           <FormField
             type="email"
@@ -232,9 +260,14 @@ function NuevoSocioForm() {
             required
           />
           <FormField
+            type="tel"
             label={t('admin.socios.telefono')}
             value={form.telefono}
-            onChange={(telefono) => setForm((f) => ({ ...f, telefono }))}
+            onChange={(telefono) => setForm((f) => ({ ...f, telefono: filterPhone(telefono) }))}
+            inputMode="tel"
+            pattern={PHONE_PATTERN}
+            maxLength={20}
+            title="Solo números, espacios, + y -"
           />
           <FormField
             type="date"

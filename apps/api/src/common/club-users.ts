@@ -12,6 +12,38 @@ export function isMemberRole(rol: string) {
 export const NOT_DELETED = { eliminado: false } as const;
 export const CLUB_NOT_DELETED = { eliminado: false } as const;
 
+type MembresiaFinder = {
+  membresia: {
+    findFirst: (args: {
+      where: Record<string, unknown>;
+      select?: Record<string, boolean>;
+    }) => Promise<{ id: number } | null>;
+  };
+};
+
+/**
+ * True si el Usuario (identidad global) tiene una membresía activa en un
+ * club distinto al indicado. Se usa para bloquear que el staff de un club
+ * pise datos personales compartidos (nombre/dni/telefono/etc.) de alguien
+ * que también es socio/admin activo en otro club — la identidad es global
+ * pero cada club solo debería poder tocarla cuando es la única dueña.
+ */
+export async function hasActiveMembershipElsewhere(
+  db: MembresiaFinder,
+  usuarioId: number,
+  excludeClubId: number,
+): Promise<boolean> {
+  const other = await db.membresia.findFirst({
+    where: {
+      usuario_id: usuarioId,
+      club_id: { not: excludeClubId },
+      ...NOT_DELETED,
+    },
+    select: { id: true },
+  });
+  return Boolean(other);
+}
+
 /** Un email no puede ser admin de dos clubes vivos. Club dado de baja no cuenta. */
 export function adminEmailInUseWhere(email: string) {
   return {

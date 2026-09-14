@@ -5,6 +5,7 @@ export { Card } from './Card';
 export { Badge } from './Badge';
 export { Button } from './Button';
 export { FloatingActionButton } from './FloatingActionButton';
+export { StatusMessage } from './StatusMessage';
 export { DataTable } from './DataTable';
 export type {
   Column,

@@ -22,6 +22,7 @@ describe('assertSesionViva', () => {
           rol: 'entrada',
           estado: 'activo',
           club_id: 1,
+          usuario: { password_changed_at: new Date(0) },
         }),
       },
       platformAdmin: { findFirst: jest.fn() },
@@ -38,6 +39,47 @@ describe('assertSesionViva', () => {
         }),
       }),
     );
+  });
+
+  it('rechaza un token firmado antes del último cambio de contraseña', async () => {
+    const iat = Math.floor(Date.now() / 1000) - 3600; // token de hace 1h
+    const db = {
+      membresia: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 9,
+          rol: 'admin',
+          estado: 'activo',
+          club_id: 1,
+          // la contraseña cambió después de que se emitió el token
+          usuario: { password_changed_at: new Date() },
+        }),
+      },
+      platformAdmin: { findFirst: jest.fn() },
+    };
+
+    await expect(
+      assertSesionViva(db, clubPayload({ iat })),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('acepta un token firmado después del último cambio de contraseña', async () => {
+    const iat = Math.floor(Date.now() / 1000);
+    const db = {
+      membresia: {
+        findFirst: jest.fn().mockResolvedValue({
+          id: 9,
+          rol: 'admin',
+          estado: 'activo',
+          club_id: 1,
+          usuario: { password_changed_at: new Date(0) },
+        }),
+      },
+      platformAdmin: { findFirst: jest.fn() },
+    };
+
+    await expect(
+      assertSesionViva(db, clubPayload({ iat })),
+    ).resolves.toBeDefined();
   });
 
   it('rechaza membresía dada de baja o club inactivo', async () => {

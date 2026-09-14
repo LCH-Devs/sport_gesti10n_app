@@ -19,6 +19,7 @@ import { ClubId } from '../common/club-id.decorator';
 import { UseClubAuth } from '../common/use-club-auth';
 import { UpdateClubConfigDto } from './dto/update-club-config.dto';
 import { CompleteOnboardingDto } from './dto/complete-onboarding.dto';
+import { VerificarTarjetaDto } from './dto/verificar-tarjeta.dto';
 import { JwtPayload } from '../auth/jwt.strategy';
 
 @Controller('clubs')
@@ -84,6 +85,12 @@ export class ClubsController {
     @Body() dto: CompleteOnboardingDto,
   ) {
     return this.clubs.completeOnboarding(clubId, req.user.sub, dto);
+  }
+
+  @UseClubAuth(AdminRoleGuard)
+  @Post('me/verificar-tarjeta')
+  verificarTarjeta(@ClubId() clubId: number, @Body() dto: VerificarTarjetaDto) {
+    return this.clubs.verificarTarjeta(clubId, dto);
   }
 }
 

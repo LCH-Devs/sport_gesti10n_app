@@ -67,6 +67,68 @@ export function buildSocioImportTemplate(): Buffer {
   return XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' }) as Buffer;
 }
 
+export type SocioExportRow = {
+  dni: string;
+  nombre: string;
+  apellido: string;
+  email: string;
+  fecha_nacimiento: string | null;
+  rol: string;
+  telefono: string;
+  categoria: string;
+  estado: string;
+};
+
+const EXPORT_HEADERS = [
+  'dni',
+  'nombre',
+  'apellido',
+  'email',
+  'fecha_nacimiento',
+  'rol',
+  'telefono',
+  'categoria',
+  'estado',
+] as const;
+
+function csvCell(value: string): string {
+  if (/[",\r\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+/**
+ * CSV de exportación de socios: mismo orden/columnas que la plantilla de
+ * importación (dni,nombre,apellido,email,fecha_nacimiento,rol,telefono,
+ * categoria) más "estado" al final. Reimportable tal cual: el parser de
+ * import solo lee las columnas que conoce por nombre de cabecera.
+ */
+export function buildSocioExportCsv(rows: SocioExportRow[]): string {
+  const lines = [EXPORT_HEADERS.join(',')];
+  for (const row of rows) {
+    lines.push(
+      [
+        row.dni,
+        row.nombre,
+        row.apellido,
+        row.email,
+        row.fecha_nacimiento
+          ? new Date(row.fecha_nacimiento).toISOString().slice(0, 10)
+          : '',
+        row.rol,
+        row.telefono,
+        row.categoria,
+        row.estado,
+      ]
+        .map(csvCell)
+        .join(','),
+    );
+  }
+  // BOM para que Excel detecte UTF-8 (mismo criterio que el parser al leer).
+  return '﻿' + lines.join('\r\n') + '\r\n';
+}
+
 function normalizeHeader(raw: string) {
   return raw
     .replace(/^\uFEFF/, '')

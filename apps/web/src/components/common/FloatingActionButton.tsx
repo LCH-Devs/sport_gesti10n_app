@@ -14,7 +14,7 @@ export function FloatingActionButton({
     <button
       type="button"
       onClick={onClick}
-      style={{ backgroundColor: 'var(--club-primary, #2563eb)' }}
+      style={{ backgroundColor: 'var(--primary, #003ec7)' }}
       className={`fixed bottom-8 right-8 w-14 h-14 text-white rounded-full shadow-lg transition hover:brightness-110 flex items-center justify-center group ${className}`}
       {...rest}
     >

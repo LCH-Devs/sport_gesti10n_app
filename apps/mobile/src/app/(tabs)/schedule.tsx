@@ -1,131 +1,141 @@
-import { ActivityCard } from "@/components/ActivityCard";
-import { Body, Button, Heading } from "@/components/common";
+import { Body, Card, Heading } from "@/components/common";
 import { ScreenHeader } from "@/components/ScreenHeader";
-import { useLanguage } from "@/context/LanguageContext";
 import { useState } from "react";
 import {
+  ActivityIndicator,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useAuth } from "@/context/AuthContext";
+import { useSocioPortal } from "@/hooks/useSocioPortal";
+import { ReservasPanel } from "@/components/ReservasPanel";
+import { EventosPanel } from "@/components/EventosPanel";
+
+function formatFecha(iso: string) {
+  return new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+}
 
 export default function ScheduleScreen() {
-  const insets = useSafeAreaInsets();
-  const { t } = useLanguage();
-  const [activeTab, setActiveTab] = useState<"weekly" | "events">("weekly");
+  const { isStaff } = useAuth();
+  const { portal, loading, error, reload } = useSocioPortal();
+  const [activeTab, setActiveTab] = useState<"actividades" | "noticias" | "reservas" | "eventos">("actividades");
 
-  const schedules = [
-    { title: "Advanced Swimming", date: "OCT 24", time: "09:00 AM" },
-    { title: "Tennis Practice", date: "OCT 24", time: "11:30 AM" },
-    { title: "Yoga Basics", date: "OCT 25", time: "02:00 PM" },
-  ];
+  if (isStaff) {
+    return (
+      <View style={{ flex: 1 }}>
+        <ScreenHeader />
+        <View style={styles.center}>
+          <Body>Esta vista es para socios. Entrá en modo administración para ver la operación del club.</Body>
+        </View>
+      </View>
+    );
+  }
 
-  const ButtonPress = () => {
-    console.log("Register Now button pressed!");
-  };
+  const actividades = portal?.actividades ?? [];
+  const noticias = portal?.noticias ?? [];
 
   return (
     <View style={{ flex: 1 }}>
       <ScreenHeader />
       <ScrollView
-        style={[styles.container]}
+        style={styles.container}
         contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={loading} onRefresh={reload} />}
       >
-        {/* Main Card with Tabs */}
         <View style={styles.mainCard}>
-        {/* Tab Header */}
-        <View style={styles.tabHeader}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "weekly" && styles.tabActive]}
-            onPress={() => setActiveTab("weekly")}
-          >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === "weekly" && styles.tabLabelActive,
-              ]}
+          <View style={styles.tabHeader}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "actividades" && styles.tabActive]}
+              onPress={() => setActiveTab("actividades")}
             >
-              {t("weeklySchedule")}
-            </Text>
-            {activeTab === "weekly" && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === "events" && styles.tabActive]}
-            onPress={() => setActiveTab("events")}
-          >
-            <Text
-              style={[
-                styles.tabLabel,
-                activeTab === "events" && styles.tabLabelActive,
-              ]}
+              <Text style={[styles.tabLabel, activeTab === "actividades" && styles.tabLabelActive]}>
+                Actividades
+              </Text>
+              {activeTab === "actividades" && <View style={styles.tabIndicator} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "noticias" && styles.tabActive]}
+              onPress={() => setActiveTab("noticias")}
             >
-              {t("upcomingEvents")}
-            </Text>
-            {activeTab === "events" && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
+              <Text style={[styles.tabLabel, activeTab === "noticias" && styles.tabLabelActive]}>
+                Noticias
+              </Text>
+              {activeTab === "noticias" && <View style={styles.tabIndicator} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "eventos" && styles.tabActive]}
+              onPress={() => setActiveTab("eventos")}
+            >
+              <Text style={[styles.tabLabel, activeTab === "eventos" && styles.tabLabelActive]}>
+                Eventos
+              </Text>
+              {activeTab === "eventos" && <View style={styles.tabIndicator} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === "reservas" && styles.tabActive]}
+              onPress={() => setActiveTab("reservas")}
+            >
+              <Text style={[styles.tabLabel, activeTab === "reservas" && styles.tabLabelActive]}>
+                Reservas
+              </Text>
+              {activeTab === "reservas" && <View style={styles.tabIndicator} />}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.cardContent}>
+            {error && <Body style={styles.error}>{error}</Body>}
+
+            {activeTab === "actividades" ? (
+              loading && actividades.length === 0 ? (
+                <ActivityIndicator color="#00288e" style={{ marginVertical: 16 }} />
+              ) : actividades.length === 0 ? (
+                <Body size="sm" style={styles.empty}>Todavía no estás inscripto en ninguna actividad.</Body>
+              ) : (
+                <View style={styles.section}>
+                  {actividades.map((a) => (
+                    <Card key={a.id} style={styles.activityItem}>
+                      <Heading level={3} style={{ marginBottom: 0 }}>{a.nombre}</Heading>
+                    </Card>
+                  ))}
+                </View>
+              )
+            ) : activeTab === "noticias" ? (
+              loading && noticias.length === 0 ? (
+                <ActivityIndicator color="#00288e" style={{ marginVertical: 16 }} />
+              ) : noticias.length === 0 ? (
+                <Body size="sm" style={styles.empty}>El club todavía no publicó noticias.</Body>
+              ) : (
+                <View style={styles.section}>
+                  {noticias.map((n) => (
+                    <Card key={n.id} style={styles.eventCard}>
+                      <Text style={styles.eventDate}>{formatFecha(n.fecha)}</Text>
+                      <Heading level={3} style={styles.eventTitle}>{n.titulo}</Heading>
+                      <Text style={styles.eventDesc} numberOfLines={3}>
+                        {n.cuerpo}
+                      </Text>
+                    </Card>
+                  ))}
+                </View>
+              )
+            ) : activeTab === "eventos" ? (
+              <EventosPanel />
+            ) : (
+              <ReservasPanel />
+            )}
+          </View>
         </View>
-
-        {/* Content */}
-        <View style={styles.cardContent}>
-          {/* Today Section */}
-          <View style={styles.section}>
-            <Heading level={3}>{t("today")}, Oct 24</Heading>
-            {schedules.slice(0, 2).map((schedule, index) => (
-              <ActivityCard
-                key={index}
-                title={schedule.title}
-                date={schedule.date}
-                time={schedule.time}
-              />
-            ))}
-          </View>
-
-          {/* Tomorrow Section */}
-          <View style={styles.section}>
-            <Heading level={3}>{t("tomorrow")}, Oct 25</Heading>
-            {schedules.slice(2).map((schedule, index) => (
-              <ActivityCard
-                key={index}
-                title={schedule.title}
-                date={schedule.date}
-                time={schedule.time}
-              />
-            ))}
-          </View>
-
-          {/* Featured Events Section */}
-          <View style={styles.section}>
-            <Heading level={3}>{t("featuredEvents")}</Heading>
-            <View style={styles.eventCard}>
-              <View style={styles.eventImage} />
-              <Heading level={3} style={styles.eventTitle}>
-                {t("fallTennisTournament")}
-              </Heading>
-              <Body size="sm" style={styles.eventDesc}>
-                {t("tournamentDescription")}
-              </Body>
-              <Button
-                label={t("registerNow")}
-                variant="primary"
-                onPress={ButtonPress}
-              />
-            </View>
-          </View>
-        </View>
-      </View>
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9ff",
-  },
+  container: { flex: 1, backgroundColor: "#f8f9ff" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24 },
   mainCard: {
     marginHorizontal: 16,
     marginVertical: 12,
@@ -135,65 +145,34 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: "hidden",
   },
-  tabHeader: {
-    flexDirection: "row",
-    borderBottomColor: "#e5eeff",
-    borderBottomWidth: 1,
-  },
+  tabHeader: { flexDirection: "row", borderBottomColor: "#e5eeff", borderBottomWidth: 1 },
   tab: {
     flex: 1,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     alignItems: "center",
     justifyContent: "center",
     borderRightColor: "#e5eeff",
     borderRightWidth: 1,
     backgroundColor: "#e8ecf5",
   },
-  tabActive: {
-    backgroundColor: "#ffffff",
-  },
-  tabLabel: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#6b7280",
-  },
-  tabLabelActive: {
-    color: "#00288e",
-  },
-  tabIndicator: {
-    position: "absolute",
-    bottom: -1.5,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: "#ffffff",
-  },
-  cardContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
-  section: {
-    paddingVertical: 12,
-  },
+  tabActive: { backgroundColor: "#ffffff" },
+  tabLabel: { fontSize: 13, fontWeight: "600", color: "#6b7280" },
+  tabLabelActive: { color: "#00288e" },
+  tabIndicator: { position: "absolute", bottom: -1.5, left: 0, right: 0, height: 3, backgroundColor: "#ffffff" },
+  cardContent: { paddingHorizontal: 16, paddingVertical: 12 },
+  section: { paddingVertical: 4 },
+  error: { color: "#ba1a1a", marginBottom: 8 },
+  empty: { marginVertical: 12, color: "#444653" },
+  activityItem: { marginBottom: 8, paddingVertical: 14 },
   eventCard: {
     backgroundColor: "#f8f9ff",
-    borderRadius: 8,
     borderColor: "#e5eeff",
     borderWidth: 1,
     padding: 12,
+    marginBottom: 10,
   },
-  eventImage: {
-    height: 160,
-    backgroundColor: "#e5eeff",
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  eventTitle: {
-    marginBottom: 8,
-  },
-  eventDesc: {
-    color: "#444653",
-    marginBottom: 16,
-  },
+  eventDate: { color: "#00288e", fontSize: 12, fontWeight: "700", marginBottom: 4, textTransform: "uppercase" },
+  eventTitle: { marginBottom: 6 },
+  eventDesc: { color: "#444653" },
 });

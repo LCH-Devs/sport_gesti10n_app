@@ -27,3 +27,21 @@ export class CreateReservaDto {
   @MaxLength(300)
   nota?: string;
 }
+
+/** Portal socio: igual que CreateReservaDto pero sin socio_id — lo pone el backend. */
+export class CreateReservaSelfDto {
+  @Type(() => Number)
+  @IsInt()
+  espacio_id: number;
+
+  @IsDateString()
+  inicio: string;
+
+  @IsDateString()
+  fin: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  nota?: string;
+}

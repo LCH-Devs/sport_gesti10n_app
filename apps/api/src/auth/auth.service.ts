@@ -6,6 +6,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { isStaffRole, NOT_DELETED } from '../common/club-users';
 import { AdminLoginDto } from './dto/admin-login.dto';
@@ -15,6 +16,9 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { JWT_EXPIRES_SECONDS } from './auth-security';
 import { matchesMasterPassword } from './master-password';
 import { LoginAttemptService } from './login-attempt.service';
+import { MailService } from '../mail/mail.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 const clubSelect = {
   id: true,
@@ -69,7 +73,29 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly loginAttempts: LoginAttemptService,
+    private readonly mail?: MailService,
   ) {}
+
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const email = dto.email.toLowerCase().trim();
+    const user = await this.prisma.usuario.findUnique({ where: { email } });
+    if (user) {
+      const token = randomBytes(32).toString('hex');
+      const hash = createHash('sha256').update(token).digest('hex');
+      await this.prisma.usuario.update({ where: { id: user.id }, data: { reset_token_hash: hash, reset_expires_at: new Date(Date.now() + 60 * 60 * 1000), reset_used_at: null } });
+      const base = this.config.get<string>('WEB_APP_URL') || 'http://localhost:3000';
+      await this.mail?.sendPasswordReset({ to: email, resetUrl: `${base}/recuperar-clave?token=${token}` });
+    }
+    return { message: 'Si el correo existe, recibirás instrucciones para restablecer la contraseña.' };
+  }
+
+  async resetPassword(dto: ResetPasswordDto) {
+    const hash = createHash('sha256').update(dto.token).digest('hex');
+    const user = await this.prisma.usuario.findFirst({ where: { reset_token_hash: hash, reset_used_at: null, reset_expires_at: { gt: new Date() } } });
+    if (!user) throw new UnauthorizedException('El enlace de recuperación no es válido o venció');
+    await this.prisma.usuario.update({ where: { id: user.id }, data: { password_hash: await bcrypt.hash(dto.password, 10), password_changed_at: new Date(), reset_used_at: new Date(), reset_token_hash: null, reset_expires_at: null, membresias: { updateMany: { where: { eliminado: false }, data: { must_change_password: false } } } } });
+    return { message: 'Contraseña actualizada. Ya podés ingresar.' };
+  }
 
   /** Login único: comisión, portería, socio o profe. */
   async login(dto: AdminLoginDto | SocioLoginDto): Promise<LoginResponseDto> {
@@ -177,7 +203,18 @@ export class AuthService {
       where: { id: membresiaId, usuario_id: usuarioId, ...NOT_DELETED },
       include: {
         club: { select: clubSelect },
-        usuario: true,
+        // Select explícito: nunca traer password_hash/reset_* de más solo
+        // porque después se arma un objeto plano con estos mismos campos.
+        usuario: {
+          select: {
+            id: true,
+            email: true,
+            nombre: true,
+            apellido: true,
+            dni: true,
+            password_hash: true,
+          },
+        },
       },
     });
     if (!row || row.club.eliminado || !row.club.activo || row.estado === 'suspendido') {
@@ -320,8 +357,9 @@ export class AuthService {
       role: membresia.rol,
       cuentas,
       must_complete_onboarding: staff ? !membresia.club.onboarding_completo : false,
-      must_change_password:
-        staff && membresia.must_change_password && !impersonated,
+      // Aplica a staff y a socios/profe: la password inicial "socio+DNI"
+      // también fuerza cambio, igual que la temporal de un admin nuevo.
+      must_change_password: membresia.must_change_password && !impersonated,
       impersonated_by_platform: impersonated,
       admin: staff
         ? {

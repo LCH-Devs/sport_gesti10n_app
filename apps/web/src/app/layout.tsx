@@ -7,7 +7,7 @@ import { LanguageProvider } from '@/lib/LanguageContext';
 import { ChromeProvider, useChrome } from '@/lib/ChromeContext';
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { applyClubTheme, getSession } from '@/lib/api';
+import { applyClubTheme, getSession, getSocioSession } from '@/lib/api';
 
 function RootLayoutContent({
   children,
@@ -26,10 +26,36 @@ function RootLayoutContent({
     pathname === '/supercalifragilisticoespiralidoso/acceso' ||
     pathname.startsWith('/supercalifragilisticoespiralidoso/plan/confirmar');
   const isPrefixedRoute = pathname.startsWith('/supercalifragilisticoespiralidoso/');
-  const showNavbarSidebar = !isPublicPage && !hideChrome;
+  const isOnboarding = pathname.startsWith('/gestion/onboarding');
+  const isCambiarClave = pathname.startsWith('/gestion/cambiar-clave');
+  // El portal del socio tiene su propia página completa (perfil, cuotas,
+  // reservas) y no debe mostrar el menú de comisión (Socios, Cobros,
+  // Usuarios...): confundiría sobre qué puede hacer un socio.
+  // OJO: "startsWith('/socio')" solo (sin el "/" final) también matchea
+  // "/socios" — la sección de gestión de socios del staff — y le hacía
+  // desaparecer el navbar/sidebar. Hay que exigir el límite de ruta.
+  const isSocioRoute = pathname === '/socio' || pathname.startsWith('/socio/');
+  // Se resuelve por pathname (no solo por el estado de ChromeContext) para que
+  // el navbar/sidebar no parpadeen en el primer render de un hard reload,
+  // antes de que el efecto de la página llame a setHideChrome.
+  const showNavbarSidebar =
+    !isPublicPage && !hideChrome && !isOnboarding && !isCambiarClave && !isSocioRoute;
+  const showClubBackground = !isPublicPage && !isPrefixedRoute && !isOnboarding;
 
   React.useEffect(() => {
     if (isPublicPage || isPrefixedRoute) return;
+    if (pathname === '/socio' || pathname.startsWith('/socio/')) {
+      const socioSession = getSocioSession();
+      if (!socioSession) return;
+      applyClubTheme(socioSession.club);
+      if (
+        socioSession.must_change_password &&
+        !pathname.startsWith('/socio/cambiar-clave')
+      ) {
+        router.replace('/socio/cambiar-clave');
+      }
+      return;
+    }
     const s = getSession();
     if (!s) return;
     applyClubTheme(s.club);
@@ -49,7 +75,10 @@ function RootLayoutContent({
   return (
     <>
       {showNavbarSidebar && (
-        <Navbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <Navbar
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
+          gradient={showClubBackground}
+        />
       )}
 
       <div className={showNavbarSidebar ? 'flex' : ''}>
@@ -57,10 +86,19 @@ function RootLayoutContent({
           <Sidebar
             isOpen={sidebarOpen}
             variant={isPrefixedRoute ? 'superadmin' : 'club'}
+            gradient={showClubBackground}
           />
         )}
 
-        <main className={showNavbarSidebar ? 'flex-1 overflow-auto max-h-[calc(100vh-4rem)] mt-16' : ''}>{children}</main>
+        <main
+          className={
+            showNavbarSidebar
+              ? 'flex-1 overflow-auto max-h-[calc(100vh-4rem)] min-h-[calc(100vh-4rem)] mt-16'
+              : 'min-h-screen'
+          }
+        >
+          {children}
+        </main>
       </div>
     </>
   );

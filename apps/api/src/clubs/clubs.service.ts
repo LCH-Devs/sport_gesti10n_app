@@ -3,8 +3,10 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { MediaService } from '../media/media.service';
+import { MercadoPagoService } from '../pagos/mercadopago.service';
 import { UpdateClubConfigDto } from './dto/update-club-config.dto';
 import { CompleteOnboardingDto } from './dto/complete-onboarding.dto';
+import { VerificarTarjetaDto } from './dto/verificar-tarjeta.dto';
 import { clubNombreInUseWhere, CLUB_NOMBRE_TAKEN } from '../common/club-users';
 import { normalizeDeportes } from '../common/club-deportes';
 import {
@@ -41,6 +43,8 @@ const CLUB_PUBLIC_SELECT = {
   email_contacto: true,
   deportes: true,
   descuento_familiar_pct: true,
+  tarjeta_verificada: true,
+  tarjeta_verificada_at: true,
   regla_moroso_cuotas: true,
   bloquear_reservas: true,
   bloquear_entrada: true,
@@ -66,6 +70,7 @@ export class ClubsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly media: MediaService,
+    private readonly mp: MercadoPagoService,
   ) {}
 
   buscar(q: string) {
@@ -250,6 +255,7 @@ export class ClubsService {
           usuario: {
             update: {
               password_hash,
+              password_changed_at: new Date(),
               nombre: `${dto.titular_nombre.trim()} ${dto.titular_apellido.trim()}`,
             },
           },
@@ -289,6 +295,48 @@ export class ClubsService {
     });
 
     return this.findById(clubId);
+  }
+
+  /**
+   * Verificación opcional de tarjeta: cobra $1 ARS con el token generado
+   * en el navegador y, si se aprueba, lo reembolsa al toque. No bloquea el
+   * onboarding — el club puede terminarlo sin verificar y hacerlo después.
+   */
+  async verificarTarjeta(clubId: number, dto: VerificarTarjetaDto) {
+    const club = await this.prisma.club.findUnique({ where: { id: clubId } });
+    if (!club) throw new NotFoundException('Club no encontrado');
+
+    const pago = await this.mp.crearPagoVerificacion({
+      token: dto.token,
+      paymentMethodId: dto.payment_method_id,
+      issuerId: dto.issuer_id,
+      monto: 1,
+      descripcion: 'Verificación de tarjeta - Kanri',
+      payerEmail: dto.payer_email,
+      identificationType: dto.identification_type,
+      identificationNumber: dto.identification_number,
+    });
+
+    if (pago.status !== 'approved') {
+      return {
+        verified: false,
+        status: pago.status,
+        statusDetail: pago.statusDetail,
+      };
+    }
+
+    const reembolsado = await this.mp.reembolsarPago(pago.id);
+
+    await this.prisma.club.update({
+      where: { id: clubId },
+      data: {
+        tarjeta_verificada: true,
+        tarjeta_verificada_at: new Date(),
+        tarjeta_verificacion_payment_id: pago.id,
+      },
+    });
+
+    return { verified: true, status: pago.status, reembolsado };
   }
 
   async uploadLogo(clubId: number, file?: Express.Multer.File) {

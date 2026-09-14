@@ -5,11 +5,13 @@ import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
+import { NAME_HELP, NAME_PATTERN, filterPersonName } from '@/lib/validation';
 
 export default function NuevoUsuarioPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const [error, setError] = useState('');
+  const [nombreError, setNombreError] = useState('');
   const [form, setForm] = useState({
     email: '',
     nombre: '',
@@ -40,7 +42,7 @@ export default function NuevoUsuarioPage() {
       });
       router.push('/gestion/usuarios');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     }
   }
 
@@ -57,8 +59,15 @@ export default function NuevoUsuarioPage() {
         <FormField
           label={t('admin.usuarios.nombre')}
           value={form.nombre}
-          onChange={(nombre) => setForm((f) => ({ ...f, nombre }))}
+          onChange={(raw) => {
+            const nombre = filterPersonName(raw);
+            setForm((f) => ({ ...f, nombre }));
+            setNombreError(raw !== nombre ? NAME_HELP : '');
+          }}
           required
+          pattern={NAME_PATTERN}
+          title={NAME_HELP}
+          error={nombreError}
         />
         <FormField
           type="email"
@@ -95,7 +104,7 @@ export default function NuevoUsuarioPage() {
         <div className="sm:col-span-2 flex gap-2">
           <button
             type="submit"
-            className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
           >
             {t('admin.usuarios.createUsuario')}
           </button>

@@ -7,6 +7,15 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
 import {
+  DNI_PATTERN,
+  NAME_HELP,
+  NAME_PATTERN,
+  PHONE_PATTERN,
+  filterDigits,
+  filterPersonName,
+  filterPhone,
+} from '@/lib/validation';
+import {
   AltaCobrosFields,
   altaCobrosPayload,
   EMPTY_ALTA_COBROS,
@@ -85,25 +94,44 @@ function PersonaFields({
   categorias: CategoriaCuota[];
   t: (key: string, fallback?: string) => string;
 }) {
+  const [nameErrors, setNameErrors] = useState({ nombre: '', apellido: '' });
   return (
     <div className="grid gap-3 sm:grid-cols-2">
       <FormField
         label={t('admin.socios.dni')}
         value={value.dni}
-        onChange={(dni) => onChange({ ...value, dni })}
+        onChange={(dni) => onChange({ ...value, dni: filterDigits(dni) })}
         required
+        inputMode="numeric"
+        pattern={DNI_PATTERN}
+        maxLength={10}
+        title="Solo números"
       />
       <FormField
         label={t('admin.socios.nombre')}
         value={value.nombre}
-        onChange={(nombre) => onChange({ ...value, nombre })}
+        onChange={(raw) => {
+          const nombre = filterPersonName(raw);
+          onChange({ ...value, nombre });
+          setNameErrors((n) => ({ ...n, nombre: raw !== nombre ? NAME_HELP : '' }));
+        }}
         required
+        pattern={NAME_PATTERN}
+        title={NAME_HELP}
+        error={nameErrors.nombre}
       />
       <FormField
         label={t('admin.socios.apellido')}
         value={value.apellido}
-        onChange={(apellido) => onChange({ ...value, apellido })}
+        onChange={(raw) => {
+          const apellido = filterPersonName(raw);
+          onChange({ ...value, apellido });
+          setNameErrors((n) => ({ ...n, apellido: raw !== apellido ? NAME_HELP : '' }));
+        }}
         required
+        pattern={NAME_PATTERN}
+        title={NAME_HELP}
+        error={nameErrors.apellido}
       />
       <FormField
         type="email"
@@ -113,9 +141,14 @@ function PersonaFields({
         required
       />
       <FormField
+        type="tel"
         label={t('admin.socios.telefono')}
         value={value.telefono}
-        onChange={(telefono) => onChange({ ...value, telefono })}
+        onChange={(telefono) => onChange({ ...value, telefono: filterPhone(telefono) })}
+        inputMode="tel"
+        pattern={PHONE_PATTERN}
+        maxLength={20}
+        title="Solo números, espacios, + y -"
       />
       <FormField
         type="date"
@@ -171,6 +204,7 @@ function NuevaFamiliaForm() {
   const [saving, setSaving] = useState(false);
   const [upgrade, setUpgrade] = useState<PlanUpgradeBody | null>(null);
   const [altaCobros, setAltaCobros] = useState<AltaCobrosValue>(EMPTY_ALTA_COBROS);
+  const [nombreFamiliaError, setNombreFamiliaError] = useState('');
 
   const defaultCategoriaId = useMemo(() => {
     const def = categorias.find((c) => c.es_default) ?? categorias[0];
@@ -214,7 +248,7 @@ function NuevaFamiliaForm() {
         );
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -280,7 +314,7 @@ function NuevaFamiliaForm() {
         setUpgrade(err.body as unknown as PlanUpgradeBody);
         return;
       }
-      setError(err instanceof Error ? err.message : 'Error al guardar');
+      setError(err instanceof Error ? err.message : t('messages.errorSaving'));
     } finally {
       setSaving(false);
     }
@@ -313,8 +347,15 @@ function NuevaFamiliaForm() {
             <FormField
               label={t('admin.familias.nombre')}
               value={nombre}
-              onChange={setNombre}
+              onChange={(raw) => {
+                const filtered = filterPersonName(raw);
+                setNombre(filtered);
+                setNombreFamiliaError(raw !== filtered ? NAME_HELP : '');
+              }}
               required
+              pattern={NAME_PATTERN}
+              title={NAME_HELP}
+              error={nombreFamiliaError}
             />
           </div>
 
@@ -497,7 +538,7 @@ function NuevaFamiliaForm() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
+              className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
             >
               {editingId
                 ? t('common.save', 'Guardar')

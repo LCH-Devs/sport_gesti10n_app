@@ -29,7 +29,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://clubapp:clubapp@db:5432/clubapp?schema=public
-      JWT_SECRET: cambialo-en-produccion-clubapp-jwt
+      JWT_SECRET: ${JWT_SECRET:?Definí JWT_SECRET en tu entorno o .env antes de levantar el perfil "full" — no hay valor por defecto}
       PORT: 3001
       CORS_ORIGIN: http://localhost:3000
     ports:
@@ -40,11 +40,14 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      # Las NEXT_PUBLIC_* se inline-an en el bundle JS durante "next build":
+      # tienen que llegar como build arg, no como `environment` de acá
+      # abajo (eso solo afecta al proceso en runtime, ya tarde para Next).
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001
     container_name: clubapp_web
     depends_on:
       - api
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
     ports:
       - "3000:3000"
 

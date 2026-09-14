@@ -6,6 +6,7 @@ function flagOn(name) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   allowedDevOrigins: ['*.localhost', 'localhost'],
   images: {
     unoptimized: true,

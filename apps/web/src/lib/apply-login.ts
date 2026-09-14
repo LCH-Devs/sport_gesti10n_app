@@ -34,6 +34,7 @@ export function persistLogin(
   if (isStaffRole(data.role) && data.admin) {
     const session: ClubSession = {
       access_token: data.access_token,
+      expires_in: data.expires_in,
       role: data.role,
       cuentas: data.cuentas,
       must_complete_onboarding: data.must_complete_onboarding,
@@ -53,8 +54,10 @@ export function persistLogin(
   }
   const session: SocioSession = {
     access_token: data.access_token,
+    expires_in: data.expires_in,
     role: data.role,
     cuentas: data.cuentas,
+    must_change_password: data.must_change_password,
     socio: data.socio,
     club: data.club,
   };
@@ -62,7 +65,10 @@ export function persistLogin(
   clearSession();
   clearPlatformSession();
   applyClubTheme(data.club);
-  return { kind: 'socio' as const, session, next: memberHome };
+  const next = data.must_change_password
+    ? paths?.changePassword || '/socio/cambiar-clave'
+    : memberHome;
+  return { kind: 'socio' as const, session, next };
 }
 
 export function enterAfterLogin(

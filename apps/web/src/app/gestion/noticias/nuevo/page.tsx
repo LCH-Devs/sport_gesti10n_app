@@ -39,7 +39,7 @@ export default function NuevaNoticiaPage() {
       });
       router.push('/noticias');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     }
   }
 
@@ -68,6 +68,7 @@ export default function NuevaNoticiaPage() {
           required
         />
         <FormField
+          type="url"
           label={t('admin.noticias.imagenUrl', 'Imagen (URL, opcional)')}
           value={form.imagen_url}
           onChange={(imagen_url) => setForm((f) => ({ ...f, imagen_url }))}
@@ -97,7 +98,7 @@ export default function NuevaNoticiaPage() {
         <div className="flex gap-2">
           <button
             type="submit"
-            className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
           >
             {t('admin.noticias.publicar')}
           </button>

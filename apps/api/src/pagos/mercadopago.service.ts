@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
+import { MercadoPagoConfig, Preference, Payment, PaymentRefund } from 'mercadopago';
 
 /**
  * Crea preferences de Checkout Pro.
@@ -69,6 +69,74 @@ export class MercadoPagoService {
     const client = new MercadoPagoConfig({ accessToken: token });
     const payment = new Payment(client);
     return payment.get({ id: paymentId });
+  }
+
+  /**
+   * Cobro directo con tarjeta (token generado por el SDK.js del navegador).
+   * Se usa para verificar que la tarjeta es real (cobro chico + reembolso
+   * inmediato), no para cobros de cuota (esos van por Preference/redirect).
+   * Si no hay MP_ACCESS_TOKEN, simula un pago aprobado (demo/local).
+   */
+  async crearPagoVerificacion(params: {
+    token: string;
+    paymentMethodId: string;
+    issuerId?: string;
+    installments?: number;
+    monto: number;
+    descripcion: string;
+    payerEmail: string;
+    identificationType?: string;
+    identificationNumber?: string;
+  }): Promise<{ id: string; status: string; statusDetail?: string }> {
+    const accessToken = this.getAccessToken();
+    if (!accessToken) {
+      this.logger.warn(
+        'MP_ACCESS_TOKEN no configurado: simulando pago de verificación de tarjeta',
+      );
+      return { id: `mock-payment-${Date.now()}`, status: 'approved', statusDetail: 'mock' };
+    }
+
+    const client = new MercadoPagoConfig({ accessToken });
+    const payment = new Payment(client);
+    const result = await payment.create({
+      body: {
+        transaction_amount: params.monto,
+        token: params.token,
+        description: params.descripcion,
+        installments: params.installments ?? 1,
+        payment_method_id: params.paymentMethodId,
+        issuer_id: params.issuerId ? Number(params.issuerId) : undefined,
+        payer: {
+          email: params.payerEmail,
+          identification:
+            params.identificationType && params.identificationNumber
+              ? {
+                  type: params.identificationType,
+                  number: params.identificationNumber,
+                }
+              : undefined,
+        },
+      },
+    });
+
+    return {
+      id: String(result.id ?? ''),
+      status: result.status || 'unknown',
+      statusDetail: result.status_detail,
+    };
+  }
+
+  /** Reembolso total de un pago. Si no hay MP_ACCESS_TOKEN, simula éxito. */
+  async reembolsarPago(paymentId: string): Promise<boolean> {
+    const accessToken = this.getAccessToken();
+    if (!accessToken || paymentId.startsWith('mock-payment-')) {
+      this.logger.warn('MP_ACCESS_TOKEN no configurado: simulando reembolso');
+      return true;
+    }
+    const client = new MercadoPagoConfig({ accessToken });
+    const refund = new PaymentRefund(client);
+    const result = await refund.create({ payment_id: paymentId });
+    return !!result?.id;
   }
 }
 

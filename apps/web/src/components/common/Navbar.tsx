@@ -10,7 +10,6 @@ import {
 import React from "react";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import {
   clearPlatformSession,
   clearSession,
@@ -19,11 +18,14 @@ import {
   getSession,
   getSocioSession,
   mediaUrl,
+  type CuentaOption,
 } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
+import ClubAccountSwitcher from "@/components/ClubAccountSwitcher";
 
 interface NavbarProps {
   onMenuClick?: () => void;
+  gradient?: boolean;
 }
 
 interface NotificationItem {
@@ -34,52 +36,21 @@ interface NotificationItem {
   read: boolean;
 }
 
-const MOCK_NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "1",
-    title: "Nueva reserva confirmada",
-    description: "Se confirmó una reserva de cancha para hoy a las 18:00.",
-    timeAgo: "hace 13 horas",
-    read: false,
-  },
-  {
-    id: "2",
-    title: "Pago recibido",
-    description: "Un socio abonó la cuota mensual correspondiente a este mes.",
-    timeAgo: "hace 16 horas",
-    read: false,
-  },
-  {
-    id: "3",
-    title: "Nueva actividad creada",
-    description: "Se agregó una nueva actividad al calendario del club.",
-    timeAgo: "hace 1 día",
-    read: false,
-  },
-  {
-    id: "4",
-    title: "Solicitud de socio pendiente",
-    description: "Hay una nueva solicitud de alta esperando aprobación.",
-    timeAgo: "hace 4 días",
-    read: true,
-  },
-];
-
-export function Navbar({ onMenuClick }: NavbarProps) {
+export function Navbar({ onMenuClick, gradient }: NavbarProps) {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [notifications, setNotifications] =
-    React.useState<NotificationItem[]>(MOCK_NOTIFICATIONS);
+    React.useState<NotificationItem[]>([]);
   const notificationsRef = React.useRef<HTMLDivElement>(null);
   const [clubName, setClubName] = React.useState("Kanri");
   const [clubLogoUrl, setClubLogoUrl] = React.useState<string | null>(null);
   const [userName, setUserName] = React.useState("User");
-  const [profileHref, setProfileHref] = React.useState(
-    "/gestion/config?tab=perfil",
-  );
-  const [preferencesHref, setPreferencesHref] = React.useState(
-    "/gestion/config?tab=preferencias",
-  );
+  const [configHref, setConfigHref] = React.useState("/gestion/config");
+  const [switcher, setSwitcher] = React.useState<{
+    token: string;
+    cuentas?: CuentaOption[];
+    currentMembresiaId?: number;
+  } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useTranslation();
@@ -97,16 +68,28 @@ export function Navbar({ onMenuClick }: NavbarProps) {
         setClubName("Kanri");
         setClubLogoUrl(null);
         setUserName(platformSession?.platform_admin.nombre || "SuperAdmin");
-        setProfileHref("/supercalifragilisticoespiralidoso/panel/perfil");
-        setPreferencesHref(
-          "/supercalifragilisticoespiralidoso/panel/preferencias",
-        );
+        setConfigHref("/supercalifragilisticoespiralidoso/panel/perfil");
+        setSwitcher(null);
       } else {
         setClubName(session?.club.nombre || "Kanri");
         setClubLogoUrl(session?.club.logo_url || null);
         setUserName(session?.admin.nombre || socioSession?.socio.nombre || "User");
-        setProfileHref("/gestion/config?tab=perfil");
-        setPreferencesHref("/gestion/config?tab=preferencias");
+        setConfigHref("/gestion/config");
+        if (session) {
+          setSwitcher({
+            token: session.access_token,
+            cuentas: session.cuentas,
+            currentMembresiaId: session.admin.id,
+          });
+        } else if (socioSession) {
+          setSwitcher({
+            token: socioSession.access_token,
+            cuentas: socioSession.cuentas,
+            currentMembresiaId: socioSession.socio.id,
+          });
+        } else {
+          setSwitcher(null);
+        }
       }
     }
 
@@ -151,17 +134,30 @@ export function Navbar({ onMenuClick }: NavbarProps) {
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-40">
+    <header
+      className={`fixed top-0 left-0 right-0 h-16 z-40 ${gradient ? '' : 'bg-white border-b border-slate-200'}`}
+      style={
+        gradient
+          ? {
+              backgroundImage: 'var(--club-bg-gradient-inverted)',
+              backgroundAttachment: 'fixed',
+              backgroundSize: '100vw 100vh',
+              backgroundPosition: '0 0',
+            }
+          : undefined
+      }
+    >
       <div className="flex items-center justify-between h-full pr-3">
         {/* Left Section: Menu Button + App Name */}
         <div className="flex items-center gap-4">
           <div className="w-16 flex-shrink-0 flex justify-center">
             <button
+              type="button"
               onClick={onMenuClick}
-              className="p-2 hover:bg-slate-100 rounded-md transition-colors"
+              className={`p-2 rounded-md transition-colors ${gradient ? 'hover:bg-white/20' : 'hover:bg-slate-100'}`}
               aria-label="Toggle sidebar"
             >
-              <Bars3Icon className="w-5 h-5 text-slate-700" />
+              <Bars3Icon className={`w-5 h-5 ${gradient ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]' : 'text-slate-700'}`} />
             </button>
           </div>
           <div className="hidden sm:flex items-center gap-2">
@@ -175,7 +171,7 @@ export function Navbar({ onMenuClick }: NavbarProps) {
             ) : (
               <span className="text-xl font-bold text-blue-600">⚡</span>
             )}
-            <h1 className="text-lg font-bold text-slate-900">{clubName}</h1>
+            <h1 className={`text-lg font-bold ${gradient ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]' : 'text-slate-900'}`}>{clubName}</h1>
           </div>
         </div>
 
@@ -193,22 +189,32 @@ export function Navbar({ onMenuClick }: NavbarProps) {
 
         {/* Right Section: Language, Notifications, User */}
         <div className="flex items-center gap-4">
-          {/* Language Switcher */}
-          <LanguageSwitcher />
+          {/* Cambiar de cuenta/club (solo si hay más de una) */}
+          {switcher && (switcher.cuentas?.length ?? 0) > 1 && (
+            <ClubAccountSwitcher
+              token={switcher.token}
+              cuentas={switcher.cuentas}
+              currentMembresiaId={switcher.currentMembresiaId}
+            />
+          )}
 
           {/* Search Icon (Mobile) */}
-          <button className="md:hidden p-2 hover:bg-slate-100 rounded-md transition-colors">
-            <MagnifyingGlassIcon className="w-5 h-5 text-slate-700" />
+            <button
+              type="button"
+              className={`md:hidden p-2 rounded-md transition-colors ${gradient ? 'hover:bg-white/20' : 'hover:bg-slate-100'}`}
+              aria-label={t("common.searchPlaceholder")}
+            >
+            <MagnifyingGlassIcon className={`w-5 h-5 ${gradient ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]' : 'text-slate-700'}`} />
           </button>
 
           {/* Notifications */}
           <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setShowNotifications((v) => !v)}
-              className="relative p-2 hover:bg-slate-100 rounded-md transition-colors"
+              className={`relative p-2 rounded-md transition-colors ${gradient ? 'hover:bg-white/20' : 'hover:bg-slate-100'}`}
               aria-label={t("notifications.title")}
             >
-              <BellIcon className="w-5 h-5 text-slate-700" />
+              <BellIcon className={`w-5 h-5 ${gradient ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]' : 'text-slate-700'}`} />
               {unreadCount > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               )}
@@ -274,31 +280,25 @@ export function Navbar({ onMenuClick }: NavbarProps) {
           <div className="relative">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
-              className="flex items-center gap-2 p-2 hover:bg-slate-100 rounded-md transition-colors"
+              className={`flex items-center gap-2 p-2 rounded-md transition-colors ${gradient ? 'hover:bg-white/20' : 'hover:bg-slate-100'}`}
             >
               <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
                 {userInitial}
               </div>
-              <span className="hidden sm:inline text-sm font-medium text-slate-700">
+              <span className={`hidden sm:inline text-sm font-medium ${gradient ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]' : 'text-slate-700'}`}>
                 {userName}
               </span>
-              <ChevronDownIcon className="w-4 h-4 text-slate-500" />
+              <ChevronDownIcon className={`w-4 h-4 ${gradient ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.55)]' : 'text-slate-500'}`} />
             </button>
 
             {/* User Dropdown Menu */}
             {showUserMenu && (
               <div className="absolute right-0 mt-1 w-48 bg-white border border-slate-200 rounded-md shadow-lg py-2 z-50">
                 <button
-                  onClick={() => goTo(profileHref)}
+                  onClick={() => goTo(configHref)}
                   className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
                 >
-                  {t("common.profileSettings")}
-                </button>
-                <button
-                  onClick={() => goTo(preferencesHref)}
-                  className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 transition-colors"
-                >
-                  {t("common.preferences")}
+                  {t("common.settings", "Configuración")}
                 </button>
                 <hr className="my-2" />
                 <button

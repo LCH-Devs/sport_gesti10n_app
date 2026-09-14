@@ -26,7 +26,7 @@ export default function LoginScreen() {
       <View style={styles.brandMark}><Text style={styles.brandMarkText}>C</Text></View>
       <Text style={styles.brand}>ClubConnect</Text>
       <Text style={styles.title}>Ingresá a tu club</Text>
-      <Text style={styles.subtitle}>Accedé a tu credencial, horarios y pagos.</Text>
+      <Text style={styles.subtitle}>Ingresá con tu cuenta de socio o de administración del club.</Text>
       <View style={styles.form}>
         <Text style={styles.label}>Email</Text>
         <TextInput value={email} onChangeText={setEmail} placeholder="tu@email.com" placeholderTextColor="#9aa4b2" autoCapitalize="none" keyboardType="email-address" style={styles.input} />

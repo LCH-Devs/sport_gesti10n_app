@@ -31,7 +31,7 @@ export default function NuevoHorarioPage() {
       });
       setProfes(socios.filter((s) => s.rol === 'profe'));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
   }, []);
 
@@ -58,7 +58,7 @@ export default function NuevoHorarioPage() {
       });
       router.push('/horarios');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al crear');
+      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     }
   }
 
@@ -80,18 +80,21 @@ export default function NuevoHorarioPage() {
           required
         />
         <FormField
+          colSpan
           label={t('admin.horarios.dias')}
           value={form.dias}
           onChange={(dias) => setForm((f) => ({ ...f, dias }))}
           required
         />
         <FormField
+          type="time"
           label={t('admin.horarios.horaInicio')}
           value={form.hora_inicio}
           onChange={(hora_inicio) => setForm((f) => ({ ...f, hora_inicio }))}
           required
         />
         <FormField
+          type="time"
           label={t('admin.horarios.horaFin')}
           value={form.hora_fin}
           onChange={(hora_fin) => setForm((f) => ({ ...f, hora_fin }))}
@@ -114,7 +117,7 @@ export default function NuevoHorarioPage() {
         <div className="sm:col-span-2 flex gap-2">
           <button
             type="submit"
-            className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
           >
             {t('admin.horarios.createHorario')}
           </button>

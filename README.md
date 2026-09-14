@@ -4,6 +4,18 @@ SaaS multi-tenant para clubes de barrio.
 **Este milestone:** API NestJS + panel web Next.js + PostgreSQL en Docker.  
 **Después:** app móvil Expo.
 
+**Plan de salida al mercado:** [Roadmap de lanzamiento](docs/ROADMAP_LANZAMIENTO.md) — diagnóstico del código, alcance propuesto, prioridades y criterios de aceptación (09/09/2026).
+
+**Plan del equipo frontend:** [Frontend de lanzamiento](docs/PLAN_FRONTEND_LANZAMIENTO.md) — tareas web por fase, dependencias de API y pruebas de aceptación.
+
+**Pendientes de backend:** [Contratos para frontend](docs/BACKEND_PENDIENTES_FRONTEND.md).
+
+**Lote frontend B01:** [Plan frontend habilitado por B01](docs/PLAN_FRONTEND_B01.md).
+
+**Frontend independiente:** [Trabajo sin dependencia de backend](docs/PLAN_FRONTEND_INDEPENDIENTE.md).
+
+**Tareas manuales:** [Checklist frontend antes del lanzamiento](docs/TAREAS_MANUALES_FRONTEND.md).
+
 ## Equipo
 
 | Quién | Rol |

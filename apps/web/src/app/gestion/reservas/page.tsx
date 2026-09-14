@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { EspaciosReservasTabs } from '../_components/EspaciosReservasTabs';
-import { FloatingActionButton } from '@/components/common';
+import { FloatingActionButton, StatusMessage } from '@/components/common';
 
 type Reserva = {
   id: number;
@@ -36,7 +36,7 @@ export default function ReservasPage() {
       });
       setItems(reservas);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -48,7 +48,7 @@ export default function ReservasPage() {
 
   async function onCancelar(id: number) {
     const session = requireSession();
-    if (!session || !confirm('¿Cancelar reserva?')) return;
+    if (!session || !confirm(t('admin.reservas.confirmCancelar'))) return;
     try {
       await apiFetch(`/reservas/${id}/cancelar`, {
         method: 'PATCH',
@@ -57,7 +57,7 @@ export default function ReservasPage() {
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cancelar');
+      setError(err instanceof Error ? err.message : t('messages.errorCancelling'));
     }
   }
 
@@ -76,7 +76,7 @@ export default function ReservasPage() {
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
         {loading ? (
-          <p className="p-4 text-slate-500">{t('common.loading')}</p>
+          <StatusMessage>{t('common.loading')}</StatusMessage>
         ) : (
           <table className="min-w-full text-left text-sm">
             <thead className="border-b bg-slate-50 text-slate-600">

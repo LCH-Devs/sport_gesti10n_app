@@ -47,7 +47,7 @@ export default function LiquidacionesPage() {
       setItems(liqs);
       setSocios(soc);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -75,7 +75,7 @@ export default function LiquidacionesPage() {
       setMsg('Mes cerrado / liquidación actualizada.');
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cerrar mes');
+      setError(err instanceof Error ? err.message : t('messages.errorSaving'));
     }
   }
 
@@ -143,7 +143,7 @@ export default function LiquidacionesPage() {
         </label>
         <button
           type="submit"
-          className="rounded-lg bg-[var(--club-primary)] px-4 py-2 font-semibold text-white"
+          className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
         >
           {t('admin.liquidaciones.cerrarMes')}
         </button>

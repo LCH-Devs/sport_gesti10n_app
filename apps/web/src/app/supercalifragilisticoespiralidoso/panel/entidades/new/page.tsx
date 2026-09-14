@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { notFound, useRouter, useSearchParams } from 'next/navigation';
 import { Header, Card, Button } from '@/components/common';
 import { apiFetch, getPlatformSession } from '@/lib/api';
@@ -21,7 +21,7 @@ type PlanPreview = {
   plan_hasta: number;
 };
 
-export default function NewClubPage() {
+function NewClubForm() {
   const router = useRouter();
   const params = useSearchParams();
   const solicitudId = params.get('solicitud_id');
@@ -224,5 +224,13 @@ export default function NewClubPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function NewClubPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Cargando formulario…</div>}>
+      <NewClubForm />
+    </Suspense>
   );
 }

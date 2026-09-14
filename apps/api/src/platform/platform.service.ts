@@ -17,7 +17,7 @@ import {
   UpdatePlatformAdminDto,
   UpdateSelfPlatformAdminDto,
 } from './dto/platform.dto';
-import { NOT_DELETED, adminEmailInUseWhere, clubNombreInUseWhere, CLUB_NOMBRE_TAKEN } from '../common/club-users';
+import { NOT_DELETED, adminEmailInUseWhere, clubNombreInUseWhere, CLUB_NOMBRE_TAKEN, usuarioPublicSelect } from '../common/club-users';
 import { normalizeDeportes } from '../common/club-deportes';
 import { ensureDefaultCategoriaCuota } from '../common/categorias-cuota';
 import {
@@ -97,19 +97,19 @@ export class PlatformService {
     await this.ensureClub(id);
     switch (resource) {
       case 'socios':
-        return this.prisma.membresia.findMany({ where: { club_id: id, rol: { in: ['socio', 'profe'] }, eliminado: false }, include: { usuario: true }, orderBy: { id: 'asc' } });
+        return this.prisma.membresia.findMany({ where: { club_id: id, rol: { in: ['socio', 'profe'] }, eliminado: false }, include: { usuario: { select: usuarioPublicSelect } }, orderBy: { id: 'asc' } });
       case 'usuarios':
         return this.prisma.membresia.findMany({ where: { club_id: id, rol: { in: ['admin', 'entrada'] }, eliminado: false }, include: { usuario: { select: { email: true, nombre: true } } }, orderBy: { id: 'asc' } });
       case 'familias':
-        return this.prisma.grupoFamiliar.findMany({ where: { club_id: id, eliminado: false }, include: { titular: { include: { usuario: true } }, socios: true }, orderBy: { id: 'asc' } });
+        return this.prisma.grupoFamiliar.findMany({ where: { club_id: id, eliminado: false }, include: { titular: { include: { usuario: { select: usuarioPublicSelect } } }, socios: { include: { usuario: { select: usuarioPublicSelect } } } }, orderBy: { id: 'asc' } });
       case 'actividades': return this.prisma.actividad.findMany({ where: { club_id: id, eliminado: false }, orderBy: { nombre: 'asc' } });
       case 'espacios': return this.prisma.espacio.findMany({ where: { club_id: id, eliminado: false }, orderBy: { nombre: 'asc' } });
       case 'horarios': return this.prisma.horario.findMany({ where: { club_id: id, eliminado: false }, orderBy: { id: 'asc' } });
-      case 'reservas': return this.prisma.reserva.findMany({ where: { club_id: id }, include: { espacio: true, socio: { include: { usuario: true } } }, orderBy: { inicio: 'desc' } });
+      case 'reservas': return this.prisma.reserva.findMany({ where: { club_id: id }, include: { espacio: true, socio: { include: { usuario: { select: usuarioPublicSelect } } } }, orderBy: { inicio: 'desc' } });
       case 'noticias': return this.prisma.noticia.findMany({ where: { club_id: id, eliminado: false }, orderBy: { fecha: 'desc' } });
       case 'torneos': return this.prisma.torneo.findMany({ where: { club_id: id }, include: { _count: { select: { partidos: true } } }, orderBy: { id: 'desc' } });
-      case 'liquidaciones': return this.prisma.liquidacionProfe.findMany({ where: { club_id: id }, include: { profe: { include: { usuario: true } } }, orderBy: { mes: 'desc' } });
-      case 'cobros': return this.prisma.pago.findMany({ where: { club_id: id }, include: { socio: { include: { usuario: true } } }, orderBy: { mes: 'desc' } });
+      case 'liquidaciones': return this.prisma.liquidacionProfe.findMany({ where: { club_id: id }, include: { profe: { include: { usuario: { select: usuarioPublicSelect } } } }, orderBy: { mes: 'desc' } });
+      case 'cobros': return this.prisma.pago.findMany({ where: { club_id: id }, include: { socio: { include: { usuario: { select: usuarioPublicSelect } } } }, orderBy: { mes: 'desc' } });
       default: throw new NotFoundException('Recurso de lectura no encontrado');
     }
   }
@@ -164,6 +164,7 @@ export class PlatformService {
             where: { id: existingUser.id },
             data: {
               password_hash,
+              password_changed_at: new Date(),
               nombre: adminNombre,
             },
           })
@@ -358,7 +359,11 @@ export class PlatformService {
     const password_hash = await bcrypt.hash(dto.password, 10);
     const usuario = await this.prisma.usuario.upsert({
       where: { email },
-      update: { nombre: dto.nombre.trim(), password_hash },
+      update: {
+        nombre: dto.nombre.trim(),
+        password_hash,
+        password_changed_at: new Date(),
+      },
       create: {
         email,
         nombre: dto.nombre.trim(),
@@ -540,7 +545,7 @@ export class PlatformService {
     await this.prisma.$transaction([
       this.prisma.usuario.update({
         where: { id: admin.usuario.id },
-        data: { password_hash },
+        data: { password_hash, password_changed_at: new Date() },
       }),
       this.prisma.membresia.update({
         where: { id: admin.id },

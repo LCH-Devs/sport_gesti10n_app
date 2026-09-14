@@ -3,7 +3,26 @@ import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
+/**
+ * Crea/actualiza cuentas de demo con contraseñas fijas y públicas en este
+ * archivo (admin123/socio123/platform123 — esta última es el superadmin
+ * de TODA la plataforma). Nunca debe correr contra una base de producción
+ * real. `ALLOW_SEED_IN_PRODUCTION=true` es el escape manual explícito si
+ * alguna vez hace falta sembrar un entorno productivo de demo separado.
+ */
+function assertNoEsProduccion() {
+  const esProduccion = process.env.NODE_ENV === 'production';
+  const permitidoExplicitamente = process.env.ALLOW_SEED_IN_PRODUCTION === 'true';
+  if (esProduccion && !permitidoExplicitamente) {
+    throw new Error(
+      'Seed bloqueado: NODE_ENV=production. Si de verdad querés sembrar este entorno, ' +
+        'volvé a correrlo con ALLOW_SEED_IN_PRODUCTION=true explícito.',
+    );
+  }
+}
+
 async function main() {
+  assertNoEsProduccion();
   const passwordHash = await bcrypt.hash('admin123', 10);
   const socioPass = await bcrypt.hash('socio123', 10);
   const platformPass = await bcrypt.hash('platform123', 10);

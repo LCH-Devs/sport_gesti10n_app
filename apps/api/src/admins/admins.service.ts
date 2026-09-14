@@ -6,7 +6,14 @@ import {
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateAdminDto, UpdateAdminDto, UpdateSelfDto } from './dto/admin.dto';
-import { flattenAdmin, isStaffRole, NOT_DELETED, STAFF_ROLES, adminEmailInUseWhere } from '../common/club-users';
+import {
+  flattenAdmin,
+  hasActiveMembershipElsewhere,
+  isStaffRole,
+  NOT_DELETED,
+  STAFF_ROLES,
+  adminEmailInUseWhere,
+} from '../common/club-users';
 
 @Injectable()
 export class AdminsService {
@@ -39,7 +46,10 @@ export class AdminsService {
         throw new BadRequestException('Ese usuario ya está en este club');
       }
       if (inClub?.eliminado) {
-        if (existing && dto.nombre.trim()) {
+        const crossClub =
+          existing &&
+          (await hasActiveMembershipElsewhere(this.prisma, existing.id, clubId));
+        if (existing && dto.nombre.trim() && !crossClub) {
           await this.prisma.usuario.update({
             where: { id: existing.id },
             data: { nombre: dto.nombre.trim() },
@@ -58,6 +68,10 @@ export class AdminsService {
       ? existing.password_hash
       : await bcrypt.hash(dto.password, 10);
 
+    const existingCrossClub = existing
+      ? await hasActiveMembershipElsewhere(this.prisma, existing.id, clubId)
+      : false;
+
     const created = await this.prisma.$transaction(async (tx) => {
       const usuario = existing
         ? existing
@@ -68,7 +82,7 @@ export class AdminsService {
               nombre: dto.nombre.trim(),
             },
           });
-      if (existing && dto.nombre.trim()) {
+      if (existing && dto.nombre.trim() && !existingCrossClub) {
         await tx.usuario.update({
           where: { id: existing.id },
           data: { nombre: dto.nombre.trim() },
@@ -94,14 +108,37 @@ export class AdminsService {
       throw new BadRequestException('Rol inválido');
     }
 
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id: membresia.usuario_id },
+    });
+    if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+    const nombreChanged =
+      dto.nombre !== undefined && dto.nombre.trim() !== usuario.nombre;
+    if (nombreChanged || dto.password) {
+      const crossClub = await hasActiveMembershipElsewhere(
+        this.prisma,
+        usuario.id,
+        clubId,
+      );
+      if (crossClub) {
+        throw new BadRequestException(
+          'Esta persona también es socio/admin activo en otro club: no se puede cambiar su nombre ni su contraseña compartida desde acá.',
+        );
+      }
+    }
+
     const updated = await this.prisma.$transaction(async (tx) => {
-      if (dto.nombre !== undefined || dto.password) {
+      if (nombreChanged || dto.password) {
         await tx.usuario.update({
           where: { id: membresia.usuario_id },
           data: {
-            ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
+            ...(nombreChanged && { nombre: dto.nombre!.trim() }),
             ...(dto.password
-              ? { password_hash: await bcrypt.hash(dto.password, 10) }
+              ? {
+                  password_hash: await bcrypt.hash(dto.password, 10),
+                  password_changed_at: new Date(),
+                }
               : {}),
           },
         });
@@ -153,7 +190,7 @@ export class AdminsService {
         where: { id: usuario.id },
         data: {
           ...(dto.nombre !== undefined && { nombre: dto.nombre.trim() }),
-          ...(password_hash && { password_hash }),
+          ...(password_hash && { password_hash, password_changed_at: new Date() }),
         },
       });
       if (password_hash) {

@@ -29,6 +29,24 @@ export class EspaciosService {
     });
   }
 
+  /** Portal socio: solo espacios activos, para elegir dónde reservar. */
+  listActivos(clubId: number) {
+    return this.prisma.espacio.findMany({
+      where: { club_id: clubId, activo: true, ...NOT_DELETED },
+      select: {
+        id: true,
+        nombre: true,
+        tipo: true,
+        descripcion: true,
+        duracion_slot_min: true,
+        precio_opcional: true,
+        hora_apertura: true,
+        hora_cierre: true,
+      },
+      orderBy: { nombre: 'asc' },
+    });
+  }
+
   async create(clubId: number, dto: CreateEspacioDto) {
     return this.prisma.espacio.create({
       data: {

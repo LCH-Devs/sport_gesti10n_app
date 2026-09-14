@@ -55,7 +55,7 @@ function FamiliasPageInner() {
       setItems(familias);
       setCuotaMes(new Map(estado.items.map((i) => [i.socio_id, i])));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
@@ -86,7 +86,7 @@ function FamiliasPageInner() {
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al borrar');
+      setError(err instanceof Error ? err.message : t('messages.errorDeleting'));
     }
   }
 
@@ -212,8 +212,9 @@ function FamiliasPageInner() {
 }
 
 export default function FamiliasPage() {
+  const { t } = useTranslation();
   return (
-    <Suspense fallback={<p className="text-sm text-slate-500">Cargando…</p>}>
+    <Suspense fallback={<p className="text-sm text-slate-500">{t('common.loading')}</p>}>
       <FamiliasPageInner />
     </Suspense>
   );

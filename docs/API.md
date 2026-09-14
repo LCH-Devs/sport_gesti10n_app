@@ -31,6 +31,10 @@ Body con campos que el DTO no declara → **400**. Login público (`/auth/login`
   Acepta la pass del admin **o**, fuera de production, `PLATFORM_MASTER_PASSWORD` (solo staff)
 - `POST /auth/switch` — Bearer, `{ membresia_id }` (emite JWT nuevo, otras 8 h). Sin rate limit de login.
 - `POST /auth/platform/login` — `{ email, password }` (superadmin ClubApp). También `expires_in` y 429.
+- `POST /auth/forgot-password` — `{ email }`. Respuesta genérica siempre; si existe, envía enlace temporal de 60 minutos.
+- `POST /auth/reset-password` — `{ token, password }`. Token de un solo uso; contraseña mínima de 8 caracteres.
+- Cambiar la contraseña (reset, `PATCH /admins/me`, `PATCH /socio/me` o un admin reseteándole la clave a otro) actualiza `Usuario.password_changed_at`; cualquier JWT con `iat` anterior a esa fecha deja de ser válido (401) aunque no haya expirado — ver `session-viva.ts`.
+- `must_change_password` en la respuesta de login aplica también a socio/profe, no solo a staff: un alta de socio sin `password` propia queda con la clave predecible `socio<DNI>` y `must_change_password: true` hasta que cambie la clave.
 - `GET /clubs/buscar?q=`
 - `GET /clubs/slug/:slug` — branding público para login white-label
 - `GET /clubs/me` — Bearer (incluye config + onboarding, `deportes`, `descuento_familiar_pct`)
@@ -82,6 +86,8 @@ JWT con `role: platform` (sin `club_id`).
 - Alta de socio/familia (solo personas nuevas): `inscripcion?` + `inscripcion_monto?` + `inscripcion_cuotas?` (1–12) y `bonificar_meses?` (`YYYY-MM[]`). Sin tilde / sin monto = sin deuda de inscripción. Los meses bonificados no generan cuota al cobrar.
 - `POST /socios/import-csv` — `{ csv }` o multipart `file` (CSV / Excel `.xlsx` / `.xls`). Si el lote cruza el tope, 409 y no procesa nada. Reenviar con `acepta_upgrade=true`.
 - `GET /socios/import-template` — plantilla Excel (solo admin)
+- `GET /socios/export-csv` — CSV de todos los socios del club (staff), mismas columnas que la plantilla de import + `estado`; reimportable tal cual
+- `GET|PATCH /socio/me` (JWT de socio/profe) — devuelve `{ socio, club, pagos, noticias, actividades }` (objeto anidado, no aplanado); `pagos` son las últimas 12 cuotas propias
 - `GET /clubs/me/plan` — uso vs tope + pendiente
 - `POST /clubs/me/plan/confirmar` — el admin del club confirma el upgrade (aplica el 1° del mes siguiente)
 - `GET /public/plan/confirmar?token=` — mismo efecto, desde el mail (sin JWT)
@@ -109,11 +115,17 @@ JWT con `role: platform` (sin `club_id`).
 
 ## Espacios / Reservas
 
-- `GET|POST /espacios` · `PATCH|DELETE /espacios/:id`
-- `GET /espacios/:id/disponibilidad?fecha=YYYY-MM-DD`
-- `GET /reservas?desde=&hasta=&espacio_id=`
-- `POST /reservas` — valida solape, moroso, max activas
-- `PATCH /reservas/:id/cancelar`
+- `GET|POST /espacios` · `PATCH|DELETE /espacios/:id` (staff)
+- `GET /espacios/:id/disponibilidad?fecha=YYYY-MM-DD` (staff)
+- `GET /reservas?desde=&hasta=&espacio_id=` (staff)
+- `POST /reservas` — valida solape, moroso, max activas; solape verificado con transacción Serializable + `EXCLUDE` constraint en DB (no hay doble reserva por carrera) (staff, `socio_id` en el body)
+- `PATCH /reservas/:id/cancelar` (staff, cualquier socio del club)
+- Portal socio (JWT de socio/profe, sin `socio_id` en el body — siempre es el propio):
+  - `GET /socio/espacios` — solo espacios activos
+  - `GET /socio/espacios/:id/disponibilidad?fecha=YYYY-MM-DD`
+  - `GET /socio/reservas` — solo las propias
+  - `POST /socio/reservas` — crea a nombre del socio autenticado
+  - `PATCH /socio/reservas/:id/cancelar` — solo si la reserva es propia (404 si no)
 
 ## Horarios / Noticias
 

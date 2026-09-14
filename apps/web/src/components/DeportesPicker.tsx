@@ -26,13 +26,17 @@ export function DeportesPicker({
   const [draft, setDraft] = useState('');
 
   function addDraft() {
-    const name = draft.trim();
-    if (!name) return;
-    const catalogo = matchCatalogoDeporte(name);
-    if (catalogo) {
-      if (!seleccionados.includes(catalogo)) onToggle(catalogo);
-    } else {
-      onAddExtra(name);
+    const names = draft
+      .split(',')
+      .map((n) => n.trim())
+      .filter(Boolean);
+    for (const name of names) {
+      const catalogo = matchCatalogoDeporte(name);
+      if (catalogo) {
+        if (!seleccionados.includes(catalogo)) onToggle(catalogo);
+      } else {
+        onAddExtra(name);
+      }
     }
     setDraft('');
   }
@@ -66,7 +70,7 @@ export function DeportesPicker({
                 addDraft();
               }
             }}
-            placeholder="Ej: Pilates"
+            placeholder="Ej: Pilates, Crossfit"
           />
           <button
             type="button"

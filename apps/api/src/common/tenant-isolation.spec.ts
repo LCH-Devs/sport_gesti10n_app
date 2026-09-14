@@ -49,6 +49,8 @@ describe('Aislamiento multi-tenant (Club A vs Club B)', () => {
                 rol: where.id === 9 ? 'socio' : 'admin',
                 estado: 'activo',
                 club_id: where.club?.id ?? 1,
+                // Anterior al `iat` de cualquier token que firme este test.
+                usuario: { password_changed_at: new Date(0) },
               })),
             },
             platformAdmin: {

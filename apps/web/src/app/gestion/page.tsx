@@ -3,6 +3,7 @@
 import { apiFetch, requireSession } from '@/lib/api';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+import { interpolate, useTranslation } from '@/lib/useTranslation';
 
 type PlanUso = {
   socios_activos: number;
@@ -56,6 +57,7 @@ type HoyData = {
 };
 
 export default function AdminHomePage() {
+  const { t } = useTranslation();
   const [data, setData] = useState<HoyData | null>(null);
   const [plan, setPlan] = useState<PlanUso | null>(null);
   const [error, setError] = useState('');
@@ -80,11 +82,11 @@ export default function AdminHomePage() {
       setData(res);
       setPlan(planUso);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -92,10 +94,8 @@ export default function AdminHomePage() {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-slate-900">Hoy en el club</h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Resumen del día: cobranza, reservas, horarios y alertas.
-      </p>
+      <h2 className="text-2xl font-bold text-slate-900">{t('hoy.title')}</h2>
+      <p className="mt-1 text-sm text-slate-600">{t('hoy.subtitle')}</p>
 
       {plan && (
         <div
@@ -108,22 +108,24 @@ export default function AdminHomePage() {
           }`}
         >
           <p className="text-sm font-semibold text-slate-900">
-            Plan: {plan.plan} · USD {plan.precio_usd_mes}/mes
+            {t('hoy.plan')}: {plan.plan} · USD {plan.precio_usd_mes}
+            {t('hoy.perMonth')}
           </p>
           <p className="mt-1 text-sm text-slate-700">
-            {plan.socios_activos} / {plan.plan_hasta} socios
+            {plan.socios_activos} / {plan.plan_hasta} {t('hoy.sociosWord')}
           </p>
           {plan.siguiente && plan.siguiente.faltan > 0 && (
             <p className="mt-1 text-xs text-slate-600">
-              Si agregás {plan.siguiente.faltan} más, el próximo ciclo sería{' '}
-              {plan.siguiente.nombre} (USD {plan.siguiente.precio_usd}/mes).
+              {interpolate(t('hoy.upgradeNota'), {
+                faltan: plan.siguiente.faltan,
+                nombre: plan.siguiente.nombre,
+                precio: plan.siguiente.precio_usd,
+              })}
             </p>
           )}
           {plan.pendiente && !plan.pendiente.confirmado && (
             <div className="mt-3">
-              <p className="text-xs text-red-700">
-                Upgrade pendiente: todavía no confirmaron el nuevo precio.
-              </p>
+              <p className="text-xs text-red-700">{t('hoy.upgradePendiente')}</p>
               <button
                 type="button"
                 className="mt-2 rounded-lg bg-red-700 px-3 py-1.5 text-xs font-semibold text-white"
@@ -137,38 +139,42 @@ export default function AdminHomePage() {
                   }).then((uso) => setPlan(uso as PlanUso));
                 }}
               >
-                Confirmar upgrade
+                {t('hoy.confirmarUpgrade')}
               </button>
             </div>
           )}
           {plan.pendiente?.confirmado && (
             <p className="mt-1 text-xs text-slate-600">
-              Confirmado. Aplica desde {plan.pendiente.aplica_desde?.slice(0, 10)}.
+              {interpolate(t('hoy.upgradeConfirmado'), {
+                fecha: plan.pendiente.aplica_desde?.slice(0, 10) || '',
+              })}
             </p>
           )}
         </div>
       )}
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-      {loading && <p className="mt-4 text-slate-500">Cargando…</p>}
+      {loading && <p className="mt-4 text-slate-500">{t('common.loading')}</p>}
 
       {data && (
         <>
           <div className="mt-6 grid gap-3 sm:grid-cols-4">
             <div className="rounded-xl border bg-white p-4">
-              <p className="text-xs text-slate-500">Cobranza {data.mes}</p>
+              <p className="text-xs text-slate-500">
+                {interpolate(t('hoy.cobranzaMes'), { mes: data.mes })}
+              </p>
               <p className="text-2xl font-bold">
                 {data.cobranza.pct_cobrado}%
               </p>
             </div>
             <div className="rounded-xl border bg-white p-4">
-              <p className="text-xs text-slate-500">Pagados</p>
+              <p className="text-xs text-slate-500">{t('hoy.pagados')}</p>
               <p className="text-2xl font-bold text-green-700">
                 {data.cobranza.pagados}
               </p>
             </div>
             <div className="rounded-xl border bg-white p-4">
-              <p className="text-xs text-slate-500">Pendientes</p>
+              <p className="text-xs text-slate-500">{t('hoy.pendientes')}</p>
               <p className="text-2xl font-bold text-amber-700">
                 {data.cobranza.pendientes}
               </p>
@@ -177,28 +183,28 @@ export default function AdminHomePage() {
               href="/gestion/fuga"
               className="rounded-xl border bg-white p-4 hover:bg-slate-50"
             >
-              <p className="text-xs text-slate-500">Alertas fuga</p>
+              <p className="text-xs text-slate-500">{t('hoy.alertasFuga')}</p>
               <p className="text-2xl font-bold text-red-700">
                 {data.alertas_fuga_count}
               </p>
-              <p className="mt-1 text-xs text-blue-600">Ver alerta de fuga →</p>
+              <p className="mt-1 text-xs text-blue-600">{t('hoy.verAlertaFuga')}</p>
             </Link>
           </div>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             <div className="overflow-x-auto rounded-xl border bg-white">
               <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-                Deudores
+                {t('hoy.deudores')}
               </h3>
               {data.deudores.length === 0 ? (
-                <p className="p-4 text-sm text-slate-500">Sin deudores.</p>
+                <p className="p-4 text-sm text-slate-500">{t('hoy.sinDeudores')}</p>
               ) : (
                 <table className="min-w-full text-left text-sm">
                   <thead className="border-b text-slate-600">
                     <tr>
-                      <th className="px-4 py-2">Socio</th>
-                      <th className="px-4 py-2">DNI</th>
-                      <th className="px-4 py-2">Monto</th>
+                      <th className="px-4 py-2">{t('hoy.socio')}</th>
+                      <th className="px-4 py-2">{t('hoy.dni')}</th>
+                      <th className="px-4 py-2">{t('hoy.monto')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -218,17 +224,17 @@ export default function AdminHomePage() {
 
             <div className="overflow-x-auto rounded-xl border bg-white">
               <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-                Reservas hoy
+                {t('hoy.reservasHoy')}
               </h3>
               {data.reservas_hoy.length === 0 ? (
-                <p className="p-4 text-sm text-slate-500">Sin reservas hoy.</p>
+                <p className="p-4 text-sm text-slate-500">{t('hoy.sinReservasHoy')}</p>
               ) : (
                 <table className="min-w-full text-left text-sm">
                   <thead className="border-b text-slate-600">
                     <tr>
-                      <th className="px-4 py-2">Espacio</th>
-                      <th className="px-4 py-2">Socio</th>
-                      <th className="px-4 py-2">Horario</th>
+                      <th className="px-4 py-2">{t('hoy.espacio')}</th>
+                      <th className="px-4 py-2">{t('hoy.socio')}</th>
+                      <th className="px-4 py-2">{t('hoy.horario')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -259,17 +265,17 @@ export default function AdminHomePage() {
 
           <div className="mt-6 overflow-x-auto rounded-xl border bg-white">
             <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-              Horarios hoy
+              {t('hoy.horariosHoy')}
             </h3>
             {data.horarios_hoy.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500">Sin horarios hoy.</p>
+              <p className="p-4 text-sm text-slate-500">{t('hoy.sinHorariosHoy')}</p>
             ) : (
               <table className="min-w-full text-left text-sm">
                 <thead className="border-b text-slate-600">
                   <tr>
-                    <th className="px-4 py-2">Título</th>
-                    <th className="px-4 py-2">Días</th>
-                    <th className="px-4 py-2">Horario</th>
+                    <th className="px-4 py-2">{t('hoy.titulo')}</th>
+                    <th className="px-4 py-2">{t('hoy.dias')}</th>
+                    <th className="px-4 py-2">{t('hoy.horario')}</th>
                   </tr>
                 </thead>
                 <tbody>

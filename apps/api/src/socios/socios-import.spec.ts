@@ -2,6 +2,7 @@ import { BadRequestException } from '@nestjs/common';
 import * as XLSX from 'xlsx';
 import {
   IMPORT_MAX_ROWS,
+  buildSocioExportCsv,
   buildSocioImportTemplate,
   parseCsvLine,
   parseSocioImportSource,
@@ -217,5 +218,79 @@ describe('parseSocioImport', () => {
     const result = parseSocioImportSource({ csvText: csv });
     expect(result.errors).toEqual([]);
     expect(result.rows[0].categoria).toBe('');
+  });
+});
+
+describe('buildSocioExportCsv', () => {
+  it('genera un CSV con BOM y cabecera esperada', () => {
+    const csv = buildSocioExportCsv([
+      {
+        dni: '30111222',
+        nombre: 'Carlos',
+        apellido: 'Gomez',
+        email: 'carlos@mail.com',
+        fecha_nacimiento: '1990-08-14T00:00:00.000Z',
+        rol: 'socio',
+        telefono: '1155550000',
+        categoria: 'Socio pleno',
+        estado: 'activo',
+      },
+    ]);
+
+    expect(csv.charCodeAt(0)).toBe(0xfeff);
+    const withoutBom = csv.slice(1);
+    const lines = withoutBom.trim().split('\r\n');
+    expect(lines[0]).toBe(
+      'dni,nombre,apellido,email,fecha_nacimiento,rol,telefono,categoria,estado',
+    );
+    expect(lines[1]).toBe(
+      '30111222,Carlos,Gomez,carlos@mail.com,1990-08-14,socio,1155550000,Socio pleno,activo',
+    );
+  });
+
+  it('escapa comas y comillas en los campos', () => {
+    const csv = buildSocioExportCsv([
+      {
+        dni: '30111222',
+        nombre: 'Carlos',
+        apellido: 'Perez, "el rengo"',
+        email: 'carlos@mail.com',
+        fecha_nacimiento: null,
+        rol: 'socio',
+        telefono: '',
+        categoria: '',
+        estado: 'activo',
+      },
+    ]);
+    const line = csv.slice(1).trim().split('\r\n')[1];
+    expect(line).toContain('"Perez, ""el rengo"""');
+  });
+
+  it('lo que exporta se puede volver a importar sin errores (round-trip)', () => {
+    const csv = buildSocioExportCsv([
+      {
+        dni: '30111222',
+        nombre: 'Carlos',
+        apellido: 'Gomez',
+        email: 'carlos@mail.com',
+        fecha_nacimiento: '1990-08-14T00:00:00.000Z',
+        rol: 'socio',
+        telefono: '1155550000',
+        categoria: 'Socio pleno',
+        estado: 'activo',
+      },
+    ]);
+    const result = parseSocioImportSource({ csvText: csv });
+    expect(result.errors).toEqual([]);
+    expect(result.rows[0]).toMatchObject({
+      dni: '30111222',
+      nombre: 'Carlos',
+      apellido: 'Gomez',
+      email: 'carlos@mail.com',
+      fecha_nacimiento: '1990-08-14',
+      rol: 'socio',
+      telefono: '1155550000',
+      categoria: 'Socio pleno',
+    });
   });
 });

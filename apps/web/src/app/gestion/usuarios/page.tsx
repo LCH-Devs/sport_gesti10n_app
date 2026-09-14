@@ -30,7 +30,7 @@ export default function UsuariosPage() {
       setAdmins(data);
       setError('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al cargar');
+      setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
   }, []);
 
@@ -40,7 +40,7 @@ export default function UsuariosPage() {
 
   async function onDelete(id: number) {
     const session = requireSession();
-    if (!session || !confirm('¿Eliminar usuario?')) return;
+    if (!session || !confirm(t('admin.usuarios.confirmDelete'))) return;
     try {
       await apiFetch(`/admins/${id}`, {
         method: 'DELETE',
@@ -49,7 +49,7 @@ export default function UsuariosPage() {
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al eliminar');
+      setError(err instanceof Error ? err.message : t('messages.errorDeleting'));
     }
   }
 
