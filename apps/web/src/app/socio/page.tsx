@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiFetch, clearSocioSession, getSocioSession, requireSocioSession, type SocioSession } from '@/lib/api';
 import { interpolate, useTranslation } from '@/lib/useTranslation';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
+import { PortalRoleTabs } from '@/components/PortalRoleTabs';
 
 type Profile = SocioSession['socio'] & { telefono?: string; fecha_nacimiento?: string | null };
 
@@ -31,6 +33,12 @@ type Espacio = {
   hora_apertura: string;
   hora_cierre: string;
 };
+
+function todayYmd(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
 
 type Reserva = {
   id: number;
@@ -65,15 +73,9 @@ function formatMes(mes: string) {
   return d.toLocaleDateString('es-AR', { year: 'numeric', month: 'long' });
 }
 
-function formatFechaHora(iso: string) {
-  return new Date(iso).toLocaleString('es-AR', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  });
-}
-
 export default function SocioPage() {
   const { t } = useTranslation();
+  const { formatDateTime, formatTime } = useDateTimeFormat();
   const [session, setSession] = useState<SocioSession | null>(null);
   const [portal, setPortal] = useState<PortalMe | null>(null);
   const [error, setError] = useState('');
@@ -126,6 +128,10 @@ export default function SocioPage() {
     }
     if (current.must_change_password) {
       router.replace('/socio/cambiar-clave');
+      return;
+    }
+    if (!current.es_socio) {
+      router.replace('/profe');
       return;
     }
     setSession(current);
@@ -226,6 +232,8 @@ export default function SocioPage() {
         </button>
       </header>
 
+      <PortalRoleTabs session={session} />
+
       <div className="rounded-2xl border bg-white p-6 shadow-sm">
         <p className="text-sm text-slate-500">{session.club.nombre}</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-900">{t('socioPortal.miCuenta')}</h1>
@@ -252,7 +260,7 @@ export default function SocioPage() {
                   <p className="font-medium capitalize">{formatMes(p.mes)}</p>
                   <p className="text-xs text-slate-500">
                     {p.concepto || (p.tipo === 'inscripcion' ? t('socioPortal.inscripcion') : t('socioPortal.cuota'))}
-                    {p.fecha_pago ? ` · ${t('socioPortal.pagadaEl')} ${formatFechaHora(p.fecha_pago)}` : ''}
+                    {p.fecha_pago ? ` · ${t('socioPortal.pagadaEl')} ${formatDateTime(p.fecha_pago)}` : ''}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -303,7 +311,7 @@ export default function SocioPage() {
                   type="date"
                   className="mt-1 block rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
                   value={fecha}
-                  min={new Date().toISOString().slice(0, 10)}
+                  min={todayYmd()}
                   onChange={(e) => {
                     setFecha(e.target.value);
                     setSlots([]);
@@ -330,10 +338,7 @@ export default function SocioPage() {
                     onClick={() => void onReservar(s)}
                     className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
                   >
-                    {new Date(s.inicio).toLocaleTimeString('es-AR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatTime(s.inicio)}
                   </button>
                 ))}
               </div>
@@ -358,7 +363,7 @@ export default function SocioPage() {
                   <li key={r.id} className="flex items-center justify-between py-2 text-sm">
                     <div>
                       <p className="font-medium">{r.espacio.nombre}</p>
-                      <p className="text-xs text-slate-500">{formatFechaHora(r.inicio)}</p>
+                      <p className="text-xs text-slate-500">{formatDateTime(r.inicio)}</p>
                     </div>
                     <button
                       type="button"
@@ -379,7 +384,7 @@ export default function SocioPage() {
                 <ul className="mt-2 divide-y">
                   {reservasPasadas.map((r) => (
                     <li key={r.id} className="flex items-center justify-between py-2 text-sm text-slate-500">
-                      <span>{r.espacio.nombre} · {formatFechaHora(r.inicio)}</span>
+                      <span>{r.espacio.nombre} · {formatDateTime(r.inicio)}</span>
                       <span className="text-xs capitalize">{r.estado}</span>
                     </li>
                   ))}

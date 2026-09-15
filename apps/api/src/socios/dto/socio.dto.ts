@@ -41,6 +41,11 @@ export class CreateSocioDto extends AltaCobrosFields {
   @IsIn(['socio', 'profe'])
   rol!: string;
 
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  es_socio?: boolean;
+
   @IsDateString()
   fecha_nacimiento!: string;
 
@@ -99,6 +104,11 @@ export class UpdateSocioDto {
   @IsOptional()
   @IsIn(['socio', 'profe'])
   rol?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  es_socio?: boolean;
 
   @IsOptional()
   @IsDateString()

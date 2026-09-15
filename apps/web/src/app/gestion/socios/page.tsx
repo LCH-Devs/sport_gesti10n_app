@@ -8,6 +8,7 @@ import { useTranslation } from '@/lib/useTranslation';
 import { DataTable, type Column, FloatingActionButton } from '@/components/common';
 import { SociosFamiliasTabs } from '../_components/SociosFamiliasTabs';
 import { CuotaMesCell, type EstadoMesItem } from '../_components/CuotaMesCell';
+import { FichaModal, type FichaTarget } from '../_components/FichaModal';
 import { UserGroupIcon, UserIcon } from '@heroicons/react/24/outline';
 
 type Socio = {
@@ -19,6 +20,7 @@ type Socio = {
   telefono: string;
   estado: string;
   rol: string;
+  es_socio: boolean;
   grupo_familiar_id?: number | null;
   categoria?: { nombre: string; monto: number } | null;
 };
@@ -54,6 +56,7 @@ export default function SociosPage() {
   const [loading, setLoading] = useState(true);
   const [upgrade, setUpgrade] = useState<PlanUpgradeBody | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [ficha, setFicha] = useState<FichaTarget | null>(null);
 
   const load = useCallback(async () => {
     const session = requireSession();
@@ -190,7 +193,7 @@ export default function SociosPage() {
         s.grupo_familiar_id ? (
           <button
             type="button"
-            onClick={() => router.push(`/familias?id=${s.grupo_familiar_id}`)}
+            onClick={() => setFicha({ kind: 'familia', familiaId: s.grupo_familiar_id! })}
             className="rounded p-1 text-slate-600 hover:bg-slate-100 hover:text-blue-600"
             aria-label={t('admin.socios.verFamilia', 'Ver grupo familiar')}
             title={
@@ -200,13 +203,21 @@ export default function SociosPage() {
             <UserGroupIcon className="h-5 w-5" />
           </button>
         ) : (
-          <span
-            className="inline-flex rounded p-1 text-slate-400"
-            title={t('admin.socios.sinFamilia', 'Sin familia')}
-            aria-label={t('admin.socios.sinFamilia', 'Sin familia')}
+          <button
+            type="button"
+            onClick={() =>
+              setFicha({
+                kind: 'socio',
+                socio: s,
+                familiaNombre: s.familia_nombre || undefined,
+              })
+            }
+            className="rounded p-1 text-slate-500 hover:bg-slate-100 hover:text-blue-600"
+            title={t('admin.socios.verFicha', 'Ver ficha')}
+            aria-label={t('admin.socios.verFicha', 'Ver ficha')}
           >
             <UserIcon className="h-5 w-5" />
-          </span>
+          </button>
         ),
     },
     { key: 'dni', header: t('admin.socios.dni'), sortable: true },
@@ -234,24 +245,32 @@ export default function SociosPage() {
       key: 'categoria',
       header: t('admin.socios.categoria', 'Categoría'),
       sortable: true,
-      accessor: (s) => s.categoria?.nombre || 'Socio pleno',
-      render: (s) => s.categoria?.nombre || 'Socio pleno',
+      accessor: (s) =>
+        s.es_socio ? s.categoria?.nombre || 'Socio pleno' : 'No socio',
+      render: (s) =>
+        s.es_socio ? s.categoria?.nombre || 'Socio pleno' : 'No socio',
     },
     {
       key: 'cuota_mes',
       header: t('admin.cobros.cuotaMes', 'Cuota mes'),
       sortable: true,
-      accessor: (s) => cuotaMes.get(s.id)?.cuota_estado || 'sin_generar',
-      render: (s) => (
-        <CuotaMesCell
-          item={cuotaMes.get(s.id)}
-          href={
-            s.grupo_familiar_id
-              ? `/cobros?familia=${s.grupo_familiar_id}`
-              : `/cobros?socio=${s.id}`
-          }
-        />
-      ),
+      accessor: (s) =>
+        s.es_socio ? cuotaMes.get(s.id)?.cuota_estado || 'sin_generar' : 'no_aplica',
+      render: (s) =>
+        s.es_socio ? (
+          <CuotaMesCell
+            item={cuotaMes.get(s.id)}
+            onClick={() =>
+              setFicha(
+                s.grupo_familiar_id
+                  ? { kind: 'familia', familiaId: s.grupo_familiar_id }
+                  : { kind: 'socio', socio: s, familiaNombre: s.familia_nombre || undefined },
+              )
+            }
+          />
+        ) : (
+          <span className="text-xs text-slate-500">No corresponde</span>
+        ),
     },
   ];
 
@@ -351,6 +370,17 @@ export default function SociosPage() {
         aria-label={t('admin.socios.createSocio')}
         title={t('admin.socios.createSocio')}
       />
+      {ficha && (
+        <FichaModal
+          target={ficha}
+          cuotaMes={cuotaMes}
+          onClose={() => setFicha(null)}
+          onEdit={(href) => {
+            setFicha(null);
+            router.push(href);
+          }}
+        />
+      )}
       {upgrade && (
         <PlanUpgradeModal
           data={upgrade}

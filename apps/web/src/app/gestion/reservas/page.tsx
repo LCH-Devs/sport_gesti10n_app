@@ -4,9 +4,11 @@ import { apiFetch, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
 import { EspaciosReservasTabs } from '../_components/EspaciosReservasTabs';
 import { DataTable, FloatingActionButton, Badge, type Column } from '@/components/common';
-import { XCircleIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, XCircleIcon } from '@heroicons/react/24/outline';
+import { ReservaEditModal } from '../_components/ReservaEditModal';
 
 type Reserva = {
   id: number;
@@ -25,8 +27,10 @@ const ESTADO_VARIANT: Record<string, 'success' | 'warning' | 'error' | 'info'> =
 
 export default function ReservasPage() {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateTimeFormat();
   const router = useRouter();
   const [items, setItems] = useState<Reserva[]>([]);
+  const [editing, setEditing] = useState<Reserva | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -78,12 +82,12 @@ export default function ReservasPage() {
       key: 'inicio',
       header: t('admin.reservas.inicio'),
       sortable: true,
-      render: (r) => new Date(r.inicio).toLocaleString('es-AR'),
+      render: (r) => formatDateTime(r.inicio),
     },
     {
       key: 'fin',
       header: t('admin.reservas.fin'),
-      render: (r) => new Date(r.fin).toLocaleString('es-AR'),
+      render: (r) => formatDateTime(r.fin),
     },
     {
       key: 'estado',
@@ -116,15 +120,26 @@ export default function ReservasPage() {
           className="rounded-t-none"
           actions={(r) =>
             r.estado === 'confirmada' ? (
-              <button
-                type="button"
-                onClick={() => void onCancelar(r.id)}
-                className="text-slate-500 hover:text-red-600"
-                aria-label={t('admin.reservas.cancelar')}
-                title={t('admin.reservas.cancelar')}
-              >
-                <XCircleIcon className="h-4 w-4" />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditing(r)}
+                  className="text-slate-500 hover:text-blue-600"
+                  aria-label={t('dataTable.edit', 'Editar')}
+                  title={t('dataTable.edit', 'Editar')}
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void onCancelar(r.id)}
+                  className="text-slate-500 hover:text-red-600"
+                  aria-label={t('admin.reservas.cancelar')}
+                  title={t('admin.reservas.cancelar')}
+                >
+                  <XCircleIcon className="h-4 w-4" />
+                </button>
+              </>
             ) : null
           }
         />
@@ -135,6 +150,17 @@ export default function ReservasPage() {
         aria-label={t('admin.reservas.createReserva')}
         title={t('admin.reservas.createReserva')}
       />
+
+      {editing && (
+        <ReservaEditModal
+          reserva={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void load();
+          }}
+        />
+      )}
     </div>
   );
 }

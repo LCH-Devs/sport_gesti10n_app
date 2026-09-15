@@ -8,7 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
-import { MEMBER_ROLES, NOT_DELETED } from '../common/club-users';
+import { MEMBER_ROLES, NOT_DELETED, SOCIO_MEMBERSHIP } from '../common/club-users';
 import {
   DEFAULT_PLAN_TRAMOS,
   PLAN_UPGRADE_REQUIRED,
@@ -349,6 +349,7 @@ export class PlanSaaSService {
       where: {
         club_id: clubId,
         rol: { in: [...MEMBER_ROLES] },
+        ...SOCIO_MEMBERSHIP,
         ...NOT_DELETED,
       },
     });

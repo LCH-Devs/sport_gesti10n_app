@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 type BaseProps = {
   label: ReactNode;
@@ -17,11 +18,12 @@ type InputProps = BaseProps & {
   required?: boolean;
   disabled?: boolean;
   placeholder?: string;
-  min?: number;
-  max?: number;
+  min?: number | string;
+  max?: number | string;
   minLength?: number;
   maxLength?: number;
   pattern?: string;
+  step?: number | string;
   inputMode?: 'text' | 'numeric' | 'tel' | 'email' | 'url' | 'decimal' | 'search' | 'none';
   title?: string;
 };
@@ -54,6 +56,7 @@ const inputClass = 'mt-1 w-full rounded-lg border border-slate-300 px-3 py-2';
 
 export function FormField(props: FormFieldProps) {
   const labelClass = `text-sm ${props.colSpan ? 'sm:col-span-2' : ''}`;
+  const [verPassword, setVerPassword] = useState(false);
 
   if (props.as === 'checkbox') {
     return (
@@ -100,25 +103,46 @@ export function FormField(props: FormFieldProps) {
     );
   }
 
+  const esPassword = props.type === 'password';
+
   return (
     <label className={labelClass}>
       {props.label}
-      <input
-        className={inputClass}
-        type={props.type ?? 'text'}
-        value={props.value}
-        onChange={(e) => props.onChange(e.target.value)}
-        required={props.required}
-        disabled={props.disabled}
-        placeholder={props.placeholder}
-        min={props.min}
-        max={props.max}
-        minLength={props.minLength}
-        maxLength={props.maxLength}
-        pattern={props.pattern}
-        inputMode={props.inputMode}
-        title={props.title}
-      />
+      <div className="relative">
+        <input
+          className={`${inputClass} ${esPassword ? 'pr-10' : ''}`}
+          type={esPassword && verPassword ? 'text' : props.type ?? 'text'}
+          value={props.value}
+          onChange={(e) => props.onChange(e.target.value)}
+          required={props.required}
+          disabled={props.disabled}
+          placeholder={props.placeholder}
+          min={props.min}
+          max={props.max}
+          minLength={props.minLength}
+          maxLength={props.maxLength}
+          pattern={props.pattern}
+          step={props.step}
+          inputMode={props.inputMode}
+          title={props.title}
+        />
+        {esPassword && (
+          <button
+            type="button"
+            onClick={() => setVerPassword((v) => !v)}
+            disabled={props.disabled}
+            className="absolute inset-y-0 right-0 mt-1 flex items-center px-3 text-slate-500 hover:text-slate-700"
+            title={verPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+            aria-label={verPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+          >
+            {verPassword ? (
+              <EyeSlashIcon className="h-5 w-5" />
+            ) : (
+              <EyeIcon className="h-5 w-5" />
+            )}
+          </button>
+        )}
+      </div>
       {props.error && <p className="mt-1 text-xs text-red-600">{props.error}</p>}
     </label>
   );

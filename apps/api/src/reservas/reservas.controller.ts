@@ -14,7 +14,7 @@ import { AdminRoleGuard } from '../common/admin-role.guard';
 import { ClubStaffGuard } from '../common/club-staff.guard';
 import { ClubId } from '../common/club-id.decorator';
 import { UseClubAuth } from '../common/use-club-auth';
-import { CreateReservaDto } from './dto/reserva.dto';
+import { CreateReservaDto, UpdateReservaDto } from './dto/reserva.dto';
 
 @Controller('reservas')
 @UseClubAuth(ClubStaffGuard)
@@ -48,6 +48,16 @@ export class ReservasController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.reservas.cancelar(clubId, id);
+  }
+
+  @Patch(':id')
+  @UseGuards(AdminRoleGuard)
+  update(
+    @ClubId() clubId: number,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateReservaDto,
+  ) {
+    return this.reservas.update(clubId, id, dto);
   }
 }
 

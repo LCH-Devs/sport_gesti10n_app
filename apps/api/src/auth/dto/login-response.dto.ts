@@ -1,6 +1,7 @@
 export class CuentaOptionDto {
   membresia_id: number;
   rol: string;
+  es_socio: boolean;
   club: {
     id: number;
     slug: string;
@@ -36,6 +37,7 @@ export class SocioSessionDto {
   dni: string;
   estado: string;
   rol: string;
+  es_socio: boolean;
 }
 
 /** Respuesta de /auth/login, /auth/admin/login, /auth/socio/login y /auth/switch. */
@@ -44,6 +46,7 @@ export class LoginResponseDto {
   /** Segundos de vida del JWT (hoy 8 h). El `exp` del token es la fuente de verdad. */
   expires_in: number;
   role: string;
+  es_socio: boolean;
   cuentas: CuentaOptionDto[];
   must_complete_onboarding: boolean;
   must_change_password: boolean;

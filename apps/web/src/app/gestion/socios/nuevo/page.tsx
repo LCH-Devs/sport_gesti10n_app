@@ -30,6 +30,7 @@ type Socio = {
   email: string;
   telefono: string;
   rol: string;
+  es_socio: boolean;
   estado: string;
   fecha_nacimiento: string | null;
   categoria_id: number | null;
@@ -50,6 +51,7 @@ const EMPTY_FORM = {
   telefono: '',
   fecha_nacimiento: '',
   rol: '',
+  es_socio: true,
   estado: 'activo',
   password: '',
   categoria_id: '',
@@ -109,6 +111,7 @@ function NuevoSocioForm() {
             ? socio.fecha_nacimiento.slice(0, 10)
             : '',
           rol: socio.rol,
+          es_socio: socio.rol === 'socio' ? true : socio.es_socio,
           estado: socio.estado,
           password: '',
           categoria_id: socio.categoria_id ? String(socio.categoria_id) : '',
@@ -135,6 +138,7 @@ function NuevoSocioForm() {
             telefono: form.telefono || undefined,
             fecha_nacimiento: form.fecha_nacimiento,
             rol: form.rol,
+            es_socio: form.rol === 'socio' ? true : form.es_socio,
             estado: form.estado,
             categoria_id: form.categoria_id ? Number(form.categoria_id) : undefined,
           }),
@@ -152,6 +156,7 @@ function NuevoSocioForm() {
             telefono: form.telefono || undefined,
             fecha_nacimiento: form.fecha_nacimiento,
             rol: form.rol,
+            es_socio: form.rol === 'socio' ? true : form.es_socio,
             password: form.password || undefined,
             categoria_id: form.categoria_id ? Number(form.categoria_id) : undefined,
             ...altaCobrosPayload(altaCobros),
@@ -200,7 +205,11 @@ function NuevoSocioForm() {
                 type="submit"
                 className="rounded-lg bg-[var(--primary,#003ec7)] px-4 py-2 font-semibold text-white"
               >
-                {editingId ? t('common.save', 'Guardar') : t('admin.socios.createSocio')}
+                {editingId
+                  ? t('common.save', 'Guardar')
+                  : form.rol === 'profe'
+                    ? t('admin.socios.createProfe')
+                    : t('admin.socios.createSocio')}
               </button>
               <button
                 type="button"
@@ -280,26 +289,42 @@ function NuevoSocioForm() {
             as="select"
             label={t('admin.socios.rol', 'Rol')}
             value={form.rol}
-            onChange={(rol) => setForm((f) => ({ ...f, rol }))}
+            onChange={(rol) =>
+              setForm((f) => ({
+                ...f,
+                rol,
+                ...(rol === 'socio' ? { es_socio: true } : {}),
+              }))
+            }
             required
           >
             <option value="">{t('admin.socios.rolPlaceholder', 'Elegí un rol')}</option>
             <option value="socio">{t('admin.socios.rolSocio', 'Socio')}</option>
             <option value="profe">{t('admin.socios.rolProfe', 'Profe')}</option>
           </FormField>
-          <FormField
-            as="select"
-            label={t('admin.socios.categoria', 'Categoría')}
-            value={form.categoria_id}
-            onChange={(categoria_id) => setForm((f) => ({ ...f, categoria_id }))}
-            required
-          >
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre} (${c.monto})
-              </option>
-            ))}
-          </FormField>
+          {form.rol === 'profe' && (
+            <FormField
+              as="checkbox"
+              label={t('admin.socios.profeTambienSocio')}
+              checked={form.es_socio}
+              onChange={(es_socio) => setForm((f) => ({ ...f, es_socio }))}
+            />
+          )}
+          {(form.rol !== 'profe' || form.es_socio) && (
+            <FormField
+              as="select"
+              label={t('admin.socios.categoria', 'Categoría')}
+              value={form.categoria_id}
+              onChange={(categoria_id) => setForm((f) => ({ ...f, categoria_id }))}
+              required
+            >
+              {categorias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre} (${c.monto})
+                </option>
+              ))}
+            </FormField>
+          )}
           {editingId && (
             <FormField
               as="select"
@@ -324,7 +349,7 @@ function NuevoSocioForm() {
             />
           )}
           </div>
-          {!editingId && (
+          {!editingId && (form.rol !== 'profe' || form.es_socio) && (
             <AltaCobrosFields
               value={altaCobros}
               onChange={setAltaCobros}

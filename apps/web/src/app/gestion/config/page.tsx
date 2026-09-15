@@ -18,6 +18,8 @@ import {
   splitDeportes,
 } from '@/lib/deportes-catalogo';
 import { useLanguageContext } from '@/lib/LanguageContext';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
+import type { TimeFormat } from '@/lib/datetime';
 import { NAME_HELP, NAME_PATTERN, PHONE_PATTERN, filterPersonName, filterPhone } from '@/lib/validation';
 import { FormEvent, Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -625,8 +627,10 @@ function PreferenciasSection() {
   const { t } = useTranslation();
   const router = useRouter();
   const { lang, setLanguage, mounted } = useLanguageContext();
+  const { timeFormat, setTimeFormat } = useDateTimeFormat();
   const [allowed, setAllowed] = useState(false);
   const [draftLang, setDraftLang] = useState<'es' | 'en'>('es');
+  const [draftTimeFormat, setDraftTimeFormat] = useState<TimeFormat>('24h');
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>({
     email: true,
     app: true,
@@ -647,8 +651,18 @@ function PreferenciasSection() {
     setDraftLang(lang);
   }, [lang]);
 
+  useEffect(() => {
+    setDraftTimeFormat(timeFormat);
+  }, [timeFormat]);
+
   function updateDraftLang(option: 'es' | 'en') {
     setDraftLang(option);
+    setDirty(true);
+    setSaved(false);
+  }
+
+  function updateDraftTimeFormat(fmt: TimeFormat) {
+    setDraftTimeFormat(fmt);
     setDirty(true);
     setSaved(false);
   }
@@ -661,6 +675,7 @@ function PreferenciasSection() {
 
   function onGuardar() {
     setLanguage(draftLang);
+    setTimeFormat(draftTimeFormat);
     localStorage.setItem(NOTIF_KEY, JSON.stringify(notifPrefs));
     setDirty(false);
     setSaved(true);
@@ -692,6 +707,27 @@ function PreferenciasSection() {
                 }`}
               >
                 {option === 'es' ? 'Español' : 'English'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium text-slate-700">{t('config.formatoHora')}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{t('config.formatoHoraHint')}</p>
+          <div className="mt-2 flex gap-2">
+            {(['24h', '12h'] as const).map((option) => (
+              <button
+                key={option}
+                type="button"
+                onClick={() => updateDraftTimeFormat(option)}
+                className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                  draftTimeFormat === option
+                    ? 'border-[var(--primary)] bg-[var(--primary)] text-white'
+                    : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {option === '24h' ? t('config.formato24h') : t('config.formato12h')}
               </button>
             ))}
           </div>

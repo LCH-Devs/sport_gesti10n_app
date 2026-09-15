@@ -54,6 +54,10 @@ Roles de membresía: `admin` | `entrada` | `socio` | `profe`.
 
 - Staff (comisión): `admin`, `entrada` — helpers `isStaffRole` / `STAFF_ROLES`
 - Miembros: `socio`, `profe` — `isMemberRole` / `MEMBER_ROLES`
+- `Membresia.es_socio`: siempre `true` para rol `socio`; en rol `profe`
+  distingue al profesor que también es socio (`true`) del contratado
+  (`false`). El contratado conserva Membresia para JWT/tenant/horarios, pero
+  no entra en cuotas, familias, reservas ni tope SaaS.
 
 **IDs en la API de negocio son `membresia.id`, no `usuario.id`.**  
 `flattenPerson` / `flattenAdmin` exponen `id: membresia.id` y aplanan el `usuario`. El front consume esa forma plana (`email`, `nombre`, `dni` en el mismo objeto). No devolver el grafo Prisma crudo.
@@ -61,7 +65,7 @@ Roles de membresía: `admin` | `entrada` | `socio` | `profe`.
 JWT de club (TTL **8 h**; login/switch devuelven `expires_in` en segundos):
 
 ```
-{ sub: membresia.id, user_id, role, club_id, club_slug, impersonated_by_platform? }
+{ sub: membresia.id, user_id, role, es_socio, club_id, club_slug, impersonated_by_platform? }
 ```
 
 JWT de plataforma: `{ sub: platformAdmin.id, role: 'platform' }` (mismo TTL).
@@ -189,6 +193,7 @@ Hay specs de aislamiento de tenant, guards y socios. Si tocás auth, tenant o `c
 - Layouts de panel (`admin/layout.tsx` / `gestion/layout.tsx`) ya hacen gate de sesión, onboarding y theme. No duplicar ese gate en cada page.
 - KISS. Evitar `any`. Preferir `'use client'` en pages de panel (el patrón actual es client components + `apiFetch`).
 - Textos de producto en español. i18n existe (`LanguageContext` / `useTranslation`): usarlo si la pantalla ya está cableada; no traducir todo el admin de un saque.
+- Fechas y horas en UI: `useDateTimeFormat()` (`apps/web/src/lib/DateTimeFormatContext.tsx`). Default 24 h; Preferencias cambia a AM/PM. No usar `toLocaleString` / `toLocaleTimeString` para relojes. Inputs `type="time"` siguen en `HH:mm`.
 
 ### Contratos
 
@@ -223,6 +228,9 @@ Si un doc (`PLAN.md`, `TECNICO_EQUIPO.md`) describe Fase 2+, es roadmap, no trab
 5. No inventar tablas Prisma si alcanza con `Usuario`/`Membresia`/`Club`.
 6. No romper aislamiento de tenant para “simplificar”.
 7. Cambio de contrato API = back + `docs/API.md` + front en el mismo trabajo.
-8. Verificar UI en el browser (flujo real, no solo screenshot) cuando toques web.
+8. Verificar en el browser cuando el cambio sea **visual o de flujo**. No hace falta para tipos, textos, o refactors que no cambian la pantalla.
+   - Delegar la verificación al subagente de browser. Cada acción (`click`, `select`, `navigate`) devuelve el árbol de accesibilidad completo de la página; hacerlo en la conversación principal la llena de ruido y fuerza un resumen.
+   - Un screenshot al cierre para confirmar, no uno por paso.
+9. Mientras iterás, correr solo los specs del módulo que tocaste. La suite completa, una vez antes de cerrar. Los specs que levantan Postgres real (`tenant-isolation-real`, `respuestas-sin-privados`, `reservas-concurrencia`) necesitan `docker compose up db -d` y el cliente Prisma con engine: si `prisma generate` corrió con `--no-engine`, fallan con `the URL must start with the protocol prisma://` y no es un bug del código.
 
 Seed local: plataforma `platform@clubapp.com` / `platform123`. Club `club-prueba`, admin `admin@clubprueba.com` / `admin123`. Socios pass `socio123`.

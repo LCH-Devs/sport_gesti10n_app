@@ -19,7 +19,9 @@ import {
 import { Header, Card, Badge, Button } from "@/components/common";
 import { DataTable } from "@/components/common/DataTable";
 import { useTranslation } from "@/lib/useTranslation";
+import { useDateTimeFormat } from "@/lib/DateTimeFormatContext";
 import { apiFetch, getPlatformSession, mediaUrl } from "@/lib/api";
+import { formatDias } from "@/lib/dias-semana";
 
 type ClubReadSession = { access_token: string; clubSlug: string; clubId: number };
 
@@ -63,8 +65,15 @@ type SectionDef = {
   fetch: (session: ClubReadSession) => Promise<any[]>;
 };
 
+type DateFmt = {
+  formatDateTime: (value: string | Date) => string;
+  formatDate: (value: string | Date) => string;
+  formatHmRange: (inicio: string, fin: string) => string;
+};
+
 function buildSectionConfig(
   t: (key: string, defaultValue?: string) => string,
+  fmt: DateFmt,
 ): Record<SectionKey, SectionDef> {
   const yesNo = (v: boolean) => (v ? t("common.yes") : t("common.no"));
   const fetchList = (session: ClubReadSession, resource: string) =>
@@ -95,7 +104,7 @@ function buildSectionConfig(
         {
           key: "horario",
           label: t("admin.espacios.horario"),
-          render: (r) => `${r.hora_apertura} – ${r.hora_cierre}`,
+          render: (r) => fmt.formatHmRange(r.hora_apertura, r.hora_cierre),
         },
         {
           key: "activo",
@@ -131,11 +140,11 @@ function buildSectionConfig(
       label: t("clubManagement.links.horarios"),
       columns: [
         { key: "titulo", label: t("admin.horarios.titulo"), render: (r) => r.titulo },
-        { key: "dias", label: t("admin.horarios.dias"), render: (r) => r.dias },
+        { key: "dias", label: t("admin.horarios.dias"), render: (r) => formatDias(r.dias) },
         {
           key: "horario",
           label: t("admin.espacios.horario"),
-          render: (r) => `${r.hora_inicio} – ${r.hora_fin}`,
+          render: (r) => fmt.formatHmRange(r.hora_inicio, r.hora_fin),
         },
         {
           key: "activo",
@@ -161,12 +170,12 @@ function buildSectionConfig(
         {
           key: "inicio",
           label: t("admin.reservas.inicio"),
-          render: (r) => new Date(r.inicio).toLocaleString("es-AR"),
+          render: (r) => fmt.formatDateTime(r.inicio),
         },
         {
           key: "fin",
           label: t("admin.reservas.fin"),
-          render: (r) => new Date(r.fin).toLocaleString("es-AR"),
+          render: (r) => fmt.formatDateTime(r.fin),
         },
         { key: "estado", label: t("admin.reservas.estado"), render: (r) => r.estado },
       ],
@@ -201,7 +210,7 @@ function buildSectionConfig(
         {
           key: "fecha",
           label: t("admin.torneos.fecha"),
-          render: (r) => new Date(r.fecha).toLocaleDateString("es-AR"),
+          render: (r) => fmt.formatDate(r.fecha),
         },
       ],
       fetch: (session) => fetchList(session, "noticias"),
@@ -339,6 +348,7 @@ const sectionKeys: SectionKey[] = [
 
 export default function ClubManagementPage() {
   const { t } = useTranslation();
+  const { formatDateTime, formatDate, formatHmRange } = useDateTimeFormat();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [club, setClub] = useState<ClubData | null>(null);
@@ -355,7 +365,11 @@ export default function ClubManagementPage() {
   const [sectionRows, setSectionRows] = useState<any[]>([]);
   const [readSession, setReadSession] = useState<ClubReadSession | null>(null);
 
-  const sectionConfig = buildSectionConfig(t);
+  const sectionConfig = buildSectionConfig(t, {
+    formatDateTime,
+    formatDate,
+    formatHmRange,
+  });
 
   const load = useCallback(async () => {
     const platformSession = getPlatformSession();

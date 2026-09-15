@@ -4,7 +4,9 @@ import { apiFetch, requireSession } from '@/lib/api';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { interpolate, useTranslation } from '@/lib/useTranslation';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
 import { DataTable, type Column } from '@/components/common';
+import { formatDias } from '@/lib/dias-semana';
 
 type PlanUso = {
   socios_activos: number;
@@ -63,6 +65,7 @@ type HorarioHoy = HoyData['horarios_hoy'][number];
 
 export default function AdminHomePage() {
   const { t } = useTranslation();
+  const { formatTimeRange, formatHmRange } = useDateTimeFormat();
   const [data, setData] = useState<HoyData | null>(null);
   const [plan, setPlan] = useState<PlanUso | null>(null);
   const [error, setError] = useState('');
@@ -109,17 +112,14 @@ export default function AdminHomePage() {
     {
       key: 'horario',
       header: t('hoy.horario'),
-      render: (r) =>
-        `${new Date(r.inicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} – ${new Date(
-          r.fin,
-        ).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`,
+      render: (r) => formatTimeRange(r.inicio, r.fin),
     },
   ];
 
   const horariosColumns: Column<HorarioHoy>[] = [
     { key: 'titulo', header: t('hoy.titulo') },
-    { key: 'dias', header: t('hoy.dias') },
-    { key: 'horario', header: t('hoy.horario'), accessor: (h) => `${h.hora_inicio} – ${h.hora_fin}` },
+    { key: 'dias', header: t('hoy.dias'), render: (h) => formatDias(h.dias) },
+    { key: 'horario', header: t('hoy.horario'), accessor: (h) => formatHmRange(h.hora_inicio, h.hora_fin) },
   ];
 
   return (

@@ -1,13 +1,37 @@
 'use client';
 
 import { apiFetch, requireSession } from '@/lib/api';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
+import { ReservaHorarioPicker } from '../../_components/ReservaHorarioPicker';
+import { localIso, todayYmd } from '@/lib/reserva-slots';
 
-type Espacio = { id: number; nombre: string };
-type Socio = { id: number; nombre: string; apellido: string; dni: string };
+type Espacio = {
+  id: number;
+  nombre: string;
+  hora_apertura: string;
+  hora_cierre: string;
+  duracion_slot_min: number;
+};
+
+type Socio = {
+  id: number;
+  nombre: string;
+  apellido: string;
+  dni: string;
+  es_socio: boolean;
+};
+
+type Disponibilidad = {
+  todos: Array<{ inicio: string; libre: boolean }>;
+};
+
+function startKey(iso: string): string {
+  const m = iso.match(/T(\d{2}:\d{2})/);
+  return m ? m[1] : '';
+}
 
 export default function NuevaReservaPage() {
   const { t } = useTranslation();
@@ -15,13 +39,22 @@ export default function NuevaReservaPage() {
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [socios, setSocios] = useState<Socio[]>([]);
   const [error, setError] = useState('');
+  const [ocupados, setOcupados] = useState<Set<string>>(new Set());
+  const [extraInicios, setExtraInicios] = useState<string[]>([]);
   const [form, setForm] = useState({
     espacio_id: '',
     socio_id: '',
-    inicio: '',
-    fin: '',
+    fecha: '',
+    hora_inicio: '',
+    hora_fin: '',
     nota: '',
   });
+
+  const espacio = useMemo(
+    () => espacios.find((e) => String(e.id) === form.espacio_id),
+    [espacios, form.espacio_id],
+  );
+  const hoy = todayYmd();
 
   const load = useCallback(async () => {
     const session = requireSession();
@@ -38,21 +71,67 @@ export default function NuevaReservaPage() {
         }),
       ]);
       setEspacios(esp);
-      setSocios(soc);
+      setSocios(soc.filter((persona) => persona.es_socio));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!form.espacio_id || !form.fecha) {
+      setOcupados(new Set());
+      setExtraInicios([]);
+      return;
+    }
+    const session = requireSession();
+    if (!session) return;
+    let cancelled = false;
+    void apiFetch<Disponibilidad>(
+      `/espacios/${form.espacio_id}/disponibilidad?fecha=${form.fecha}`,
+      { token: session.access_token, clubSlug: session.club.slug },
+    )
+      .then((data) => {
+        if (cancelled) return;
+        const todos = data.todos ?? [];
+        setExtraInicios(todos.map((s) => startKey(s.inicio)).filter(Boolean));
+        setOcupados(
+          new Set(
+            todos
+              .filter((s) => !s.libre)
+              .map((s) => startKey(s.inicio))
+              .filter(Boolean),
+          ),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setOcupados(new Set());
+          setExtraInicios([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [form.espacio_id, form.fecha]);
+
   async function onCreate(e: FormEvent) {
     e.preventDefault();
     const session = requireSession();
-    if (!session) return;
+    if (!session || !espacio) return;
+    if (!form.hora_inicio || !form.hora_fin) {
+      setError(t('admin.reservas.elegirInicioPrimero'));
+      return;
+    }
+    if (new Date(`${form.fecha}T${form.hora_inicio}`).getTime() < Date.now()) {
+      setError(t('admin.reservas.fechaPasada'));
+      return;
+    }
     try {
+      setError('');
       await apiFetch('/reservas', {
         method: 'POST',
         token: session.access_token,
@@ -60,8 +139,8 @@ export default function NuevaReservaPage() {
         body: JSON.stringify({
           espacio_id: Number(form.espacio_id),
           socio_id: Number(form.socio_id),
-          inicio: new Date(form.inicio).toISOString(),
-          fin: new Date(form.fin).toISOString(),
+          inicio: localIso(form.fecha, form.hora_inicio),
+          fin: localIso(form.fecha, form.hora_fin),
           nota: form.nota || undefined,
         }),
       });
@@ -85,13 +164,15 @@ export default function NuevaReservaPage() {
           as="select"
           label={t('admin.reservas.espacio')}
           value={form.espacio_id}
-          onChange={(espacio_id) => setForm((f) => ({ ...f, espacio_id }))}
+          onChange={(espacio_id) =>
+            setForm((f) => ({ ...f, espacio_id, hora_inicio: '', hora_fin: '' }))
+          }
           required
         >
           <option value="">Elegir…</option>
           {espacios.map((e) => (
             <option key={e.id} value={e.id}>
-              {e.nombre}
+              {e.nombre} ({e.duracion_slot_min} min)
             </option>
           ))}
         </FormField>
@@ -110,18 +191,24 @@ export default function NuevaReservaPage() {
           ))}
         </FormField>
         <FormField
-          type="datetime-local"
-          label={t('admin.reservas.inicio')}
-          value={form.inicio}
-          onChange={(inicio) => setForm((f) => ({ ...f, inicio }))}
+          type="date"
+          colSpan
+          label={t('admin.reservas.fecha')}
+          value={form.fecha}
+          onChange={(fecha) => setForm((f) => ({ ...f, fecha }))}
           required
+          min={hoy}
         />
-        <FormField
-          type="datetime-local"
-          label={t('admin.reservas.fin')}
-          value={form.fin}
-          onChange={(fin) => setForm((f) => ({ ...f, fin }))}
-          required
+        <ReservaHorarioPicker
+          espacio={espacio}
+          fecha={form.fecha}
+          horaInicio={form.hora_inicio}
+          horaFin={form.hora_fin}
+          ocupados={ocupados}
+          extraInicios={extraInicios}
+          onChange={(next) =>
+            setForm((f) => ({ ...f, hora_inicio: next.hora_inicio, hora_fin: next.hora_fin }))
+          }
         />
         <FormField
           as="textarea"

@@ -6,17 +6,18 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateEspacioDto, UpdateEspacioDto } from './dto/espacio.dto';
 import { NOT_DELETED } from '../common/club-users';
-
-function parseHm(hm: string): number {
-  const [h, m] = hm.split(':').map(Number);
-  return h * 60 + (m || 0);
-}
-
-function toHm(mins: number): string {
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
+import {
+  addDays,
+  disponibilidadSlotsForDay,
+  mondayOf,
+  slotMinutes,
+  startOfDay,
+} from './ocupacion';
+import {
+  busyIntervalsForSpace,
+  resumenDia,
+  resumenPeriodo,
+} from './ocupacion-agenda';
 
 @Injectable()
 export class EspaciosService {
@@ -97,6 +98,42 @@ export class EspaciosService {
     });
   }
 
+  async ocupacion(clubId: number, fecha?: string) {
+    if (fecha && !/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      throw new BadRequestException('fecha debe ser YYYY-MM-DD');
+    }
+    const ref = fecha
+      ? startOfDay(new Date(`${fecha}T00:00:00`))
+      : startOfDay(new Date());
+    const dayStart = ref;
+    const weekStart = mondayOf(ref);
+    const weekEnd = addDays(weekStart, 7);
+    const monthStart = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    const monthEnd = new Date(ref.getFullYear(), ref.getMonth() + 1, 1);
+    const rangeStart = monthStart < weekStart ? monthStart : weekStart;
+    const rangeEnd = monthEnd > weekEnd ? monthEnd : weekEnd;
+
+    const espacios = await this.list(clubId);
+    const out = [];
+    for (const e of espacios) {
+      const busy = await busyIntervalsForSpace(this.prisma, {
+        clubId,
+        espacioId: e.id,
+        rangeStart,
+        rangeEnd,
+      });
+      const dia = resumenDia(e.hora_apertura, e.hora_cierre, dayStart, busy);
+      out.push({
+        espacio_id: e.id,
+        dia: { pct: dia.pct },
+        semana: { pct: resumenPeriodo(e.hora_apertura, e.hora_cierre, weekStart, weekEnd, busy) },
+        mes: { pct: resumenPeriodo(e.hora_apertura, e.hora_cierre, monthStart, monthEnd, busy) },
+        calor: dia.calor,
+      });
+    }
+    return out;
+  }
+
   async disponibilidad(clubId: number, id: number, fecha: string) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
       throw new BadRequestException('fecha debe ser YYYY-MM-DD');
@@ -106,45 +143,29 @@ export class EspaciosService {
       throw new BadRequestException('Espacio inactivo');
     }
 
-    const dayStart = new Date(`${fecha}T00:00:00`);
-    const dayEnd = new Date(`${fecha}T23:59:59.999`);
-
-    const reservas = await this.prisma.reserva.findMany({
-      where: {
-        club_id: clubId,
-        espacio_id: id,
-        estado: 'confirmada',
-        inicio: { lt: dayEnd },
-        fin: { gt: dayStart },
-      },
+    const dayStart = startOfDay(new Date(`${fecha}T00:00:00`));
+    const dayEnd = addDays(dayStart, 1);
+    const busy = await busyIntervalsForSpace(this.prisma, {
+      clubId,
+      espacioId: id,
+      rangeStart: dayStart,
+      rangeEnd: dayEnd,
     });
 
-    const apertura = parseHm(espacio.hora_apertura);
-    const cierre = parseHm(espacio.hora_cierre);
-    const slot = espacio.duracion_slot_min;
-    const slots: Array<{ inicio: string; fin: string; libre: boolean }> = [];
-
-    for (let t = apertura; t + slot <= cierre; t += slot) {
-      const slotInicio = new Date(dayStart);
-      slotInicio.setHours(Math.floor(t / 60), t % 60, 0, 0);
-      const slotFin = new Date(slotInicio);
-      slotFin.setMinutes(slotFin.getMinutes() + slot);
-
-      const overlap = reservas.some(
-        (r: any) => r.inicio < slotFin && r.fin > slotInicio,
-      );
-      slots.push({
-        inicio: `${fecha}T${toHm(t)}:00`,
-        fin: `${fecha}T${toHm(t + slot)}:00`,
-        libre: !overlap,
-      });
-    }
+    const slots = disponibilidadSlotsForDay({
+      fecha,
+      dayStart,
+      apertura: espacio.hora_apertura,
+      cierre: espacio.hora_cierre,
+      duracionSlotMin: espacio.duracion_slot_min,
+      busy,
+    });
 
     return {
       espacio_id: id,
       fecha,
-      duracion_slot_min: slot,
-      slots: slots.filter((s: any) => s.libre),
+      duracion_slot_min: slotMinutes(espacio.duracion_slot_min),
+      slots: slots.filter((s) => s.libre),
       todos: slots,
     };
   }
@@ -157,4 +178,3 @@ export class EspaciosService {
     return espacio;
   }
 }
-

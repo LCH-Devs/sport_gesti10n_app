@@ -176,7 +176,8 @@ Un email **no** puede ser `admin` de dos clubes.
 | Método | Ruta | Body / query |
 |--------|------|----------------|
 | `GET` | `/espacios` | — |
-| `GET` | `/espacios/:id/disponibilidad?fecha=YYYY-MM-DD` | — |
+| `GET` | `/espacios/ocupacion?fecha=YYYY-MM-DD` | ocupación día/semana/mes + calor (staff) |
+| `GET` | `/espacios/:id/disponibilidad?fecha=YYYY-MM-DD` | slots; ve reservas, eventos y horarios |
 | `POST` | `/espacios` | `{ nombre, tipo, descripcion?, duracion_slot_min?, precio_opcional?, hora_apertura?, hora_cierre? }` |
 | `PATCH` | `/espacios/:id` | mismos campos + `activo?` |
 | `DELETE` | `/espacios/:id` | — |
@@ -197,12 +198,13 @@ Un email **no** puede ser `admin` de dos clubes.
 |--------|------|----------------|
 | `GET` | `/reservas?desde=&hasta=&espacio_id=` | ISO dates |
 | `POST` | `/reservas` | `{ espacio_id, socio_id, inicio, fin, nota? }` (`inicio`/`fin` ISO) |
+| `PATCH` | `/reservas/:id` | mismos campos, todos opcionales; solo `confirmada` |
 | `PATCH` | `/reservas/:id/cancelar` | — |
 
 `estado`: `confirmada` | `cancelada` | `no_show`.  
-El back valida solape, socio suspendido, moroso (`bloquear_reservas`) y máximo de reservas activas.
+El back valida que el inicio no esté en el pasado, que `inicio`/`fin` caigan en el horario útil del espacio (apertura → cierre − 1 h; p. ej. 08:00–22:00 → 08:00–21:00), solape (reserva + evento + entrenamiento), socio suspendido, moroso (`bloquear_reservas`) y máximo de reservas activas.
 
-**UI hoy:** crear y cancelar. No hay delete físico (correcto: se cancela).
+**UI hoy:** crear, editar (modal) y cancelar. No hay delete físico (correcto: se cancela).
 
 ---
 
@@ -214,11 +216,12 @@ El back valida solape, socio suspendido, moroso (`bloquear_reservas`) y máximo 
 | Método | Ruta | Body |
 |--------|------|------|
 | `GET` | `/horarios` | — |
-| `POST` | `/horarios` | `{ titulo, dias, hora_inicio, hora_fin, profe_id?, activo? }` |
+| `POST` | `/horarios` | `{ titulo, dias, hora_inicio, hora_fin, profe_id?, espacio_id?, activo? }` |
 | `PATCH` | `/horarios/:id` | mismos campos |
 | `DELETE` | `/horarios/:id` | — |
 
-`dias`: string tipo `"lun,mie,vie"`. Horas `"HH:mm"`.  
+`dias`: nombres completos separados por coma, p.ej. `"Lunes,Miércoles,Viernes"` (también se aceptan abreviaturas viejas `lun,mie,vie`). Horas `"HH:mm"`.
+`espacio_id` opcional: si está, el entrenamiento ocupa esa cancha y no puede pisar reservas/eventos/otros horarios.
 `DELETE` = `eliminado: true` (sigue listándose solo lo no eliminado).
 
 **UI hoy:** crear y borrar. **Falta en UI:** editar.

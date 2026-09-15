@@ -1,0 +1,30 @@
+---
+description: Mostrar fechas y horas con la preferencia 24h / AM-PM (useDateTimeFormat)
+globs: apps/web/**/*.{ts,tsx},apps/web-v2/**/*.{ts,tsx}
+alwaysApply: true
+---
+
+# Formato de fecha y hora (24 h / AM-PM)
+
+La preferencia vive en `localStorage` (`clubapp_time_format`, default `24h`). El usuario la cambia en Configuración → Preferencias (club) o Panel → Preferencias (plataforma).
+
+Al **agregar o cambiar** cualquier fecha/hora visible en tablas, listados, cards o labels:
+
+- Usar `useDateTimeFormat()` de `@/lib/DateTimeFormatContext`.
+- Helpers: `formatDateTime`, `formatTime`, `formatDate`, `formatHm`, `formatHmRange`, `formatTimeRange`.
+- Si el componente no puede usar el hook (helper puro), recibir el formatter por argumento. No llamar `toLocaleString` adentro.
+
+```tsx
+// ❌ BAD
+new Date(r.inicio).toLocaleString('es-AR')
+new Date(s.inicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })
+`${r.hora_apertura} – ${r.hora_cierre}`
+
+// ✅ GOOD
+const { formatDateTime, formatTime, formatHmRange } = useDateTimeFormat();
+formatDateTime(r.inicio)
+formatTime(s.inicio)
+formatHmRange(r.hora_apertura, r.hora_cierre)
+```
+
+No aplica a: montos (`toLocaleString` de números), labels de mes/año de calendarios, inputs `type="time"` / `datetime-local` (siguen `HH:mm` internamente).

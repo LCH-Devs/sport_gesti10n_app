@@ -1,8 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { flattenPerson, MEMBER_ROLES, NOT_DELETED, personInclude } from '../common/club-users';
-
-const DIA_KEYS = ['dom', 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'] as const;
+import {
+  flattenPerson,
+  MEMBER_ROLES,
+  NOT_DELETED,
+  personInclude,
+  SOCIO_MEMBERSHIP,
+} from '../common/club-users';
+import { horarioCaeEnDia } from '../espacios/ocupacion';
 
 function mesActual(): string {
   const now = new Date();
@@ -34,7 +39,6 @@ export class ReportesService {
   async hoy(clubId: number) {
     const mes = mesActual();
     const now = new Date();
-    const diaKey = DIA_KEYS[now.getDay()];
     const desde = startOfDay(now);
     const hasta = endOfDay(now);
 
@@ -83,10 +87,7 @@ export class ReportesService {
         };
       });
 
-    const horarios_hoy = horarios.filter((h: any) => {
-      const dias = h.dias.toLowerCase();
-      return dias.includes(diaKey);
-    });
+    const horarios_hoy = horarios.filter((h) => horarioCaeEnDia(h.dias, now));
 
     const alerta = await this.alertaFuga(clubId);
 
@@ -117,7 +118,12 @@ export class ReportesService {
     hace30.setHours(0, 0, 0, 0);
 
     const socios = await this.prisma.membresia.findMany({
-      where: { club_id: clubId, rol: { in: [...MEMBER_ROLES] }, ...NOT_DELETED },
+      where: {
+        club_id: clubId,
+        rol: { in: [...MEMBER_ROLES] },
+        ...SOCIO_MEMBERSHIP,
+        ...NOT_DELETED,
+      },
       include: {
         usuario: {
           select: {
@@ -197,6 +203,7 @@ export class ReportesService {
       where: {
         club_id: clubId,
         rol: { in: [...MEMBER_ROLES] },
+        ...SOCIO_MEMBERSHIP,
         ...NOT_DELETED,
         usuario: { fecha_nacimiento: { not: null } },
       },
@@ -237,6 +244,7 @@ export class ReportesService {
       where: {
         club_id: clubId,
         rol: { in: [...MEMBER_ROLES] },
+        ...SOCIO_MEMBERSHIP,
         ...NOT_DELETED,
         usuario: { fecha_nacimiento: { not: null } },
       },

@@ -18,7 +18,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { Header, Card, Badge, Button } from "@/components/common";
 import { useTranslation } from "@/lib/useTranslation";
+import { useDateTimeFormat } from "@/lib/DateTimeFormatContext";
 import { apiFetch, getPlatformSession, mediaUrl } from "@/lib/api";
+import { formatDias } from "@/lib/dias-semana";
 
 type ClubReadSession = { access_token: string; clubSlug: string };
 
@@ -62,8 +64,15 @@ type SectionDef = {
   fetch: (session: ClubReadSession) => Promise<any[]>;
 };
 
+type DateFmt = {
+  formatDateTime: (value: string | Date) => string;
+  formatDate: (value: string | Date) => string;
+  formatHmRange: (inicio: string, fin: string) => string;
+};
+
 function buildSectionConfig(
   t: (key: string, defaultValue?: string) => string,
+  fmt: DateFmt,
 ): Record<SectionKey, SectionDef> {
   const yesNo = (v: boolean) => (v ? t("common.yes") : t("common.no"));
   const fetchList = (session: ClubReadSession, path: string) =>
@@ -95,7 +104,7 @@ function buildSectionConfig(
         },
         {
           label: t("admin.espacios.horario"),
-          render: (r) => `${r.hora_apertura} – ${r.hora_cierre}`,
+          render: (r) => fmt.formatHmRange(r.hora_apertura, r.hora_cierre),
         },
         {
           label: t("admin.espacios.activo"),
@@ -127,10 +136,10 @@ function buildSectionConfig(
       label: t("clubManagement.links.horarios"),
       columns: [
         { label: t("admin.horarios.titulo"), render: (r) => r.titulo },
-        { label: t("admin.horarios.dias"), render: (r) => r.dias },
+        { label: t("admin.horarios.dias"), render: (r) => formatDias(r.dias) },
         {
           label: t("admin.espacios.horario"),
-          render: (r) => `${r.hora_inicio} – ${r.hora_fin}`,
+          render: (r) => fmt.formatHmRange(r.hora_inicio, r.hora_fin),
         },
         {
           label: t("admin.espacios.activo"),
@@ -152,11 +161,11 @@ function buildSectionConfig(
         },
         {
           label: t("admin.reservas.inicio"),
-          render: (r) => new Date(r.inicio).toLocaleString("es-AR"),
+          render: (r) => fmt.formatDateTime(r.inicio),
         },
         {
           label: t("admin.reservas.fin"),
-          render: (r) => new Date(r.fin).toLocaleString("es-AR"),
+          render: (r) => fmt.formatDateTime(r.fin),
         },
         { label: t("admin.reservas.estado"), render: (r) => r.estado },
       ],
@@ -187,7 +196,7 @@ function buildSectionConfig(
         },
         {
           label: t("admin.torneos.fecha"),
-          render: (r) => new Date(r.fecha).toLocaleDateString("es-AR"),
+          render: (r) => fmt.formatDate(r.fecha),
         },
       ],
       fetch: (session) => fetchList(session, "/noticias"),
@@ -321,6 +330,7 @@ const sectionKeys: SectionKey[] = [
 
 export default function ClubManagementPage() {
   const { t } = useTranslation();
+  const { formatDateTime, formatDate, formatHmRange } = useDateTimeFormat();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [club, setClub] = useState<ClubData | null>(null);
@@ -337,7 +347,11 @@ export default function ClubManagementPage() {
   const [sectionRows, setSectionRows] = useState<any[]>([]);
   const [readSession, setReadSession] = useState<ClubReadSession | null>(null);
 
-  const sectionConfig = buildSectionConfig(t);
+  const sectionConfig = buildSectionConfig(t, {
+    formatDateTime,
+    formatDate,
+    formatHmRange,
+  });
 
   const load = useCallback(async () => {
     const platformSession = getPlatformSession();

@@ -31,7 +31,7 @@ export class FamiliasService {
       where: { club_id: clubId, ...NOT_DELETED },
       include: {
         titular: { include: personInclude },
-        socios: { where: NOT_DELETED, include: personInclude },
+        socios: { where: { es_socio: true, ...NOT_DELETED }, include: personInclude },
       },
       orderBy: { nombre: 'asc' },
     });
@@ -118,7 +118,12 @@ export class FamiliasService {
             ? dto.socio_ids
             : (
                 await tx.membresia.findMany({
-                  where: { club_id: clubId, grupo_familiar_id: id, ...NOT_DELETED },
+                  where: {
+                    club_id: clubId,
+                    grupo_familiar_id: id,
+                    es_socio: true,
+                    ...NOT_DELETED,
+                  },
                   select: { id: true },
                 })
               ).map((m) => m.id);
@@ -245,7 +250,7 @@ export class FamiliasService {
       where: { id, club_id: clubId, ...NOT_DELETED },
       include: {
         titular: { include: personInclude },
-        socios: { where: NOT_DELETED, include: personInclude },
+        socios: { where: { es_socio: true, ...NOT_DELETED }, include: personInclude },
       },
     });
     if (!g) throw new NotFoundException('Familia no encontrada');
@@ -274,7 +279,7 @@ export class FamiliasService {
 
   private async ensureSocio(db: FamiliaDb, clubId: number, socioId: number) {
     const s = await db.membresia.findFirst({
-      where: { id: socioId, club_id: clubId, ...NOT_DELETED },
+      where: { id: socioId, club_id: clubId, es_socio: true, ...NOT_DELETED },
     });
     if (!s) throw new BadRequestException(`Socio ${socioId} no encontrado`);
     return s;

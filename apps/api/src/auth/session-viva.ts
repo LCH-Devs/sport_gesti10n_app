@@ -6,6 +6,7 @@ export type SessionDb = {
     findFirst: (args: unknown) => Promise<{
       id: number;
       rol: string;
+      es_socio: boolean;
       estado: string;
       club_id: number;
       usuario: { password_changed_at: Date };
@@ -55,6 +56,7 @@ export async function assertSesionViva(
     select: {
       id: true,
       rol: true,
+      es_socio: true,
       estado: true,
       club_id: true,
       usuario: { select: { password_changed_at: true } },
@@ -75,6 +77,7 @@ export async function assertSesionViva(
   return {
     ...payload,
     role: row.rol,
+    es_socio: row.rol === 'socio' || row.es_socio,
     club_id: row.club_id,
   };
 }

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MercadoPagoService } from './mercadopago.service';
-import { flattenPerson, MEMBER_ROLES, NOT_DELETED, personInclude } from '../common/club-users';
+import { flattenPerson, MEMBER_ROLES, NOT_DELETED, personInclude, SOCIO_MEMBERSHIP } from '../common/club-users';
 import { GenerarCobrosDto } from './dto/generar-cobros.dto';
 import { AltaCobrosFields } from './dto/alta-cobros.dto';
 import {
@@ -86,6 +86,7 @@ export class PagosService {
         where: {
           club_id: clubId,
           rol: { in: [...MEMBER_ROLES] },
+          ...SOCIO_MEMBERSHIP,
           ...NOT_DELETED,
         },
         select: {
@@ -245,6 +246,7 @@ export class PagosService {
           club_id: clubId,
           estado: 'activo',
           rol: { in: [...MEMBER_ROLES] },
+          ...SOCIO_MEMBERSHIP,
           ...NOT_DELETED,
         },
         include: {

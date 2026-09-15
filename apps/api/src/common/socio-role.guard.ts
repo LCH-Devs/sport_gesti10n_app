@@ -9,8 +9,14 @@ import {
 @Injectable()
 export class SocioRoleGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const req = context.switchToHttp().getRequest<{ user?: { role: string } }>();
-    if (req.user?.role !== 'socio' && req.user?.role !== 'profe') {
+    const req = context.switchToHttp().getRequest<{
+      user?: { role: string; es_socio?: boolean };
+    }>();
+    const user = req.user;
+    if (
+      user?.role !== 'socio' &&
+      !(user?.role === 'profe' && user.es_socio === true)
+    ) {
       throw new ForbiddenException('Solo socios');
     }
     return true;

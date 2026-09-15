@@ -4,6 +4,7 @@ import { apiFetch, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
 import { EspaciosReservasTabs } from '../_components/EspaciosReservasTabs';
 import { DataTable, FloatingActionButton, type Column } from '@/components/common';
 
@@ -19,10 +20,63 @@ type Espacio = {
   hora_cierre: string;
 };
 
+type Ocupacion = {
+  espacio_id: number;
+  dia: { pct: number };
+  semana: { pct: number };
+  mes: { pct: number };
+  calor: { manana: number; tarde: number; noche: number };
+};
+
+function barColor(pct: number) {
+  if (pct >= 70) return 'bg-red-500';
+  if (pct >= 40) return 'bg-amber-400';
+  return 'bg-emerald-500';
+}
+
+function OccupancyBar({ label, pct }: { label: string; pct: number }) {
+  return (
+    <div className="min-w-[4.5rem]">
+      <div className="flex justify-between text-[10px] leading-none text-slate-500">
+        <span>{label}</span>
+        <span>{pct}%</span>
+      </div>
+      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-200">
+        <div className={`h-full rounded-full ${barColor(pct)}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+
+function HeatDots({
+  calor,
+  labels,
+}: {
+  calor: Ocupacion['calor'];
+  labels: { manana: string; tarde: string; noche: string };
+}) {
+  const cell = (v: number, title: string) => (
+    <span
+      title={`${title}: ${v}%`}
+      className="inline-block h-4 w-4 rounded-sm border border-slate-200"
+      style={{ backgroundColor: `rgba(185, 28, 28, ${Math.max(0.06, v / 100)})` }}
+    />
+  );
+  return (
+    <div className="flex items-center gap-0.5">
+      {cell(calor.manana, labels.manana)}
+      {cell(calor.tarde, labels.tarde)}
+      {cell(calor.noche, labels.noche)}
+    </div>
+  );
+}
+
 export default function EspaciosPage() {
   const { t } = useTranslation();
+  const { formatHmRange } = useDateTimeFormat();
   const router = useRouter();
   const [items, setItems] = useState<Espacio[]>([]);
+  const [ocupacion, setOcupacion] = useState<Record<number, Ocupacion>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -32,11 +86,18 @@ export default function EspaciosPage() {
     setLoading(true);
     setError('');
     try {
-      const data = await apiFetch<Espacio[]>('/espacios', {
-        token: session.access_token,
-        clubSlug: session.club.slug,
-      });
+      const [data, occ] = await Promise.all([
+        apiFetch<Espacio[]>('/espacios', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }),
+        apiFetch<Ocupacion[]>('/espacios/ocupacion', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }),
+      ]);
       setItems(data);
+      setOcupacion(Object.fromEntries(occ.map((o) => [o.espacio_id, o])));
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     } finally {
@@ -75,7 +136,40 @@ export default function EspaciosPage() {
     {
       key: 'horario',
       header: t('admin.espacios.horario'),
-      accessor: (e) => `${e.hora_apertura} – ${e.hora_cierre}`,
+      accessor: (e) => formatHmRange(e.hora_apertura, e.hora_cierre),
+    },
+    {
+      key: 'ocupacion',
+      header: t('admin.espacios.ocupacion'),
+      render: (e) => {
+        const o = ocupacion[e.id];
+        if (!o) return '—';
+        return (
+          <div className="flex flex-wrap items-end gap-3">
+            <OccupancyBar label={t('admin.espacios.ocupacionDia')} pct={o.dia.pct} />
+            <OccupancyBar label={t('admin.espacios.ocupacionSemana')} pct={o.semana.pct} />
+            <OccupancyBar label={t('admin.espacios.ocupacionMes')} pct={o.mes.pct} />
+          </div>
+        );
+      },
+    },
+    {
+      key: 'calor',
+      header: t('admin.espacios.calor'),
+      render: (e) => {
+        const o = ocupacion[e.id];
+        if (!o) return '—';
+        return (
+          <HeatDots
+            calor={o.calor}
+            labels={{
+              manana: t('admin.espacios.calorManana'),
+              tarde: t('admin.espacios.calorTarde'),
+              noche: t('admin.espacios.calorNoche'),
+            }}
+          />
+        );
+      },
     },
     {
       key: 'activo',

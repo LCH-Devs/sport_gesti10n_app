@@ -82,6 +82,9 @@ JWT con `role: platform` (sin `club_id`).
 ## Socios / Admins
 
 - `GET|POST /socios` · `GET|PATCH|DELETE /socios/:id`
+- Profesor: `rol=profe`; `es_socio` default `true`. Con `es_socio=false`
+  conserva membresía/login pero queda fuera de cuota, familia, reservas y
+  límite SaaS.
 - `POST /socios` y `POST /familias` aceptan `acepta_upgrade` si el alta cruza el tope del plan. Sin el flag → **409** `PLAN_UPGRADE_REQUIRED` (el socio no se crea).
 - Alta de socio/familia (solo personas nuevas): `inscripcion?` + `inscripcion_monto?` + `inscripcion_cuotas?` (1–12) y `bonificar_meses?` (`YYYY-MM[]`). Sin tilde / sin monto = sin deuda de inscripción. Los meses bonificados no generan cuota al cobrar.
 - `POST /socios/import-csv` — `{ csv }` o multipart `file` (CSV / Excel `.xlsx` / `.xls`). Si el lote cruza el tope, 409 y no procesa nada. Reenviar con `acepta_upgrade=true`.
@@ -116,21 +119,31 @@ JWT con `role: platform` (sin `club_id`).
 ## Espacios / Reservas
 
 - `GET|POST /espacios` · `PATCH|DELETE /espacios/:id` (staff)
-- `GET /espacios/:id/disponibilidad?fecha=YYYY-MM-DD` (staff)
+- `GET /espacios/ocupacion?fecha=YYYY-MM-DD` — % día/semana/mes y calor mañana/tarde/noche por espacio (staff). Ventana útil = apertura → cierre − 1 h
+- `GET /espacios/:id/disponibilidad?fecha=YYYY-MM-DD` (staff). Slots libres; excluye reservas confirmadas, eventos (con `fin` y canchas) y entrenamientos con `espacio_id`. Incluye inicios de la grilla y el instante en que se libera el espacio (p. ej. entrenamiento hasta 19:30 → turno 19:30–20:30). Último turno termina en cierre − 1 h
 - `GET /reservas?desde=&hasta=&espacio_id=` (staff)
-- `POST /reservas` — valida solape, moroso, max activas; solape verificado con transacción Serializable + `EXCLUDE` constraint en DB (no hay doble reserva por carrera) (staff, `socio_id` en el body)
+- `POST /reservas` — valida que el inicio no esté en el pasado, que inicio/fin estén en el horario útil del espacio (apertura → cierre − 1 h), que la duración sea al menos un turno de `duracion_slot_min` y que el inicio caiga en la grilla **o** en el momento en que se libera el espacio (sin 18:43; sí 19:30–20:30 si un entrenamiento termina 19:30), solape con reserva/evento/horario, moroso, max activas; solape entre reservas también con transacción Serializable + `EXCLUDE` constraint en DB (staff, `socio_id` en el body)
+- `PATCH /reservas/:id` — editar espacio, socio, inicio, fin, nota (solo confirmada; mismas reglas de horario y solape, ignora la propia reserva)
 - `PATCH /reservas/:id/cancelar` (staff, cualquier socio del club)
-- Portal socio (JWT de socio/profe, sin `socio_id` en el body — siempre es el propio):
+- Portal socio (JWT de socio, o profe con `es_socio=true`, sin `socio_id` en el body — siempre es el propio):
   - `GET /socio/espacios` — solo espacios activos
   - `GET /socio/espacios/:id/disponibilidad?fecha=YYYY-MM-DD`
   - `GET /socio/reservas` — solo las propias
   - `POST /socio/reservas` — crea a nombre del socio autenticado
   - `PATCH /socio/reservas/:id/cancelar` — solo si la reserva es propia (404 si no)
+- Portal profesor (`role=profe`):
+  - `GET /profe/me` — perfil, horarios propios y últimas 12 liquidaciones
 
 ## Horarios / Noticias
 
-- `GET|POST /horarios` · `PATCH|DELETE /horarios/:id`
+- `GET|POST /horarios` · `PATCH|DELETE /horarios/:id` — `dias` nombres completos (`Lunes,Miércoles,Viernes`); `espacio_id?` opcional: si hay cancha, el entrenamiento ocupa ese espacio (recurrencia semanal, se chequea ~8 semanas)
 - `GET|POST /noticias?es_evento=` · `PATCH|DELETE /noticias/:id`
+
+## Eventos del club
+
+- `GET|POST /eventos` · `GET|PATCH|DELETE /eventos/:id` (staff / mutaciones admin)
+- Body extra: `fin?` (ISO), `todos_espacios?`, `espacio_ids?`. Sin canchas el evento no bloquea reservas. Con canchas hace falta `fin` y no puede pisar reserva/evento/entrenamiento
+- `GET /eventos-publicos` — feed público cross-tenant (`publicado` + `visibilidad=publico`)
 
 ## Social (feed entre clubes)
 

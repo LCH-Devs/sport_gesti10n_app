@@ -3,6 +3,7 @@
 import { apiFetch, requireSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
 import { DataTable, Badge, type Column } from '@/components/common';
 import { EyeIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 
@@ -37,6 +38,7 @@ type TablaRow = {
 
 export default function TorneosPage() {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateTimeFormat();
   const [items, setItems] = useState<Torneo[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [partidos, setPartidos] = useState<Partido[]>([]);
@@ -216,7 +218,7 @@ export default function TorneosPage() {
     {
       key: 'fecha',
       header: t('admin.torneos.fecha'),
-      render: (p) => (p.fecha ? new Date(p.fecha).toLocaleString('es-AR') : '—'),
+      render: (p) => (p.fecha ? formatDateTime(p.fecha) : '—'),
     },
   ];
 

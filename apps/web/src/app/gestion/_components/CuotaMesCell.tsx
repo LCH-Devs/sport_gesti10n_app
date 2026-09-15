@@ -26,9 +26,11 @@ export type EstadoMesItem = {
 export function CuotaMesCell({
   item,
   href,
+  onClick,
 }: {
   item: EstadoMesItem | undefined;
-  href: string;
+  href?: string;
+  onClick?: () => void;
 }) {
   const { t } = useTranslation();
   const estado = item?.cuota_estado ?? 'sin_generar';
@@ -52,13 +54,25 @@ export function CuotaMesCell({
       <QuestionMarkCircleIcon className="h-5 w-5 text-slate-300" />
     );
 
+  const className = 'inline-flex rounded p-0.5 hover:bg-slate-100';
+  const title = `${label} · ${t('admin.cobros.verCuenta', 'Ver estado de cuenta')}`;
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={className}
+        title={title}
+        aria-label={title}
+      >
+        {icon}
+      </button>
+    );
+  }
+
   return (
-    <Link
-      href={href}
-      className="inline-flex rounded p-0.5 hover:bg-slate-100"
-      title={`${label} · ${t('admin.cobros.verCuenta', 'Ver estado de cuenta')}`}
-      aria-label={`${label}. ${t('admin.cobros.verCuenta', 'Ver estado de cuenta')}`}
-    >
+    <Link href={href || '/cobros'} className={className} title={title} aria-label={title}>
       {icon}
     </Link>
   );

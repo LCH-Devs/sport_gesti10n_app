@@ -4,6 +4,7 @@ import './globals.css';
 import 'leaflet/dist/leaflet.css';
 import { Navbar, Sidebar } from '@/components/common';
 import { LanguageProvider } from '@/lib/LanguageContext';
+import { DateTimeFormatProvider } from '@/lib/DateTimeFormatContext';
 import { ChromeProvider, useChrome } from '@/lib/ChromeContext';
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -34,17 +35,21 @@ function RootLayoutContent({
   // OJO: "startsWith('/socio')" solo (sin el "/" final) también matchea
   // "/socios" — la sección de gestión de socios del staff — y le hacía
   // desaparecer el navbar/sidebar. Hay que exigir el límite de ruta.
-  const isSocioRoute = pathname === '/socio' || pathname.startsWith('/socio/');
+  const isMemberPortalRoute =
+    pathname === '/socio' ||
+    pathname.startsWith('/socio/') ||
+    pathname === '/profe' ||
+    pathname.startsWith('/profe/');
   // Se resuelve por pathname (no solo por el estado de ChromeContext) para que
   // el navbar/sidebar no parpadeen en el primer render de un hard reload,
   // antes de que el efecto de la página llame a setHideChrome.
   const showNavbarSidebar =
-    !isPublicPage && !hideChrome && !isOnboarding && !isCambiarClave && !isSocioRoute;
+    !isPublicPage && !hideChrome && !isOnboarding && !isCambiarClave && !isMemberPortalRoute;
   const showClubBackground = !isPublicPage && !isPrefixedRoute && !isOnboarding;
 
   React.useEffect(() => {
     if (isPublicPage || isPrefixedRoute) return;
-    if (pathname === '/socio' || pathname.startsWith('/socio/')) {
+    if (isMemberPortalRoute) {
       const socioSession = getSocioSession();
       if (!socioSession) return;
       applyClubTheme(socioSession.club);
@@ -70,7 +75,7 @@ function RootLayoutContent({
     ) {
       router.replace('/gestion/cambiar-clave');
     }
-  }, [pathname, isPublicPage, isPrefixedRoute, router]);
+  }, [pathname, isPublicPage, isPrefixedRoute, isMemberPortalRoute, router]);
 
   return (
     <>
@@ -117,9 +122,11 @@ export default function RootLayout({
       </head>
       <body className="bg-slate-50">
         <LanguageProvider>
-          <ChromeProvider>
-            <RootLayoutContent>{children}</RootLayoutContent>
-          </ChromeProvider>
+          <DateTimeFormatProvider>
+            <ChromeProvider>
+              <RootLayoutContent>{children}</RootLayoutContent>
+            </ChromeProvider>
+          </DateTimeFormatProvider>
         </LanguageProvider>
       </body>
     </html>
