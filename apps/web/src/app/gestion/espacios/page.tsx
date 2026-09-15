@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { EspaciosReservasTabs } from '../_components/EspaciosReservasTabs';
-import { FloatingActionButton, StatusMessage } from '@/components/common';
+import { DataTable, FloatingActionButton, type Column } from '@/components/common';
 
 type Espacio = {
   id: number;
@@ -42,11 +42,47 @@ export default function EspaciosPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  async function onDelete(espacio: Espacio) {
+    const session = requireSession();
+    if (!session) return;
+    try {
+      await apiFetch(`/espacios/${espacio.id}`, {
+        method: 'DELETE',
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('messages.errorDeleting'));
+    }
+  }
+
+  const columns: Column<Espacio>[] = [
+    { key: 'nombre', header: t('admin.espacios.nombre'), sortable: true },
+    { key: 'tipo', header: t('admin.espacios.tipo') },
+    {
+      key: 'slot',
+      header: t('admin.espacios.slot'),
+      accessor: (e) => e.duracion_slot_min,
+      render: (e) => `${e.duracion_slot_min} min`,
+    },
+    {
+      key: 'horario',
+      header: t('admin.espacios.horario'),
+      accessor: (e) => `${e.hora_apertura} – ${e.hora_cierre}`,
+    },
+    {
+      key: 'activo',
+      header: t('admin.espacios.activo'),
+      render: (e) => (e.activo ? t('common.yes') : t('common.no')),
+    },
+  ];
 
   return (
     <div className="relative">
@@ -61,42 +97,17 @@ export default function EspaciosPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        {loading ? (
-          <StatusMessage>{t('common.loading')}</StatusMessage>
-        ) : (
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3">{t('admin.espacios.nombre')}</th>
-                <th className="px-4 py-3">{t('admin.espacios.tipo')}</th>
-                <th className="px-4 py-3">{t('admin.espacios.slot')}</th>
-                <th className="px-4 py-3">{t('admin.espacios.horario')}</th>
-                <th className="px-4 py-3">{t('admin.espacios.activo')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((e) => (
-                <tr key={e.id} className="border-b last:border-0">
-                  <td className="px-4 py-3">{e.nombre}</td>
-                  <td className="px-4 py-3">{e.tipo}</td>
-                  <td className="px-4 py-3">{e.duracion_slot_min} min</td>
-                  <td className="px-4 py-3">
-                    {e.hora_apertura} – {e.hora_cierre}
-                  </td>
-                  <td className="px-4 py-3">{e.activo ? 'Sí' : 'No'}</td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-4 text-slate-500">
-                    {t('messages.noData')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      <div className="-mt-px">
+        <DataTable
+          columns={columns}
+          data={items}
+          getRowId={(e) => e.id}
+          loading={loading}
+          onEdit={(e) => router.push(`/espacios/nuevo?id=${e.id}`)}
+          onDelete={onDelete}
+          deleteConfirmMessage={t('admin.espacios.confirmDelete', '¿Eliminar este espacio?')}
+          className="rounded-t-none"
+        />
       </div>
 
       <FloatingActionButton

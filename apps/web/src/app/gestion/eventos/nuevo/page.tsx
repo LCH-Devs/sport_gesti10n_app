@@ -4,6 +4,7 @@ import { apiFetch, requireSession } from '@/lib/api';
 import { FormEvent, Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FormField } from '../../_components/FormField';
+import { ImageUploadField } from '@/components/ImageUploadField';
 import { LockClosedIcon, GlobeAltIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from '@/lib/useTranslation';
 
@@ -18,6 +19,7 @@ type Evento = {
   fecha: string;
   lugar: string | null;
   descripcion: string | null;
+  imagen_url: string | null;
   publicado: boolean;
 };
 
@@ -58,6 +60,7 @@ function NuevoEventoForm() {
     fecha: '',
     lugar: '',
     descripcion: '',
+    imagen_url: '',
     publicado: false,
   });
 
@@ -78,6 +81,7 @@ function NuevoEventoForm() {
           fecha: toDatetimeLocal(ev.fecha),
           lugar: ev.lugar || '',
           descripcion: ev.descripcion || '',
+          imagen_url: ev.imagen_url || '',
           publicado: ev.publicado,
         }),
       )
@@ -99,6 +103,7 @@ function NuevoEventoForm() {
         fecha: new Date(form.fecha).toISOString(),
         lugar: form.lugar || undefined,
         descripcion: form.descripcion || undefined,
+        imagen_url: form.imagen_url || undefined,
         publicado: form.publicado,
       });
       if (editingId) {
@@ -219,6 +224,14 @@ function NuevoEventoForm() {
           label={t('admin.eventos.descripcion')}
           value={form.descripcion}
           onChange={(descripcion) => setForm((f) => ({ ...f, descripcion }))}
+        />
+
+        <ImageUploadField
+          label={t('admin.eventos.imagen', 'Imagen / flyer (opcional)')}
+          value={form.imagen_url}
+          onChange={(imagen_url) => setForm((f) => ({ ...f, imagen_url }))}
+          uploadPath="/eventos/imagenes"
+          onError={setError}
         />
 
         <FormField

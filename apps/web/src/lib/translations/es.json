@@ -294,7 +294,7 @@
       "apertura": "Apertura",
       "cierre": "Cierre",
       "createEspacio": "Crear Espacio",
-      "slot": "Slot",
+      "slot": "Tiempo",
       "horario": "Horario",
       "activo": "Activo"
     },
@@ -304,6 +304,8 @@
       "nombre": "Nombre",
       "modoCobro": "Modo de Cobro",
       "createActividad": "Crear Actividad",
+      "editActividad": "Editar actividad",
+      "confirmDelete": "¿Eliminar esta actividad?",
       "adicional": "Adicional",
       "club": "Club",
       "profe": "Profesor"
@@ -332,6 +334,7 @@
       "horaInicio": "Inicio",
       "horaFin": "Fin",
       "createHorario": "Crear Horario",
+      "editHorario": "Editar horario",
       "activo": "Activo",
       "confirmDelete": "¿Eliminar horario?"
     },
@@ -370,7 +373,9 @@
       "titulo": "Título",
       "cuerpo": "Cuerpo",
       "esEvento": "Es evento",
-      "publicar": "Publicar"
+      "publicar": "Publicar",
+      "editar": "Editar noticia",
+      "confirmDelete": "¿Eliminar esta noticia?"
     },
     "usuarios": {
       "title": "Usuarios del Club",
@@ -407,7 +412,11 @@
       "pg": "PG",
       "pe": "PE",
       "pp": "PP",
-      "sinPartidosJugados": "Sin partidos jugados."
+      "sinPartidosJugados": "Sin partidos jugados.",
+      "confirmDelete": "¿Eliminar este torneo?",
+      "verDetalle": "Ver detalle",
+      "cargarResultado": "Cargar resultado",
+      "resultadoInvalido": "Ingresá números válidos"
     },
     "cobros": {
       "title": "Cobros",
@@ -417,6 +426,7 @@
       "generar": "Generar y Enviar Cobros",
       "generarYEnviar": "Generar y Enviar Cobros",
       "generando": "Generando…",
+      "sociosProcesados": "Socios procesados",
       "actualizar": "Actualizar",
       "pagados": "Pagados",
       "pendientes": "Pendientes",
@@ -463,7 +473,8 @@
       "mes": "Mes",
       "profesor": "Profesor",
       "totalClub": "Total Club",
-      "marcarPagada": "Marcar pagada"
+      "marcarPagada": "Marcar pagada",
+      "mesCerrado": "Mes cerrado / liquidación actualizada."
     },
     "eventos": {
       "title": "Eventos",
@@ -473,6 +484,7 @@
       "tipoSeminario": "Seminario",
       "tipoTorneo": "Torneo",
       "tipoSocial": "Social",
+      "filtroTodos": "Todos",
       "publicado": "Publicado",
       "borrador": "Borrador",
       "visibilidadPublico": "Público",

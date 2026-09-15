@@ -4,6 +4,7 @@ import { apiFetch, requireSession } from '@/lib/api';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { interpolate, useTranslation } from '@/lib/useTranslation';
+import { DataTable, type Column } from '@/components/common';
 
 type PlanUso = {
   socios_activos: number;
@@ -56,6 +57,10 @@ type HoyData = {
   alertas_fuga_count: number;
 };
 
+type Deudor = HoyData['deudores'][number];
+type ReservaHoy = HoyData['reservas_hoy'][number];
+type HorarioHoy = HoyData['horarios_hoy'][number];
+
 export default function AdminHomePage() {
   const { t } = useTranslation();
   const [data, setData] = useState<HoyData | null>(null);
@@ -91,6 +96,31 @@ export default function AdminHomePage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const deudoresColumns: Column<Deudor>[] = [
+    { key: 'socio', header: t('hoy.socio'), accessor: (d) => `${d.apellido}, ${d.nombre}` },
+    { key: 'dni', header: t('hoy.dni') },
+    { key: 'monto', header: t('hoy.monto'), align: 'right', render: (d) => `$${d.monto}` },
+  ];
+
+  const reservasColumns: Column<ReservaHoy>[] = [
+    { key: 'espacio', header: t('hoy.espacio'), accessor: (r) => r.espacio.nombre },
+    { key: 'socio', header: t('hoy.socio'), accessor: (r) => `${r.socio.apellido}, ${r.socio.nombre}` },
+    {
+      key: 'horario',
+      header: t('hoy.horario'),
+      render: (r) =>
+        `${new Date(r.inicio).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })} – ${new Date(
+          r.fin,
+        ).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`,
+    },
+  ];
+
+  const horariosColumns: Column<HorarioHoy>[] = [
+    { key: 'titulo', header: t('hoy.titulo') },
+    { key: 'dias', header: t('hoy.dias') },
+    { key: 'horario', header: t('hoy.horario'), accessor: (h) => `${h.hora_inicio} – ${h.hora_fin}` },
+  ];
 
   return (
     <div>
@@ -192,105 +222,35 @@ export default function AdminHomePage() {
           </div>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <div className="overflow-x-auto rounded-xl border bg-white">
-              <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-                {t('hoy.deudores')}
-              </h3>
-              {data.deudores.length === 0 ? (
-                <p className="p-4 text-sm text-slate-500">{t('hoy.sinDeudores')}</p>
-              ) : (
-                <table className="min-w-full text-left text-sm">
-                  <thead className="border-b text-slate-600">
-                    <tr>
-                      <th className="px-4 py-2">{t('hoy.socio')}</th>
-                      <th className="px-4 py-2">{t('hoy.dni')}</th>
-                      <th className="px-4 py-2">{t('hoy.monto')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.deudores.map((d) => (
-                      <tr key={d.id} className="border-b last:border-0">
-                        <td className="px-4 py-2">
-                          {d.apellido}, {d.nombre}
-                        </td>
-                        <td className="px-4 py-2 font-mono">{d.dni}</td>
-                        <td className="px-4 py-2">${d.monto}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+            <div>
+              <h3 className="mb-2 font-semibold">{t('hoy.deudores')}</h3>
+              <DataTable
+                columns={deudoresColumns}
+                data={data.deudores}
+                getRowId={(d) => d.id}
+                emptyMessage={t('hoy.sinDeudores')}
+              />
             </div>
 
-            <div className="overflow-x-auto rounded-xl border bg-white">
-              <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-                {t('hoy.reservasHoy')}
-              </h3>
-              {data.reservas_hoy.length === 0 ? (
-                <p className="p-4 text-sm text-slate-500">{t('hoy.sinReservasHoy')}</p>
-              ) : (
-                <table className="min-w-full text-left text-sm">
-                  <thead className="border-b text-slate-600">
-                    <tr>
-                      <th className="px-4 py-2">{t('hoy.espacio')}</th>
-                      <th className="px-4 py-2">{t('hoy.socio')}</th>
-                      <th className="px-4 py-2">{t('hoy.horario')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.reservas_hoy.map((r) => (
-                      <tr key={r.id} className="border-b last:border-0">
-                        <td className="px-4 py-2">{r.espacio.nombre}</td>
-                        <td className="px-4 py-2">
-                          {r.socio.apellido}, {r.socio.nombre}
-                        </td>
-                        <td className="px-4 py-2">
-                          {new Date(r.inicio).toLocaleTimeString('es-AR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}{' '}
-                          –{' '}
-                          {new Date(r.fin).toLocaleTimeString('es-AR', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+            <div>
+              <h3 className="mb-2 font-semibold">{t('hoy.reservasHoy')}</h3>
+              <DataTable
+                columns={reservasColumns}
+                data={data.reservas_hoy}
+                getRowId={(r) => r.id}
+                emptyMessage={t('hoy.sinReservasHoy')}
+              />
             </div>
           </div>
 
-          <div className="mt-6 overflow-x-auto rounded-xl border bg-white">
-            <h3 className="border-b bg-slate-50 px-4 py-3 font-semibold">
-              {t('hoy.horariosHoy')}
-            </h3>
-            {data.horarios_hoy.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500">{t('hoy.sinHorariosHoy')}</p>
-            ) : (
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b text-slate-600">
-                  <tr>
-                    <th className="px-4 py-2">{t('hoy.titulo')}</th>
-                    <th className="px-4 py-2">{t('hoy.dias')}</th>
-                    <th className="px-4 py-2">{t('hoy.horario')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.horarios_hoy.map((h) => (
-                    <tr key={h.id} className="border-b last:border-0">
-                      <td className="px-4 py-2">{h.titulo}</td>
-                      <td className="px-4 py-2">{h.dias}</td>
-                      <td className="px-4 py-2">
-                        {h.hora_inicio} – {h.hora_fin}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+          <div className="mt-6">
+            <h3 className="mb-2 font-semibold">{t('hoy.horariosHoy')}</h3>
+            <DataTable
+              columns={horariosColumns}
+              data={data.horarios_hoy}
+              getRowId={(h) => h.id}
+              emptyMessage={t('hoy.sinHorariosHoy')}
+            />
           </div>
         </>
       )}

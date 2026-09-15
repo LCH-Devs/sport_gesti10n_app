@@ -27,6 +27,11 @@ export class EspaciosController {
     return this.espacios.list(clubId);
   }
 
+  @Get(':id')
+  getOne(@ClubId() clubId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.espacios.getOne(clubId, id);
+  }
+
   @Get(':id/disponibilidad')
   disponibilidad(
     @ClubId() clubId: number,

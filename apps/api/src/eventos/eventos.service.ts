@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MediaService } from '../media/media.service';
 import { NOT_DELETED } from '../common/club-users';
 import { CreateEventoDto, UpdateEventoDto } from './dto/evento.dto';
 
 @Injectable()
 export class EventosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly media: MediaService,
+  ) {}
 
   list(clubId: number, tipo?: string) {
     return this.prisma.evento.findMany({
@@ -32,10 +36,17 @@ export class EventosService {
         fecha: new Date(dto.fecha),
         lugar: dto.lugar,
         descripcion: dto.descripcion,
+        imagen_url: dto.imagen_url,
         publicado: dto.publicado ?? false,
         torneo_id: dto.torneo_id,
       },
     });
+  }
+
+  /** Sube el flyer/imagen del evento. Se puede llamar antes o después de crear el evento en sí. */
+  async uploadImagen(file: Express.Multer.File) {
+    const url = await this.media.saveEntityImage('eventos', Date.now(), file);
+    return { url };
   }
 
   async update(clubId: number, id: number, dto: UpdateEventoDto) {
@@ -49,6 +60,7 @@ export class EventosService {
         ...(dto.fecha !== undefined && { fecha: new Date(dto.fecha) }),
         ...(dto.lugar !== undefined && { lugar: dto.lugar }),
         ...(dto.descripcion !== undefined && { descripcion: dto.descripcion }),
+        ...(dto.imagen_url !== undefined && { imagen_url: dto.imagen_url }),
         ...(dto.publicado !== undefined && { publicado: dto.publicado }),
         ...(dto.torneo_id !== undefined && { torneo_id: dto.torneo_id }),
       },

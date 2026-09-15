@@ -1,11 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MediaService } from '../media/media.service';
 import { NOT_DELETED } from '../common/club-users';
 import { CreateNoticiaDto, UpdateNoticiaDto } from './dto/noticia.dto';
 
 @Injectable()
 export class NoticiasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly media: MediaService,
+  ) {}
 
   list(clubId: number, esEvento?: boolean) {
     return this.prisma.noticia.findMany({
@@ -16,6 +20,16 @@ export class NoticiasService {
       },
       orderBy: { fecha: 'desc' },
     });
+  }
+
+  getOne(clubId: number, id: number) {
+    return this.ensureInClub(clubId, id);
+  }
+
+  /** Sube la imagen de una noticia. Se puede llamar antes o después de crearla. */
+  async uploadImagen(file: Express.Multer.File) {
+    const url = await this.media.saveEntityImage('noticias', Date.now(), file);
+    return { url };
   }
 
   create(clubId: number, dto: CreateNoticiaDto) {

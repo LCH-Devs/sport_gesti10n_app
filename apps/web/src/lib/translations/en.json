@@ -294,7 +294,7 @@
       "apertura": "Opening",
       "cierre": "Closing",
       "createEspacio": "Create Space",
-      "slot": "Slot",
+      "slot": "Duration",
       "horario": "Schedule",
       "activo": "Active"
     },
@@ -304,6 +304,8 @@
       "nombre": "Name",
       "modoCobro": "Billing Mode",
       "createActividad": "Create Activity",
+      "editActividad": "Edit activity",
+      "confirmDelete": "Delete this activity?",
       "adicional": "Additional",
       "club": "Club",
       "profe": "Coach"
@@ -332,6 +334,7 @@
       "horaInicio": "Start Time",
       "horaFin": "End Time",
       "createHorario": "Create Schedule",
+      "editHorario": "Edit schedule",
       "activo": "Active",
       "confirmDelete": "Delete schedule?"
     },
@@ -370,7 +373,9 @@
       "titulo": "Title",
       "cuerpo": "Content",
       "esEvento": "Is event",
-      "publicar": "Publish"
+      "publicar": "Publish",
+      "editar": "Edit news",
+      "confirmDelete": "Delete this news item?"
     },
     "usuarios": {
       "title": "Club Users",
@@ -407,7 +412,11 @@
       "pg": "PG",
       "pe": "PE",
       "pp": "PP",
-      "sinPartidosJugados": "No matches played."
+      "sinPartidosJugados": "No matches played.",
+      "confirmDelete": "Delete this tournament?",
+      "verDetalle": "View details",
+      "cargarResultado": "Enter result",
+      "resultadoInvalido": "Enter valid numbers"
     },
     "cobros": {
       "title": "Billing",
@@ -417,6 +426,7 @@
       "generar": "Generate and Send Invoices",
       "generarYEnviar": "Generate and Send Invoices",
       "generando": "Generating…",
+      "sociosProcesados": "Members processed",
       "actualizar": "Update",
       "pagados": "Paid",
       "pendientes": "Pending",
@@ -463,7 +473,8 @@
       "mes": "Month",
       "profesor": "Coach",
       "totalClub": "Total Club",
-      "marcarPagada": "Mark as paid"
+      "marcarPagada": "Mark as paid",
+      "mesCerrado": "Month closed / settlement updated."
     },
     "eventos": {
       "title": "Events",
@@ -473,6 +484,7 @@
       "tipoSeminario": "Seminar",
       "tipoTorneo": "Tournament",
       "tipoSocial": "Social",
+      "filtroTodos": "All",
       "publicado": "Published",
       "borrador": "Draft",
       "visibilidadPublico": "Public",

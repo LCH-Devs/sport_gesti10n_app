@@ -1,17 +1,32 @@
 'use client';
 
 import { apiFetch, requireSession } from '@/lib/api';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent, Suspense, useCallback, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
 
 type Profe = { id: number; nombre: string; apellido: string; rol: string };
 
-export default function NuevaActividadPage() {
+type Actividad = {
+  id: number;
+  nombre: string;
+  modo_cobro: string;
+  monto_adicional: number;
+  profe_id: number | null;
+  comision_tipo: string | null;
+  comision_valor: number | null;
+};
+
+function NuevaActividadForm() {
   const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingId = searchParams.get('id');
+
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(Boolean(editingId));
+  const [saving, setSaving] = useState(false);
   const [profes, setProfes] = useState<Profe[]>([]);
   const [form, setForm] = useState({
     nombre: '',
@@ -34,48 +49,98 @@ export default function NuevaActividadPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  async function onCreate(e: FormEvent) {
+  useEffect(() => {
+    if (!editingId) return;
+    const session = requireSession();
+    if (!session) return;
+    setLoading(true);
+    apiFetch<Actividad>(`/actividades/${editingId}`, {
+      token: session.access_token,
+      clubSlug: session.club.slug,
+    })
+      .then((a) =>
+        setForm({
+          nombre: a.nombre,
+          modo_cobro: a.modo_cobro,
+          monto_adicional: a.monto_adicional ? String(a.monto_adicional) : '',
+          profe_id: a.profe_id ? String(a.profe_id) : '',
+          comision_tipo: a.comision_tipo || 'porcentaje',
+          comision_valor: a.comision_valor ? String(a.comision_valor) : '',
+        }),
+      )
+      .catch((err) => setError(err instanceof Error ? err.message : t('messages.errorLoading')))
+      .finally(() => setLoading(false));
+  }, [editingId, t]);
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const session = requireSession();
     if (!session) return;
+    setSaving(true);
+    setError('');
     try {
-      await apiFetch('/actividades', {
-        method: 'POST',
-        token: session.access_token,
-        clubSlug: session.club.slug,
-        body: JSON.stringify({
-          nombre: form.nombre,
-          modo_cobro: form.modo_cobro,
-          monto_adicional: form.monto_adicional ? Number(form.monto_adicional) : undefined,
-          profe_id:
-            form.modo_cobro === 'profe' && form.profe_id ? Number(form.profe_id) : undefined,
-          comision_tipo: form.modo_cobro === 'profe' ? form.comision_tipo : undefined,
-          comision_valor:
-            form.modo_cobro === 'profe' && form.comision_valor
-              ? Number(form.comision_valor)
-              : undefined,
-        }),
+      const body = JSON.stringify({
+        nombre: form.nombre,
+        modo_cobro: form.modo_cobro,
+        monto_adicional: form.monto_adicional ? Number(form.monto_adicional) : undefined,
+        profe_id:
+          form.modo_cobro === 'profe' && form.profe_id ? Number(form.profe_id) : undefined,
+        comision_tipo: form.modo_cobro === 'profe' ? form.comision_tipo : undefined,
+        comision_valor:
+          form.modo_cobro === 'profe' && form.comision_valor
+            ? Number(form.comision_valor)
+            : undefined,
       });
+      if (editingId) {
+        await apiFetch(`/actividades/${editingId}`, {
+          method: 'PATCH',
+          token: session.access_token,
+          clubSlug: session.club.slug,
+          body,
+        });
+      } else {
+        await apiFetch('/actividades', {
+          method: 'POST',
+          token: session.access_token,
+          clubSlug: session.club.slug,
+          body,
+        });
+      }
       router.push('/actividades');
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
+      setError(err instanceof Error ? err.message : t('messages.errorSaving'));
+    } finally {
+      setSaving(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold">
+          {editingId ? t('admin.actividades.editActividad', 'Editar actividad') : t('admin.socios.quickCreate')}
+        </h2>
+        <p className="mt-6 text-sm text-slate-500">{t('common.loading')}</p>
+      </div>
+    );
   }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">{t('admin.socios.quickCreate')}</h2>
+      <h2 className="text-2xl font-bold">
+        {editingId ? t('admin.actividades.editActividad', 'Editar actividad') : t('admin.socios.quickCreate')}
+      </h2>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <form
-        onSubmit={onCreate}
+        onSubmit={onSubmit}
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
         <FormField
@@ -137,9 +202,10 @@ export default function NuevaActividadPage() {
         <div className="sm:col-span-2 flex gap-2">
           <button
             type="submit"
-            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
+            disabled={saving}
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
           >
-            {t('admin.actividades.createActividad')}
+            {saving ? t('config.guardando') : editingId ? t('config.guardar') : t('admin.actividades.createActividad')}
           </button>
           <button
             type="button"
@@ -151,5 +217,13 @@ export default function NuevaActividadPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NuevaActividadPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaActividadForm />
+    </Suspense>
   );
 }

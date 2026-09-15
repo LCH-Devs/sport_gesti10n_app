@@ -383,7 +383,7 @@ export default function EventsPage() {
         </svg>
       </button>
 
-      <style jsx global>{`
+      <style>{`
         .fullcalendar-card .fc {
           font-family: inherit;
         }

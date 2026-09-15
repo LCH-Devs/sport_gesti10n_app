@@ -3,6 +3,8 @@
 import { apiFetch, requireSession } from '@/lib/api';
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
+import { DataTable, Badge, type Column } from '@/components/common';
+import { CheckCircleIcon } from '@heroicons/react/24/outline';
 
 type Liquidacion = {
   id: number;
@@ -51,7 +53,7 @@ export default function LiquidacionesPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -72,25 +74,25 @@ export default function LiquidacionesPage() {
           profe_id: Number(form.profe_id),
         }),
       });
-      setMsg('Mes cerrado / liquidación actualizada.');
+      setMsg(t('admin.liquidaciones.mesCerrado'));
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorSaving'));
     }
   }
 
-  async function marcarPagada(id: number) {
+  async function marcarPagada(liquidacion: Liquidacion) {
     const session = requireSession();
     if (!session) return;
     try {
-      await apiFetch(`/liquidaciones-profe/${id}/marcar-pagada`, {
+      await apiFetch(`/liquidaciones-profe/${liquidacion.id}/marcar-pagada`, {
         method: 'PATCH',
         token: session.access_token,
         clubSlug: session.club.slug,
       });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error');
+      setError(err instanceof Error ? err.message : t('messages.errorSaving'));
     }
   }
 
@@ -98,6 +100,28 @@ export default function LiquidacionesPage() {
     (s) => !s.rol || s.rol === 'profe' || s.rol === 'profesor',
   );
   const profeOptions = profes.length > 0 ? profes : socios;
+
+  const columns: Column<Liquidacion>[] = [
+    { key: 'mes', header: t('admin.liquidaciones.mes'), sortable: true },
+    {
+      key: 'profe',
+      header: t('admin.liquidaciones.profesor'),
+      accessor: (l) => `${l.profe.apellido}, ${l.profe.nombre}`,
+    },
+    {
+      key: 'total_club',
+      header: t('admin.liquidaciones.totalClub'),
+      align: 'right',
+      render: (l) => `$${l.total_club}`,
+    },
+    {
+      key: 'estado',
+      header: t('dashboard.status'),
+      render: (l) => (
+        <Badge label={l.estado} variant={l.estado === 'pagada' ? 'success' : 'pending'} />
+      ),
+    },
+  ];
 
   return (
     <div>
@@ -149,52 +173,26 @@ export default function LiquidacionesPage() {
         </button>
       </form>
 
-      <div className="mt-8 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        {loading ? (
-          <p className="p-4 text-slate-500">{t('common.loading')}</p>
-        ) : (
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3">{t('admin.liquidaciones.mes')}</th>
-                <th className="px-4 py-3">{t('admin.liquidaciones.profesor')}</th>
-                <th className="px-4 py-3">{t('admin.liquidaciones.totalClub')}</th>
-                <th className="px-4 py-3">{t('dashboard.status')}</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((l) => (
-                <tr key={l.id} className="border-b last:border-0">
-                  <td className="px-4 py-3">{l.mes}</td>
-                  <td className="px-4 py-3">
-                    {l.profe.apellido}, {l.profe.nombre}
-                  </td>
-                  <td className="px-4 py-3">${l.total_club}</td>
-                  <td className="px-4 py-3">{l.estado}</td>
-                  <td className="px-4 py-3 text-right">
-                    {l.estado !== 'pagada' && (
-                      <button
-                        type="button"
-                        className="text-green-700 hover:underline"
-                        onClick={() => void marcarPagada(l.id)}
-                      >
-                        {t('admin.liquidaciones.marcarPagada')}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-4 py-4 text-slate-500">
-                    {t('messages.noData')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      <div className="mt-8">
+        <DataTable
+          columns={columns}
+          data={items}
+          getRowId={(l) => l.id}
+          loading={loading}
+          actions={(l) =>
+            l.estado !== 'pagada' ? (
+              <button
+                type="button"
+                onClick={() => void marcarPagada(l)}
+                className="text-slate-500 hover:text-green-700"
+                aria-label={t('admin.liquidaciones.marcarPagada')}
+                title={t('admin.liquidaciones.marcarPagada')}
+              >
+                <CheckCircleIcon className="h-4 w-4" />
+              </button>
+            ) : null
+          }
+        />
       </div>
     </div>
   );

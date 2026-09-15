@@ -8,8 +8,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { NoticiasService } from './noticias.service';
 import { AdminRoleGuard } from '../common/admin-role.guard';
 import { ClubStaffGuard } from '../common/club-staff.guard';
@@ -29,6 +32,18 @@ export class NoticiasController {
         ? undefined
         : esEvento === 'true' || esEvento === '1';
     return this.noticias.list(clubId, flag);
+  }
+
+  @Get(':id')
+  getOne(@ClubId() clubId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.noticias.getOne(clubId, id);
+  }
+
+  @Post('imagenes')
+  @UseGuards(AdminRoleGuard)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 4 * 1024 * 1024 } }))
+  uploadImagen(@UploadedFile() file: Express.Multer.File) {
+    return this.noticias.uploadImagen(file);
   }
 
   @Post()

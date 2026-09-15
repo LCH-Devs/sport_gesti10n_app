@@ -8,8 +8,11 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { EventosService } from './eventos.service';
 import { AdminRoleGuard } from '../common/admin-role.guard';
 import { ClubStaffGuard } from '../common/club-staff.guard';
@@ -25,6 +28,13 @@ export class EventosController {
   @Get()
   list(@ClubId() clubId: number, @Query('tipo') tipo?: string) {
     return this.eventos.list(clubId, tipo);
+  }
+
+  @Post('imagenes')
+  @UseGuards(AdminRoleGuard)
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 4 * 1024 * 1024 } }))
+  uploadImagen(@UploadedFile() file: Express.Multer.File) {
+    return this.eventos.uploadImagen(file);
   }
 
   @Get(':id')

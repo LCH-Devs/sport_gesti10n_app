@@ -30,6 +30,10 @@ export class ActividadesService {
     }));
   }
 
+  getOne(clubId: number, id: number) {
+    return this.ensureInClub(clubId, id);
+  }
+
   create(clubId: number, dto: CreateActividadDto) {
     return this.prisma.actividad.create({
       data: {

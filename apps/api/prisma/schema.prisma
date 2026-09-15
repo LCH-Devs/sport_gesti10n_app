@@ -458,6 +458,7 @@ model Evento {
   fecha       DateTime
   lugar       String?
   descripcion String?
+  imagen_url  String?
   publicado   Boolean           @default(false)
   torneo_id   Int?              @unique
   torneo      Torneo?           @relation(fields: [torneo_id], references: [id])

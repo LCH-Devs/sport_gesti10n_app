@@ -30,6 +30,11 @@ export class ActividadesController {
     return this.actividades.list(clubId);
   }
 
+  @Get(':id')
+  getOne(@ClubId() clubId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.actividades.getOne(clubId, id);
+  }
+
   @Post()
   @UseGuards(AdminRoleGuard)
   create(@ClubId() clubId: number, @Body() dto: CreateActividadDto) {

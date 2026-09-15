@@ -26,6 +26,11 @@ export class HorariosController {
     return this.horarios.list(clubId);
   }
 
+  @Get(':id')
+  getOne(@ClubId() clubId: number, @Param('id', ParseIntPipe) id: number) {
+    return this.horarios.getOne(clubId, id);
+  }
+
   @Post()
   @UseGuards(AdminRoleGuard)
   create(@ClubId() clubId: number, @Body() dto: CreateHorarioDto) {

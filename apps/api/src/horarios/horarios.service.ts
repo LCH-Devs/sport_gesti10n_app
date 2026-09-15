@@ -14,6 +14,10 @@ export class HorariosService {
     });
   }
 
+  getOne(clubId: number, id: number) {
+    return this.ensureInClub(clubId, id);
+  }
+
   create(clubId: number, dto: CreateHorarioDto) {
     return this.prisma.horario.create({
       data: {

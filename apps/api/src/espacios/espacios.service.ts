@@ -47,6 +47,10 @@ export class EspaciosService {
     });
   }
 
+  getOne(clubId: number, id: number) {
+    return this.ensureInClub(clubId, id);
+  }
+
   async create(clubId: number, dto: CreateEspacioDto) {
     return this.prisma.espacio.create({
       data: {

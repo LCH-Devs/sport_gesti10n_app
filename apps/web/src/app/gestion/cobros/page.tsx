@@ -4,6 +4,8 @@ import { apiFetch, requireSession } from '@/lib/api';
 import { FormEvent, Suspense, useCallback, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
+import { DataTable, Badge, type Column } from '@/components/common';
+import { CheckCircleIcon } from '@heroicons/react/24/outline';
 
 type PagoRow = {
   id: number;
@@ -160,7 +162,7 @@ function CobrosPageInner() {
         body: JSON.stringify(body),
       });
       setMsg(
-        `${data.message} Socios procesados: ${data.socios_procesados}.`,
+        `${data.message} ${t('admin.cobros.sociosProcesados')}: ${data.socios_procesados}.`,
       );
       await load();
       await loadCuenta();
@@ -246,6 +248,102 @@ function CobrosPageInner() {
     }
   }
 
+  const cuentaColumns: Column<PagoRow>[] = [
+    { key: 'mes', header: t('admin.cobros.mes') },
+    {
+      key: 'concepto',
+      header: t('admin.cobros.concepto', 'Concepto'),
+      render: (p) => (
+        <>
+          <span className="text-xs uppercase text-slate-500">
+            {p.tipo === 'inscripcion'
+              ? t('admin.cobros.tipoInscripcion', 'Inscripción')
+              : t('admin.cobros.tipoCuota', 'Cuota')}
+          </span>
+          {p.concepto && <span className="mt-0.5 block">{p.concepto}</span>}
+        </>
+      ),
+    },
+    {
+      key: 'socio',
+      header: t('dashboard.member'),
+      accessor: (p) => `${p.socio.apellido}, ${p.socio.nombre}`,
+    },
+    { key: 'monto', header: t('admin.cobros.monto'), align: 'right', render: (p) => `$${p.monto}` },
+    {
+      key: 'estado',
+      header: t('dashboard.status'),
+      render: (p) => <Badge label={p.estado} variant={p.estado === 'pagado' ? 'success' : 'pending'} />,
+    },
+  ];
+
+  const pagosColumns: Column<PagoRow>[] = [
+    {
+      key: 'socio',
+      header: t('dashboard.member'),
+      render: (p) => (
+        <>
+          {p.socio.apellido}, {p.socio.nombre}
+          {p.grupo_familiar?.nombre && (
+            <span className="mt-0.5 block text-xs text-slate-500">{p.grupo_familiar.nombre}</span>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'concepto',
+      header: t('admin.cobros.concepto', 'Concepto'),
+      render: (p) => (
+        <>
+          <span className="text-xs uppercase text-slate-500">
+            {p.tipo === 'inscripcion'
+              ? t('admin.cobros.tipoInscripcion', 'Inscripción')
+              : t('admin.cobros.tipoCuota', 'Cuota')}
+          </span>
+          {p.concepto && <span className="mt-0.5 block">{p.concepto}</span>}
+        </>
+      ),
+    },
+    { key: 'dni', header: t('dashboard.dni'), accessor: (p) => p.socio.dni },
+    { key: 'monto', header: t('admin.cobros.monto'), align: 'right', render: (p) => `$${p.monto}` },
+    {
+      key: 'estado',
+      header: t('dashboard.status'),
+      render: (p) => <Badge label={p.estado} variant={p.estado === 'pagado' ? 'success' : 'pending'} />,
+    },
+    {
+      key: 'link',
+      header: t('admin.cobros.link'),
+      render: (p) =>
+        p.mp_init_point ? (
+          <a
+            href={p.mp_init_point}
+            target="_blank"
+            rel="noreferrer"
+            className="text-blue-600 hover:underline"
+          >
+            {t('admin.cobros.abrir')}
+          </a>
+        ) : (
+          '—'
+        ),
+    },
+  ];
+
+  function marcarPagadoAction(p: PagoRow) {
+    return p.estado !== 'pagado' ? (
+      <button
+        type="button"
+        onClick={() => void marcarPagado(p.id)}
+        className="text-slate-500 hover:text-green-700"
+        aria-label={t('admin.cobros.marcarPagado')}
+        title={t('admin.cobros.marcarPagado')}
+      >
+        <CheckCircleIcon className="h-4 w-4" />
+      </button>
+    ) : null;
+  }
+
   return (
     <div>
       <h2 className="text-2xl font-bold">{t('admin.cobros.title')}</h2>
@@ -280,57 +378,14 @@ function CobrosPageInner() {
               {t('admin.cobros.cerrarCuenta', 'Ver todos los cobros')}
             </button>
           </div>
-          <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="border-b bg-slate-50">
-                <tr>
-                  <th className="px-3 py-2">{t('admin.cobros.mes')}</th>
-                  <th className="px-3 py-2">{t('admin.cobros.concepto', 'Concepto')}</th>
-                  <th className="px-3 py-2">{t('dashboard.member')}</th>
-                  <th className="px-3 py-2">{t('admin.cobros.monto')}</th>
-                  <th className="px-3 py-2">{t('dashboard.status')}</th>
-                  <th className="px-3 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {cuenta.pagos.map((p) => (
-                  <tr key={p.id} className="border-b last:border-0">
-                    <td className="px-3 py-2 font-mono">{p.mes}</td>
-                    <td className="px-3 py-2">
-                      <span className="text-xs uppercase text-slate-500">
-                        {p.tipo === 'inscripcion'
-                          ? t('admin.cobros.tipoInscripcion', 'Inscripción')
-                          : t('admin.cobros.tipoCuota', 'Cuota')}
-                      </span>
-                      {p.concepto && (
-                        <span className="mt-0.5 block">{p.concepto}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {p.socio.apellido}, {p.socio.nombre}
-                    </td>
-                    <td className="px-3 py-2">${p.monto}</td>
-                    <td className="px-3 py-2">{p.estado}</td>
-                    <td className="px-3 py-2 text-right">
-                      {p.estado !== 'pagado' && (
-                        <button
-                          type="button"
-                          className="text-green-700 hover:underline"
-                          onClick={() => void marcarPagado(p.id)}
-                        >
-                          {t('admin.cobros.marcarPagado')}
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {cuenta.pagos.length === 0 && (
-              <p className="p-3 text-sm text-slate-500">
-                {t('admin.cobros.cuentaVacia', 'Sin movimientos en esta cuenta.')}
-              </p>
-            )}
+          <div className="mt-4">
+            <DataTable
+              columns={cuentaColumns}
+              data={cuenta.pagos}
+              getRowId={(p) => p.id}
+              emptyMessage={t('admin.cobros.cuentaVacia', 'Sin movimientos en esta cuenta.')}
+              actions={marcarPagadoAction}
+            />
           </div>
         </div>
       )}
@@ -482,77 +537,14 @@ function CobrosPageInner() {
         </div>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-xl border bg-white">
-        <table className="min-w-full text-left text-sm">
-          <thead className="border-b bg-slate-50">
-            <tr>
-              <th className="px-4 py-3">{t('dashboard.member')}</th>
-              <th className="px-4 py-3">{t('admin.cobros.concepto', 'Concepto')}</th>
-              <th className="px-4 py-3">{t('dashboard.dni')}</th>
-              <th className="px-4 py-3">{t('admin.cobros.monto')}</th>
-              <th className="px-4 py-3">{t('dashboard.status')}</th>
-              <th className="px-4 py-3">{t('admin.cobros.link')}</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody>
-            {(resumen?.pagos || []).map((p) => (
-              <tr key={p.id} className="border-b last:border-0">
-                <td className="px-4 py-3">
-                  {p.socio.apellido}, {p.socio.nombre}
-                  {p.grupo_familiar?.nombre && (
-                    <span className="mt-0.5 block text-xs text-slate-500">
-                      {p.grupo_familiar.nombre}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="text-xs uppercase text-slate-500">
-                    {p.tipo === 'inscripcion'
-                      ? t('admin.cobros.tipoInscripcion', 'Inscripción')
-                      : t('admin.cobros.tipoCuota', 'Cuota')}
-                  </span>
-                  {p.concepto && (
-                    <span className="mt-0.5 block">{p.concepto}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 font-mono">{p.socio.dni}</td>
-                <td className="px-4 py-3">${p.monto}</td>
-                <td className="px-4 py-3">{p.estado}</td>
-                <td className="px-4 py-3">
-                  {p.mp_init_point ? (
-                    <a
-                      href={p.mp_init_point}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-blue-600 hover:underline"
-                    >
-                      {t('admin.cobros.abrir')}
-                    </a>
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {p.estado !== 'pagado' && (
-                    <button
-                      type="button"
-                      className="text-green-700 hover:underline"
-                      onClick={() => void marcarPagado(p.id)}
-                    >
-                      {t('admin.cobros.marcarPagado')}
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {resumen && resumen.pagos.length === 0 && (
-          <p className="p-4 text-slate-500">
-            {t('admin.cobros.sinPagos')}
-          </p>
-        )}
+      <div className="mt-6">
+        <DataTable
+          columns={pagosColumns}
+          data={resumen?.pagos || []}
+          getRowId={(p) => p.id}
+          emptyMessage={t('admin.cobros.sinPagos')}
+          actions={marcarPagadoAction}
+        />
       </div>
     </div>
   );

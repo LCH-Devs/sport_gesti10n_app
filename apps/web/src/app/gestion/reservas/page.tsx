@@ -5,7 +5,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { EspaciosReservasTabs } from '../_components/EspaciosReservasTabs';
-import { FloatingActionButton, StatusMessage } from '@/components/common';
+import { DataTable, FloatingActionButton, Badge, type Column } from '@/components/common';
+import { XCircleIcon } from '@heroicons/react/24/outline';
 
 type Reserva = {
   id: number;
@@ -15,6 +16,11 @@ type Reserva = {
   nota: string | null;
   socio: { id: number; nombre: string; apellido: string; dni: string };
   espacio: { id: number; nombre: string };
+};
+
+const ESTADO_VARIANT: Record<string, 'success' | 'warning' | 'error' | 'info'> = {
+  confirmada: 'success',
+  cancelada: 'error',
 };
 
 export default function ReservasPage() {
@@ -40,7 +46,7 @@ export default function ReservasPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -61,6 +67,33 @@ export default function ReservasPage() {
     }
   }
 
+  const columns: Column<Reserva>[] = [
+    { key: 'espacio', header: t('admin.reservas.espacio'), accessor: (r) => r.espacio.nombre },
+    {
+      key: 'socio',
+      header: t('admin.reservas.socio'),
+      accessor: (r) => `${r.socio.apellido}, ${r.socio.nombre}`,
+    },
+    {
+      key: 'inicio',
+      header: t('admin.reservas.inicio'),
+      sortable: true,
+      render: (r) => new Date(r.inicio).toLocaleString('es-AR'),
+    },
+    {
+      key: 'fin',
+      header: t('admin.reservas.fin'),
+      render: (r) => new Date(r.fin).toLocaleString('es-AR'),
+    },
+    {
+      key: 'estado',
+      header: t('admin.reservas.estado'),
+      render: (r) => (
+        <Badge label={r.estado} variant={ESTADO_VARIANT[r.estado] || 'info'} />
+      ),
+    },
+  ];
+
   return (
     <div className="relative">
       <h2 className="text-2xl font-bold">{t('admin.reservas.title')}</h2>
@@ -74,58 +107,27 @@ export default function ReservasPage() {
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        {loading ? (
-          <StatusMessage>{t('common.loading')}</StatusMessage>
-        ) : (
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3">{t('admin.reservas.espacio')}</th>
-                <th className="px-4 py-3">{t('admin.reservas.socio')}</th>
-                <th className="px-4 py-3">{t('admin.reservas.inicio')}</th>
-                <th className="px-4 py-3">{t('admin.reservas.fin')}</th>
-                <th className="px-4 py-3">{t('admin.reservas.estado')}</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((r) => (
-                <tr key={r.id} className="border-b last:border-0">
-                  <td className="px-4 py-3">{r.espacio.nombre}</td>
-                  <td className="px-4 py-3">
-                    {r.socio.apellido}, {r.socio.nombre}
-                  </td>
-                  <td className="px-4 py-3">
-                    {new Date(r.inicio).toLocaleString('es-AR')}
-                  </td>
-                  <td className="px-4 py-3">
-                    {new Date(r.fin).toLocaleString('es-AR')}
-                  </td>
-                  <td className="px-4 py-3">{r.estado}</td>
-                  <td className="px-4 py-3 text-right">
-                    {r.estado === 'confirmada' && (
-                      <button
-                        type="button"
-                        className="text-red-600 hover:underline"
-                        onClick={() => void onCancelar(r.id)}
-                      >
-                        {t('admin.reservas.cancelar')}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {items.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-4 text-slate-500">
-                    {t('messages.noData')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      <div className="-mt-px">
+        <DataTable
+          columns={columns}
+          data={items}
+          getRowId={(r) => r.id}
+          loading={loading}
+          className="rounded-t-none"
+          actions={(r) =>
+            r.estado === 'confirmada' ? (
+              <button
+                type="button"
+                onClick={() => void onCancelar(r.id)}
+                className="text-slate-500 hover:text-red-600"
+                aria-label={t('admin.reservas.cancelar')}
+                title={t('admin.reservas.cancelar')}
+              >
+                <XCircleIcon className="h-4 w-4" />
+              </button>
+            ) : null
+          }
+        />
       </div>
 
       <FloatingActionButton

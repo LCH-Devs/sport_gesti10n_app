@@ -27,12 +27,41 @@ export class MediaService {
       throw new BadRequestException('Solo JPG, PNG, WEBP o GIF');
     }
     if (this.imagekitEnabled()) {
-      return this.uploadToImageKit(clubId, file, ext);
+      return this.uploadToImageKit(`club-${clubId}`, '/clubapp/logos', file, ext);
     }
     this.logger.warn(
       'IMAGEKIT_PRIVATE_KEY no configurado: el logo se guarda en disco local',
     );
-    return this.saveToDisk(clubId, file, ext);
+    return this.saveToDisk('logos', `club-${clubId}`, file, ext);
+  }
+
+  /**
+   * Imagen genérica de una entidad (noticia, evento, etc.), con nombre único por
+   * subida (a diferencia del logo, que siempre pisa el mismo archivo del club).
+   */
+  async saveEntityImage(
+    category: string,
+    entityId: number,
+    file: Express.Multer.File,
+  ): Promise<string> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Elegí una imagen');
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      throw new BadRequestException('La imagen no puede superar 4 MB');
+    }
+    const ext = this.extForMime(file.mimetype);
+    if (!ext) {
+      throw new BadRequestException('Solo JPG, PNG, WEBP o GIF');
+    }
+    const baseName = `${category}-${entityId}-${Date.now()}`;
+    if (this.imagekitEnabled()) {
+      return this.uploadToImageKit(baseName, `/clubapp/${category}`, file, ext);
+    }
+    this.logger.warn(
+      'IMAGEKIT_PRIVATE_KEY no configurado: la imagen se guarda en disco local',
+    );
+    return this.saveToDisk(category, baseName, file, ext);
   }
 
   private imagekitEnabled() {
@@ -40,14 +69,13 @@ export class MediaService {
   }
 
   private async uploadToImageKit(
-    clubId: number,
+    fileNameBase: string,
+    folder: string,
     file: Express.Multer.File,
     ext: string,
   ) {
     const privateKey = this.config.get<string>('IMAGEKIT_PRIVATE_KEY')!.trim();
-    const folder =
-      this.config.get<string>('IMAGEKIT_FOLDER')?.trim() || '/clubapp/logos';
-    const fileName = `club-${clubId}${ext}`;
+    const fileName = `${fileNameBase}${ext}`;
     const auth = Buffer.from(`${privateKey}:`).toString('base64');
 
     const body = new FormData();
@@ -68,22 +96,23 @@ export class MediaService {
     if (!res.ok || !data.url) {
       this.logger.error(`ImageKit upload falló: ${data.message || res.status}`);
       throw new BadRequestException(
-        data.message || 'No se pudo subir el logo a ImageKit',
+        data.message || 'No se pudo subir la imagen a ImageKit',
       );
     }
-    this.logger.log(`Logo club ${clubId} subido a ImageKit`);
+    this.logger.log(`Imagen ${fileName} subida a ImageKit`);
     return data.url;
   }
 
   private saveToDisk(
-    clubId: number,
+    subdir: string,
+    fileNameBase: string,
     file: Express.Multer.File,
     ext: string,
   ) {
-    const dir = join(process.cwd(), 'uploads', 'logos');
+    const dir = join(process.cwd(), 'uploads', subdir);
     mkdirSync(dir, { recursive: true });
     for (const name of readdirSync(dir)) {
-      if (name.startsWith(`club-${clubId}-`)) {
+      if (name.startsWith(fileNameBase)) {
         try {
           unlinkSync(join(dir, name));
         } catch {
@@ -91,9 +120,9 @@ export class MediaService {
         }
       }
     }
-    const filename = `club-${clubId}-${Date.now()}${ext}`;
+    const filename = `${fileNameBase}${ext}`;
     writeFileSync(join(dir, filename), file.buffer);
-    return `/uploads/logos/${filename}`;
+    return `/uploads/${subdir}/${filename}`;
   }
 }
 

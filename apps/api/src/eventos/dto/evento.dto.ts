@@ -37,6 +37,11 @@ export class CreateEventoDto {
   descripcion?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imagen_url?: string;
+
+  @IsOptional()
   @IsBoolean()
   publicado?: boolean;
 
@@ -72,6 +77,11 @@ export class UpdateEventoDto {
   @IsString()
   @MaxLength(4000)
   descripcion?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  imagen_url?: string;
 
   @IsOptional()
   @IsBoolean()

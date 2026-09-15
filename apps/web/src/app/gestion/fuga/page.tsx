@@ -3,6 +3,8 @@
 import { apiFetch, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from '@/lib/useTranslation';
+import { DataTable, type Column } from '@/components/common';
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 
 type Alerta = {
   id: number;
@@ -48,6 +50,23 @@ export default function FugaPage() {
     void load();
   }, [load]);
 
+  const columns: Column<Alerta>[] = [
+    {
+      key: 'socio',
+      header: t('fuga.socio'),
+      accessor: (s) => `${s.apellido}, ${s.nombre}`,
+    },
+    { key: 'dni', header: t('fuga.dni') },
+    { key: 'cuotas_pendientes', header: t('fuga.cuotasPend'), align: 'right' },
+    {
+      key: 'asistencia',
+      header: t('fuga.asistencia'),
+      accessor: (s) => s.asistencia_pct,
+      render: (s) => (s.asistencia_pct == null ? '—' : `${s.asistencia_pct}%`),
+    },
+    { key: 'motivo', header: t('fuga.motivo') },
+  ];
+
   return (
     <div>
       <h2 className="text-2xl font-bold">{t('fuga.title')}</h2>
@@ -59,61 +78,28 @@ export default function FugaPage() {
         <p className="text-2xl font-bold">{data?.total ?? '—'}</p>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200 bg-white">
-        {loading ? (
-          <p className="p-4 text-slate-500">{t('common.loading')}</p>
-        ) : (
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-4 py-3">{t('fuga.socio')}</th>
-                <th className="px-4 py-3">{t('fuga.dni')}</th>
-                <th className="px-4 py-3">{t('fuga.cuotasPend')}</th>
-                <th className="px-4 py-3">{t('fuga.asistencia')}</th>
-                <th className="px-4 py-3">{t('fuga.motivo')}</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody>
-              {(data?.socios || []).map((s) => (
-                <tr key={s.id} className="border-b last:border-0">
-                  <td className="px-4 py-3">
-                    {s.apellido}, {s.nombre}
-                  </td>
-                  <td className="px-4 py-3 font-mono">{s.dni}</td>
-                  <td className="px-4 py-3">{s.cuotas_pendientes}</td>
-                  <td className="px-4 py-3">
-                    {s.asistencia_pct == null
-                      ? '—'
-                      : `${s.asistencia_pct}%`}
-                  </td>
-                  <td className="px-4 py-3">{s.motivo}</td>
-                  <td className="px-4 py-3 text-right">
-                    {s.whatsapp_url ? (
-                      <a
-                        href={s.whatsapp_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-green-700 hover:underline"
-                      >
-                        WhatsApp
-                      </a>
-                    ) : (
-                      '—'
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {data && data.socios.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-4 text-slate-500">
-                    {t('fuga.sinAlertas')}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        )}
+      <div className="mt-6">
+        <DataTable
+          columns={columns}
+          data={data?.socios || []}
+          getRowId={(s) => s.id}
+          loading={loading}
+          emptyMessage={t('fuga.sinAlertas')}
+          actions={(s) =>
+            s.whatsapp_url ? (
+              <a
+                href={s.whatsapp_url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-slate-500 hover:text-green-700"
+                aria-label="WhatsApp"
+                title="WhatsApp"
+              >
+                <ChatBubbleLeftRightIcon className="h-4 w-4" />
+              </a>
+            ) : null
+          }
+        />
       </div>
     </div>
   );

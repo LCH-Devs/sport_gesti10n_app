@@ -1,15 +1,31 @@
 'use client';
 
 import { apiFetch, requireSession } from '@/lib/api';
-import { FormEvent, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent, Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
 
-export default function NuevoEspacioPage() {
+type Espacio = {
+  id: number;
+  nombre: string;
+  tipo: string;
+  descripcion: string | null;
+  duracion_slot_min: number;
+  precio_opcional: number | null;
+  hora_apertura: string;
+  hora_cierre: string;
+};
+
+function NuevoEspacioForm() {
   const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editingId = searchParams.get('id');
+
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(Boolean(editingId));
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     nombre: '',
     tipo: 'cancha',
@@ -20,41 +36,92 @@ export default function NuevoEspacioPage() {
     hora_cierre: '23:00',
   });
 
-  async function onCreate(e: FormEvent) {
+  useEffect(() => {
+    if (!editingId) return;
+    const session = requireSession();
+    if (!session) return;
+    setLoading(true);
+    apiFetch<Espacio>(`/espacios/${editingId}`, {
+      token: session.access_token,
+      clubSlug: session.club.slug,
+    })
+      .then((e) =>
+        setForm({
+          nombre: e.nombre,
+          tipo: e.tipo,
+          descripcion: e.descripcion || '',
+          duracion_slot_min: String(e.duracion_slot_min),
+          precio_opcional: e.precio_opcional != null ? String(e.precio_opcional) : '',
+          hora_apertura: e.hora_apertura,
+          hora_cierre: e.hora_cierre,
+        }),
+      )
+      .catch((err) => setError(err instanceof Error ? err.message : t('messages.errorLoading')))
+      .finally(() => setLoading(false));
+  }, [editingId, t]);
+
+  async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const session = requireSession();
     if (!session) return;
+    setSaving(true);
+    setError('');
     try {
-      await apiFetch('/espacios', {
-        method: 'POST',
-        token: session.access_token,
-        clubSlug: session.club.slug,
-        body: JSON.stringify({
-          nombre: form.nombre,
-          tipo: form.tipo,
-          descripcion: form.descripcion || undefined,
-          duracion_slot_min: Number(form.duracion_slot_min) || 60,
-          precio_opcional: form.precio_opcional
-            ? Number(form.precio_opcional)
-            : undefined,
-          hora_apertura: form.hora_apertura,
-          hora_cierre: form.hora_cierre,
-        }),
+      const body = JSON.stringify({
+        nombre: form.nombre,
+        tipo: form.tipo,
+        descripcion: form.descripcion || undefined,
+        duracion_slot_min: Number(form.duracion_slot_min) || 60,
+        precio_opcional: form.precio_opcional
+          ? Number(form.precio_opcional)
+          : undefined,
+        hora_apertura: form.hora_apertura,
+        hora_cierre: form.hora_cierre,
       });
+      if (editingId) {
+        await apiFetch(`/espacios/${editingId}`, {
+          method: 'PATCH',
+          token: session.access_token,
+          clubSlug: session.club.slug,
+          body,
+        });
+      } else {
+        await apiFetch('/espacios', {
+          method: 'POST',
+          token: session.access_token,
+          clubSlug: session.club.slug,
+          body,
+        });
+      }
       router.push('/espacios');
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('messages.errorCreating'));
+      setError(err instanceof Error ? err.message : t('messages.errorSaving'));
+    } finally {
+      setSaving(false);
     }
+  }
+
+  if (loading) {
+    return (
+      <div>
+        <h2 className="text-2xl font-bold">
+          {editingId ? t('admin.espacios.editEspacio') : t('admin.socios.quickCreate')}
+        </h2>
+        <p className="mt-6 text-sm text-slate-500">{t('common.loading')}</p>
+      </div>
+    );
   }
 
   return (
     <div>
-      <h2 className="text-2xl font-bold">{t('admin.socios.quickCreate')}</h2>
+      <h2 className="text-2xl font-bold">
+        {editingId ? t('admin.espacios.editEspacio') : t('admin.socios.quickCreate')}
+      </h2>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <form
-        onSubmit={onCreate}
+        onSubmit={onSubmit}
         className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2"
       >
         <FormField
@@ -120,9 +187,10 @@ export default function NuevoEspacioPage() {
         <div className="sm:col-span-2 flex gap-2">
           <button
             type="submit"
-            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white"
+            disabled={saving}
+            className="rounded-lg bg-[var(--primary)] px-4 py-2 font-semibold text-white disabled:opacity-60"
           >
-            {t('admin.espacios.createEspacio')}
+            {saving ? t('config.guardando') : editingId ? t('config.guardar') : t('admin.espacios.createEspacio')}
           </button>
           <button
             type="button"
@@ -134,5 +202,13 @@ export default function NuevoEspacioPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NuevoEspacioPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevoEspacioForm />
+    </Suspense>
   );
 }
