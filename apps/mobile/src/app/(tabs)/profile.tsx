@@ -7,6 +7,8 @@ import {
   Text,
   TouchableOpacity,
   View,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -14,6 +16,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useAuth } from "@/context/AuthContext";
 import { AccountSwitcherModal } from "@/components/AccountSwitcherModal";
 import { router } from "expo-router";
+import { updateProfile } from '@/lib/api';
 
 export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
@@ -21,6 +24,13 @@ export default function ProfileScreen() {
   const { session, isStaff, signOut } = useAuth();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const hasMultipleCuentas = (session?.cuentas?.length ?? 0) > 1;
+  const person = session?.socio ?? session?.admin;
+  const displayName = person ? `${person.nombre}${'apellido' in person && person.apellido ? ` ${person.apellido}` : ''}` : 'Usuario';
+  const initials = displayName.split(/\s+/).map((part) => part[0]).join('').slice(0, 2).toUpperCase();
+  const [editing, setEditing] = useState(false);
+  const [nameDraft, setNameDraft] = useState(person?.nombre ?? '');
+  const [lastNameDraft, setLastNameDraft] = useState(session?.socio?.apellido ?? '');
+  const [saving, setSaving] = useState(false);
 
   const menuItems = [
     { icon: "settings-outline", label: "accountSettings" },
@@ -29,30 +39,14 @@ export default function ProfileScreen() {
     { icon: "card-outline", label: "paymentMethods" },
   ];
 
-  const notifications = [
-    {
-      icon: "calendar-outline",
-      title: "newClassSchedule",
-      message: "classScheduleMessage",
-      time: "2h ago",
-    },
-    {
-      icon: "checkmark-circle-outline",
-      title: "paymentConfirmed",
-      message: "paymentConfirmedMessage",
-      time: "1d ago",
-    },
-    {
-      icon: "information-circle-outline",
-      title: "facilityMaintenance",
-      message: "maintenanceMessage",
-      time: "3d ago",
-    },
-  ];
-
-  const ButtonPress = () => {
-    console.log("Edit Profile button pressed!");
-  };
+  async function saveProfile() {
+    if (!session || !nameDraft.trim()) return;
+    setSaving(true);
+    try {
+      await updateProfile(session.access_token, session.role, { nombre: nameDraft.trim(), ...(lastNameDraft ? { apellido: lastNameDraft.trim() } : {}) });
+      setEditing(false);
+    } finally { setSaving(false); }
+  }
 
   return (
     <View style={{ flex: 1 }}>
@@ -90,15 +84,21 @@ export default function ProfileScreen() {
       <Card style={styles.profileCard}>
         <View style={styles.profileContent}>
           <View style={styles.avatarLarge}>
-            <Text style={styles.initials}>AJ</Text>
+            <Text style={styles.initials}>{initials || '?'}</Text>
           </View>
-          <Heading level={2}>Alex Johnson</Heading>
+          <Heading level={2}>{displayName}</Heading>
           <Body size="sm" style={styles.memberInfo}>
-            {t("premiumMember")} • ID: CC-9824
+            {session?.role} • {session?.club.nombre}
           </Body>
         </View>
-        <Button label={t("editProfile")} variant="primary" onPress={ButtonPress} />
+        {editing ? <View style={{ width: '100%' }}><TextInput value={nameDraft} onChangeText={setNameDraft} placeholder="Nombre" style={styles.editInput} /><TextInput value={lastNameDraft} onChangeText={setLastNameDraft} placeholder="Apellido" style={styles.editInput} /><Button label={saving ? 'Guardando…' : 'Guardar'} variant="primary" onPress={saveProfile} /></View> : <Button label="Editar perfil" variant="primary" onPress={() => setEditing(true)} />}
       </Card>
+
+      <TouchableOpacity style={styles.securityEntry} onPress={() => router.push('/cambiar-clave' as never)} activeOpacity={0.8}>
+        <Ionicons name="lock-closed-outline" size={20} color="#00288e" />
+        <Text style={styles.securityText}>Cambiar contraseña</Text>
+        <Text style={styles.menuArrow}>›</Text>
+      </TouchableOpacity>
 
       {/* Menu Items */}
       <View style={styles.section}>
@@ -122,24 +122,10 @@ export default function ProfileScreen() {
         <Heading level={3} style={styles.sectionTitle}>
           {t("recentNotifications")}
         </Heading>
-        {notifications.map((notif, index) => (
-          <Card key={index} style={styles.notificationCard}>
-            <View style={styles.notifIcon}>
-              <Ionicons name={notif.icon as any} size={24} color="#00288e" />
-            </View>
-            <View style={styles.notifContent}>
-              <Heading level={3} style={styles.notifTitle}>
-                {t(notif.title as any)}
-              </Heading>
-              <Body size="sm" style={styles.notifMessage}>
-                {t(notif.message as any)}
-              </Body>
-              <Body size="sm" style={styles.notifTime}>
-                {notif.time}
-              </Body>
-            </View>
-          </Card>
-        ))}
+        <Card style={styles.notificationCard}>
+          <View style={styles.notifIcon}><Ionicons name="notifications-off-outline" size={24} color="#00288e" /></View>
+          <View style={styles.notifContent}><Body size="sm" style={styles.notifMessage}>Las notificaciones push se habilitarán cuando esté disponible FCM.</Body></View>
+        </Card>
       </View>
       </ScrollView>
     </View>
@@ -214,6 +200,26 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+  editInput: {
+    height: 44,
+    borderColor: '#c4c5d5',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    color: '#1b1b21',
+    marginBottom: 8,
+  },
+  securityEntry: {
+    marginHorizontal: 16,
+    marginBottom: 4,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#eef2ff',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  securityText: { flex: 1, color: '#00288e', fontSize: 14, fontWeight: '700' },
   avatarLarge: {
     width: 80,
     height: 80,

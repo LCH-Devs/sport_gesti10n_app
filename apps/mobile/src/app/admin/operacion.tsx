@@ -1,2 +1,19 @@
-import { AdminSection } from './socios';
-export default function OperacionScreen() { return <AdminSection title="Operación" subtitle="La actividad diaria del club" icon="construct-outline" metrics={[["12", "Clases hoy"], ["8", "Reservas pendientes"], ["4", "Espacios activos"]]} />; }
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Brand } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
+import { apiFetch } from '@/lib/api';
+
+type Horario = { id: number; titulo: string; dias: string; hora_inicio: string; hora_fin: string; profe_id: number | null; activo: boolean };
+export default function OperacionScreen() {
+  const { session } = useAuth(); const [items, setItems] = useState<Horario[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const load = useCallback(async () => { if (!session) return; setLoading(true); try { setItems(await apiFetch<Horario[]>('/horarios', {}, session.access_token)); setError(''); } catch (err) { setError(err instanceof Error ? err.message : 'No se pudieron cargar los horarios'); } finally { setLoading(false); } }, [session]);
+  useEffect(() => { void load(); }, [load]);
+  return <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
+    <View style={styles.intro}><View style={styles.icon}><Ionicons name="construct-outline" size={25} color={Brand.primary} /></View><View><Text style={styles.title}>Operación</Text><Text style={styles.subtitle}>Horarios y actividades del club</Text></View></View>
+    {!!error && <Text style={styles.error}>{error}</Text>}
+    {loading && items.length === 0 ? <ActivityIndicator color={Brand.primary} style={styles.loader} /> : items.length === 0 ? <View style={styles.empty}><Ionicons name="calendar-outline" size={28} color={Brand.primary} /><Text style={styles.emptyTitle}>No hay horarios</Text><Text style={styles.emptyText}>Todavía no hay horarios cargados en este club.</Text></View> : <View style={styles.list}>{items.map((item) => <View key={item.id} style={styles.row}><View style={styles.rowIcon}><Ionicons name="calendar-outline" size={20} color={Brand.primary} /></View><View style={styles.rowText}><Text style={styles.name}>{item.titulo}</Text><Text style={styles.detail}>{item.dias} · {item.hora_inicio} a {item.hora_fin}</Text></View><Text style={[styles.status, !item.activo && styles.inactive]}>{item.activo ? 'Activo' : 'Inactivo'}</Text></View>)}</View>}
+  </ScrollView>;
+}
+const styles = StyleSheet.create({ screen: { flex: 1, backgroundColor: Brand.surface }, content: { padding: 16, paddingBottom: 110 }, intro: { flexDirection: 'row', alignItems: 'center', marginBottom: 22 }, icon: { width: 52, height: 52, borderRadius: 15, backgroundColor: '#e5eeff', alignItems: 'center', justifyContent: 'center', marginRight: 13 }, title: { color: Brand.text, fontSize: 24, fontWeight: '700' }, subtitle: { color: Brand.muted, fontSize: 13, marginTop: 3 }, list: { backgroundColor: '#fff', borderColor: Brand.border, borderWidth: 1, borderRadius: 12, overflow: 'hidden' }, row: { flexDirection: 'row', alignItems: 'center', padding: 13, borderBottomColor: Brand.border, borderBottomWidth: 1 }, rowIcon: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#e5eeff', alignItems: 'center', justifyContent: 'center' }, rowText: { flex: 1, marginLeft: 11 }, name: { color: Brand.text, fontWeight: '700', fontSize: 14 }, detail: { color: Brand.muted, fontSize: 11, marginTop: 4 }, status: { color: Brand.primary, fontSize: 11, fontWeight: '700' }, inactive: { color: Brand.muted }, loader: { marginTop: 30 }, error: { color: '#ba1a1a', marginBottom: 12 }, empty: { backgroundColor: '#fff', borderColor: Brand.border, borderWidth: 1, borderRadius: 12, padding: 22, alignItems: 'center' }, emptyTitle: { color: Brand.text, fontSize: 17, fontWeight: '700', marginTop: 10 }, emptyText: { color: Brand.muted, textAlign: 'center', fontSize: 13, lineHeight: 19, marginTop: 7 } });

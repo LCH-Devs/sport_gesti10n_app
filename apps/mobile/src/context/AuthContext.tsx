@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { LoginResponse } from '@/lib/api';
-import { changePassword, isStaffRole, login, setUnauthorizedHandler, switchCuenta } from '@/lib/api';
+import { changePassword, completeOnboarding, isStaffRole, login, setUnauthorizedHandler, switchCuenta } from '@/lib/api';
 import { clearSession, loadSession, saveSession } from '@/lib/session-storage';
 
 type AuthContextValue = {
@@ -14,6 +14,7 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
   switchAccount: (membresiaId: number) => Promise<void>;
   completeChangePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  completeClubOnboarding: (input: Parameters<typeof completeOnboarding>[1]) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -73,6 +74,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         await changePassword(session.access_token, session.role, currentPassword, newPassword);
         const updated = { ...session, must_change_password: false };
+        await saveSession(updated);
+        setSession(updated);
+      } finally {
+        setLoading(false);
+      }
+    },
+    completeClubOnboarding: async (input) => {
+      if (!session || !isStaffRole(session.role)) return;
+      setLoading(true);
+      try {
+        const club = await completeOnboarding(session.access_token, input);
+        const updated = { ...session, must_complete_onboarding: false, must_change_password: false, club: { ...session.club, ...club } };
         await saveSession(updated);
         setSession(updated);
       } finally {

@@ -1,2 +1,19 @@
-import { AdminSection } from './socios';
-export default function NoticiasScreen() { return <AdminSection title="Noticias" subtitle="Comunicaciones del club" icon="newspaper-outline" metrics={[["6", "Publicadas"], ["2", "Borradores"], ["1,2k", "Lecturas"]]} />; }
+import { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { Brand } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
+import { apiFetch } from '@/lib/api';
+
+type Noticia = { id: number; titulo: string; cuerpo: string; fecha: string; published: boolean; es_evento: boolean };
+export default function NoticiasScreen() {
+  const { session } = useAuth(); const [items, setItems] = useState<Noticia[]>([]); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const load = useCallback(async () => { if (!session) return; setLoading(true); try { setItems(await apiFetch<Noticia[]>('/noticias', {}, session.access_token)); setError(''); } catch (err) { setError(err instanceof Error ? err.message : 'No se pudieron cargar las noticias'); } finally { setLoading(false); } }, [session]);
+  useEffect(() => { void load(); }, [load]);
+  return <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={loading} onRefresh={load} />}>
+    <View style={styles.intro}><View style={styles.icon}><Ionicons name="newspaper-outline" size={25} color={Brand.primary} /></View><View><Text style={styles.title}>Noticias</Text><Text style={styles.subtitle}>Comunicaciones del club</Text></View></View>
+    {!!error && <Text style={styles.error}>{error}</Text>}
+    {loading && !items.length ? <ActivityIndicator color={Brand.primary} style={styles.loader} /> : items.length ? <View style={styles.list}>{items.map((item) => <View key={item.id} style={styles.card}><View style={styles.cardHeader}><Text style={styles.cardTitle}>{item.titulo}</Text><Text style={[styles.badge, item.published ? styles.published : styles.draft]}>{item.published ? 'Publicada' : 'Borrador'}</Text></View><Text style={styles.date}>{new Date(item.fecha).toLocaleDateString('es-AR')}{item.es_evento ? ' · Evento' : ''}</Text><Text style={styles.body} numberOfLines={3}>{item.cuerpo}</Text></View>)}</View> : <View style={styles.empty}><Ionicons name="newspaper-outline" size={28} color={Brand.primary} /><Text style={styles.emptyTitle}>No hay noticias</Text><Text style={styles.emptyText}>Todavía no hay comunicaciones cargadas.</Text></View>}
+  </ScrollView>;
+}
+const styles = StyleSheet.create({ screen: { flex: 1, backgroundColor: Brand.surface }, content: { padding: 16, paddingBottom: 110 }, intro: { flexDirection: 'row', alignItems: 'center', marginBottom: 22 }, icon: { width: 52, height: 52, borderRadius: 15, backgroundColor: '#e5eeff', alignItems: 'center', justifyContent: 'center', marginRight: 13 }, title: { color: Brand.text, fontSize: 24, fontWeight: '700' }, subtitle: { color: Brand.muted, fontSize: 13, marginTop: 3 }, list: { gap: 10 }, card: { backgroundColor: '#fff', borderColor: Brand.border, borderWidth: 1, borderRadius: 12, padding: 15 }, cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 }, cardTitle: { flex: 1, color: Brand.text, fontSize: 16, fontWeight: '700' }, badge: { fontSize: 10, fontWeight: '700', paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8 }, published: { color: '#166534', backgroundColor: '#dcfce7' }, draft: { color: '#92400e', backgroundColor: '#fef3c7' }, date: { color: Brand.muted, fontSize: 11, marginTop: 6 }, body: { color: Brand.muted, fontSize: 13, lineHeight: 19, marginTop: 9 }, loader: { marginTop: 30 }, error: { color: '#ba1a1a', marginBottom: 12 }, empty: { backgroundColor: '#fff', borderColor: Brand.border, borderWidth: 1, borderRadius: 12, padding: 22, alignItems: 'center' }, emptyTitle: { color: Brand.text, fontSize: 17, fontWeight: '700', marginTop: 10 }, emptyText: { color: Brand.muted, textAlign: 'center', fontSize: 13, lineHeight: 19, marginTop: 7 } });

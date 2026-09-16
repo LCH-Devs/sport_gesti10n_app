@@ -41,7 +41,7 @@ Body con campos que el DTO no declara → **400**. Login público (`/auth/login`
 - `PATCH /clubs/me` — config: cuota (Socio pleno), logo, color, reglas, nombre, `deportes?`, `descuento_familiar_pct?` (0–100). El nombre no puede coincidir con otro club vivo
 - `POST /clubs/me/logo` — multipart `file` (JPG/PNG/WEBP/GIF, máx. 2 MB).  
   Con `IMAGEKIT_PRIVATE_KEY` sube a ImageKit (CDN) y guarda esa URL en `logo_url`. Sin ImageKit (dev), guarda en disco `uploads/logos/` y `logo_url` queda `/uploads/logos/...`.
-- `PATCH /clubs/me/onboarding` — primer acceso. Body: titular, CUIT/CUIL, branding, `nueva_password` (fuerte), `cuota_monto` (Socio pleno), `categorias?` (tipos extra con monto), y opcional `bloquear_entrada`, `deportes` (`string[]`), `descuento_familiar_pct` (0–100). Los espacios se crean aparte con `POST /espacios`. El % familiar se aplica al **cobrar el mes** si la familia tiene 2+ socios no bonificados.
+- `PATCH /clubs/me/onboarding` — primer acceso. Body: titular, DNI (7–11 dígitos; la columna histórica se llama `cuit_cuil`), branding, `nueva_password` (fuerte), `cuota_monto` (Socio pleno), `categorias?` (tipos extra con monto), y opcional `bloquear_entrada`, `deportes` (`string[]`), `descuento_familiar_pct` (0–100). Los espacios se crean aparte con `POST /espacios`. El % familiar se aplica al **cobrar el mes** si la familia tiene 2+ socios no bonificados.
 
 ## Plataforma (superadmin)
 

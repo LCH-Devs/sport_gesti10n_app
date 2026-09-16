@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsObject,
   IsOptional,
+  Matches,
   IsString,
   Max,
   MaxLength,
@@ -14,7 +15,6 @@ import {
 } from 'class-validator';
 import { OnboardingCategoriaDto } from '../../categorias-cuota/dto/categoria-cuota.dto';
 import {
-  IsCuitCuil,
   IsOptionalColorHex,
   IsPersonName,
   IsStrongPassword,
@@ -27,7 +27,7 @@ export class CompleteOnboardingDto {
   @IsPersonName()
   titular_apellido!: string;
 
-  @IsCuitCuil()
+  @Matches(/^\d{7,11}$/, { message: 'DNI debe tener entre 7 y 11 dígitos' })
   cuit_cuil!: string;
 
   @IsOptional()

@@ -105,3 +105,25 @@ jobs:
       # real, no una limitación de Windows.
       - name: Build (valida el empaquetado standalone en Linux)
         run: pnpm --filter web build
+
+  mobile:
+    name: Mobile — type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Instalar dependencias (workspace completo)
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm --filter mobile type-check

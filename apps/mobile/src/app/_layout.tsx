@@ -10,6 +10,7 @@ function AuthGate() {
   const pathname = usePathname();
   const isLoginRoute = pathname === '/login';
   const isChangePasswordRoute = pathname === '/cambiar-clave';
+  const isOnboardingRoute = pathname === '/onboarding';
 
   if (restoring) {
     return null;
@@ -23,7 +24,11 @@ function AuthGate() {
     return <Redirect href={'/cambiar-clave' as never} />;
   }
 
-  if (session && !session.must_change_password && (isLoginRoute || isChangePasswordRoute)) {
+  if (session?.must_complete_onboarding && !isOnboardingRoute) {
+    return <Redirect href={'/onboarding' as never} />;
+  }
+
+  if (session && !session.must_change_password && !session.must_complete_onboarding && (isLoginRoute || isChangePasswordRoute || isOnboardingRoute)) {
     return <Redirect href="/(tabs)" />;
   }
 
@@ -55,6 +60,7 @@ export default function RootLayout() {
           >
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="cambiar-clave" options={{ headerShown: false }} />
+            <Stack.Screen name="onboarding" options={{ headerShown: false }} />
           </Stack>
         </SplashGate>
       </AuthProvider>

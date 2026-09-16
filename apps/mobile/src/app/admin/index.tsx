@@ -3,16 +3,18 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Brand } from '@/constants/theme';
+import { useAuth } from '@/context/AuthContext';
 
 const actions = [
-  { icon: 'people-outline', title: 'Socios', detail: '248 activos', color: Brand.primary },
-  { icon: 'cash-outline', title: 'Cobros', detail: '$ 1.240.500 este mes', color: Brand.success },
-  { icon: 'calendar-outline', title: 'Horarios', detail: '12 clases hoy', color: Brand.accent },
-  { icon: 'bookmark-outline', title: 'Reservas', detail: '8 pendientes', color: '#7c3aed' },
+  { icon: 'people-outline', title: 'Socios', detail: 'Abrir gestión', route: '/admin/socios', color: Brand.primary },
+  { icon: 'cash-outline', title: 'Cobros', detail: 'Abrir gestión', route: '/admin/finanzas', color: Brand.success },
+  { icon: 'calendar-outline', title: 'Horarios', detail: 'Abrir gestión', route: '/admin/operacion', color: Brand.accent },
+  { icon: 'bookmark-outline', title: 'Reservas', detail: 'Abrir gestión', route: '/admin/espacios', color: '#7c3aed' },
 ];
 
 export default function AdminDashboard() {
   const insets = useSafeAreaInsets();
+  const { session } = useAuth();
 
   return (
     <View style={styles.screen}>
@@ -20,8 +22,8 @@ export default function AdminDashboard() {
         <View style={styles.header}>
           <View>
             <Text style={styles.eyebrow}>PANEL DEL CLUB</Text>
-            <Text style={styles.title}>Buen día, comisión</Text>
-            <Text style={styles.subtitle}>Club Atlético San Martín</Text>
+            <Text style={styles.title}>{session?.club.nombre ?? 'Administración'}</Text>
+            <Text style={styles.subtitle}>Accesos rápidos para la operación del club.</Text>
           </View>
           <TouchableOpacity style={styles.closeButton} onPress={() => router.replace('/(tabs)')}>
             <Ionicons name="close" size={22} color={Brand.primary} />
@@ -30,9 +32,9 @@ export default function AdminDashboard() {
 
         <View style={styles.summaryCard}>
           <View>
-            <Text style={styles.summaryLabel}>RECAUDACIÓN DEL MES</Text>
-            <Text style={styles.summaryAmount}>$ 1.240.500</Text>
-            <Text style={styles.summaryPositive}>↑ 12,4% vs. mes anterior</Text>
+            <Text style={styles.summaryLabel}>CLUB ACTIVO</Text>
+            <Text style={styles.summaryAmount}>{session?.club.slug ?? '—'}</Text>
+            <Text style={styles.summaryPositive}>Rol actual: {session?.role ?? '—'}</Text>
           </View>
           <View style={styles.summaryIcon}><Ionicons name="trending-up" size={26} color="#fff" /></View>
         </View>
@@ -40,7 +42,7 @@ export default function AdminDashboard() {
         <Text style={styles.sectionTitle}>Accesos rápidos</Text>
         <View style={styles.grid}>
           {actions.map((action) => (
-            <TouchableOpacity key={action.title} style={styles.actionCard} activeOpacity={0.8}>
+            <TouchableOpacity key={action.title} style={styles.actionCard} activeOpacity={0.8} onPress={() => router.push(action.route as never)}>
               <View style={[styles.actionIcon, { backgroundColor: `${action.color}18` }]}>
                 <Ionicons name={action.icon as keyof typeof Ionicons.glyphMap} size={24} color={action.color} />
               </View>
@@ -53,9 +55,9 @@ export default function AdminDashboard() {
         <Text style={styles.sectionTitle}>Actividad reciente</Text>
         <View style={styles.activityCard}>
           {[
-            ['person-add-outline', 'Nuevo socio registrado', 'María López · hace 12 min'],
-            ['cash-outline', 'Cobro acreditado', 'Cuota octubre · hace 35 min'],
-            ['calendar-outline', 'Clase modificada', 'Fútbol infantil · hace 1 h'],
+            ['business-outline', 'Configuración del club', session?.club.onboarding_completo ? 'Onboarding completo' : 'Pendiente'],
+            ['shield-checkmark-outline', 'Sesión actual', session?.role ?? '—'],
+            ['information-circle-outline', 'Operación', 'Métricas reales próximamente'],
           ].map(([icon, title, detail]) => (
             <View key={title} style={styles.activityRow}>
               <View style={styles.activityIcon}><Ionicons name={icon as keyof typeof Ionicons.glyphMap} size={18} color={Brand.primary} /></View>

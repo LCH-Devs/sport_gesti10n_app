@@ -189,4 +189,26 @@ export function changePassword(
   }, token);
 }
 
+export function updateProfile(token: string, role: string, input: { nombre?: string; apellido?: string; telefono?: string }) {
+  return apiFetch(role === 'socio' || role === 'profe' ? '/socio/me' : '/admins/me', { method: 'PATCH', body: JSON.stringify(input) }, token);
+}
+
+export type CompleteOnboardingInput = {
+  titular_nombre: string;
+  titular_apellido: string;
+  cuit_cuil: string;
+  nueva_password: string;
+  cuota_monto?: number;
+  direccion?: string;
+  provincia?: string;
+  ciudad?: string;
+};
+
+export function completeOnboarding(token: string, input: CompleteOnboardingInput) {
+  return apiFetch<ClubInfo>('/clubs/me/onboarding', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  }, token);
+}
+
 export { API_URL };
