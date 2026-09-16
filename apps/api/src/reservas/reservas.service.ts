@@ -6,11 +6,104 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { flattenPerson, NOT_DELETED, personInclude } from '../common/club-users';
-import { CreateReservaDto } from './dto/reserva.dto';
-
-const OCUPADO_MSG = 'Horario ocupado: solapamiento con otra reserva confirmada';
+import {
+  flattenPerson,
+  NOT_DELETED,
+  personInclude,
+} from '../common/club-users';
+import { CreateReservaDto, UpdateReservaDto } from './dto/reserva.dto';
+import {
+  busyIntervalsForSpace,
+  OCUPADO_MSG,
+  espacioOcupadoEnRango,
+} from '../espacios/ocupacion-agenda';
+import {
+  addDays,
+  extraStartMinutesFromBusyDates,
+  intervalWithinUsableWindow,
+  reservaFitsSlot,
+  slotMinutes,
+  startOfDay,
+  toHm,
+  usableWindowMins,
+} from '../espacios/ocupacion';
 const MAX_SERIALIZATION_RETRIES = 3;
+const PASADO_MSG = 'No se puede reservar en una fecha u hora que ya pasó';
+
+function assertInicioFuturo(inicio: Date) {
+  if (inicio.getTime() < Date.now()) {
+    throw new BadRequestException(PASADO_MSG);
+  }
+}
+
+async function extraStartsDelDia(
+  prisma: PrismaService,
+  clubId: number,
+  espacio: {
+    id: number;
+    hora_apertura: string;
+    hora_cierre: string;
+    duracion_slot_min: number;
+  },
+  inicio: Date,
+  ignoreReservaId?: number,
+): Promise<number[]> {
+  const dayStart = startOfDay(inicio);
+  const busy = await busyIntervalsForSpace(prisma, {
+    clubId,
+    espacioId: espacio.id,
+    rangeStart: dayStart,
+    rangeEnd: addDays(dayStart, 1),
+    ignoreReservaId,
+  });
+  return extraStartMinutesFromBusyDates(
+    dayStart,
+    espacio.hora_apertura,
+    espacio.hora_cierre,
+    espacio.duracion_slot_min,
+    busy,
+  );
+}
+
+function assertHorarioEspacio(
+  inicio: Date,
+  fin: Date,
+  espacio: {
+    hora_apertura: string;
+    hora_cierre: string;
+    duracion_slot_min: number;
+  },
+  extraStartMins: readonly number[] = [],
+) {
+  if (
+    !intervalWithinUsableWindow(
+      inicio,
+      fin,
+      espacio.hora_apertura,
+      espacio.hora_cierre,
+    )
+  ) {
+    const win = usableWindowMins(espacio.hora_apertura, espacio.hora_cierre);
+    throw new BadRequestException(
+      `La reserva tiene que estar entre ${toHm(win.start)} y ${toHm(win.end)} (el espacio cierra a las ${espacio.hora_cierre}; la última hora no se reserva)`,
+    );
+  }
+  if (
+    !reservaFitsSlot(
+      inicio,
+      fin,
+      espacio.hora_apertura,
+      espacio.hora_cierre,
+      espacio.duracion_slot_min,
+      extraStartMins,
+    )
+  ) {
+    const slot = slotMinutes(espacio.duracion_slot_min);
+    throw new BadRequestException(
+      `El alquiler de este espacio es de ${slot} min: el inicio tiene que coincidir con un turno (o con el momento en que se libera) y la duración no puede ser menor`,
+    );
+  }
+}
 
 function isSerializationFailure(err: unknown): boolean {
   // P2034: "Transaction failed due to a write conflict or a deadlock.
@@ -59,16 +152,34 @@ export class ReservasService {
     if (!(inicio < fin)) {
       throw new BadRequestException('inicio debe ser anterior a fin');
     }
+    assertInicioFuturo(inicio);
 
     const espacio = await this.prisma.espacio.findFirst({
-      where: { id: dto.espacio_id, club_id: clubId, activo: true, ...NOT_DELETED },
+      where: {
+        id: dto.espacio_id,
+        club_id: clubId,
+        activo: true,
+        ...NOT_DELETED,
+      },
     });
     if (!espacio) {
       throw new BadRequestException('Espacio no encontrado o inactivo');
     }
+    const extraStarts = await extraStartsDelDia(
+      this.prisma,
+      clubId,
+      espacio,
+      inicio,
+    );
+    assertHorarioEspacio(inicio, fin, espacio, extraStarts);
 
     const socio = await this.prisma.membresia.findFirst({
-      where: { id: dto.socio_id, club_id: clubId, ...NOT_DELETED },
+      where: {
+        id: dto.socio_id,
+        club_id: clubId,
+        es_socio: true,
+        ...NOT_DELETED,
+      },
     });
     if (!socio) throw new BadRequestException('Socio no encontrado');
     if (socio.estado === 'suspendido') {
@@ -119,16 +230,13 @@ export class ReservasService {
               );
             }
 
-            const solape = await tx.reserva.findFirst({
-              where: {
-                club_id: clubId,
-                espacio_id: espacio.id,
-                estado: 'confirmada',
-                inicio: { lt: fin },
-                fin: { gt: inicio },
-              },
+            const ocupado = await espacioOcupadoEnRango(tx, {
+              clubId,
+              espacioId: espacio.id,
+              inicio,
+              fin,
             });
-            if (solape) {
+            if (ocupado) {
               throw new BadRequestException(OCUPADO_MSG);
             }
 
@@ -152,7 +260,10 @@ export class ReservasService {
         );
         return { ...created, socio: flattenPerson(created.socio) };
       } catch (err) {
-        if (isSerializationFailure(err) && attempt < MAX_SERIALIZATION_RETRIES) {
+        if (
+          isSerializationFailure(err) &&
+          attempt < MAX_SERIALIZATION_RETRIES
+        ) {
           continue;
         }
         // Los errores que nosotros mismos tiramos adentro de la transacción
@@ -169,6 +280,135 @@ export class ReservasService {
       }
     }
     // Inalcanzable: el loop siempre retorna o tira en el último intento.
+    throw new BadRequestException(OCUPADO_MSG);
+  }
+
+  async update(clubId: number, id: number, dto: UpdateReservaDto) {
+    const current = await this.prisma.reserva.findFirst({
+      where: { id, club_id: clubId },
+    });
+    if (!current) throw new NotFoundException('Reserva no encontrada');
+    if (current.estado !== 'confirmada') {
+      throw new BadRequestException(
+        'Solo se puede editar una reserva confirmada',
+      );
+    }
+
+    const inicio =
+      dto.inicio !== undefined ? new Date(dto.inicio) : current.inicio;
+    const fin = dto.fin !== undefined ? new Date(dto.fin) : current.fin;
+    if (!(inicio < fin)) {
+      throw new BadRequestException('inicio debe ser anterior a fin');
+    }
+    assertInicioFuturo(inicio);
+
+    const espacioId = dto.espacio_id ?? current.espacio_id;
+    const socioId = dto.socio_id ?? current.socio_id;
+
+    const espacio = await this.prisma.espacio.findFirst({
+      where: { id: espacioId, club_id: clubId, activo: true, ...NOT_DELETED },
+    });
+    if (!espacio) {
+      throw new BadRequestException('Espacio no encontrado o inactivo');
+    }
+    const extraStarts = await extraStartsDelDia(
+      this.prisma,
+      clubId,
+      espacio,
+      inicio,
+      current.id,
+    );
+    assertHorarioEspacio(inicio, fin, espacio, extraStarts);
+
+    const socio = await this.prisma.membresia.findFirst({
+      where: { id: socioId, club_id: clubId, es_socio: true, ...NOT_DELETED },
+    });
+    if (!socio) throw new BadRequestException('Socio no encontrado');
+    if (socio.estado === 'suspendido') {
+      throw new BadRequestException('Socio suspendido');
+    }
+
+    const club = await this.prisma.club.findUnique({ where: { id: clubId } });
+    if (!club) throw new NotFoundException('Club no encontrado');
+
+    if (socioId !== current.socio_id && club.bloquear_reservas) {
+      const pendientes = await this.prisma.pago.count({
+        where: {
+          club_id: clubId,
+          socio_id: socio.id,
+          estado: 'pendiente',
+        },
+      });
+      if (pendientes >= club.regla_moroso_cuotas) {
+        throw new BadRequestException(
+          'Socio con cuotas pendientes; reservas bloqueadas',
+        );
+      }
+    }
+
+    for (let attempt = 1; attempt <= MAX_SERIALIZATION_RETRIES; attempt++) {
+      try {
+        const updated = await this.prisma.$transaction(
+          async (tx) => {
+            if (socioId !== current.socio_id) {
+              const ahora = new Date();
+              const activas = await tx.reserva.count({
+                where: {
+                  club_id: clubId,
+                  socio_id: socio.id,
+                  estado: 'confirmada',
+                  inicio: { gt: ahora },
+                },
+              });
+              if (activas >= club.max_reservas_activas) {
+                throw new BadRequestException(
+                  `Máximo de ${club.max_reservas_activas} reservas activas alcanzado`,
+                );
+              }
+            }
+
+            const ocupado = await espacioOcupadoEnRango(tx, {
+              clubId,
+              espacioId: espacio.id,
+              inicio,
+              fin,
+              ignoreReservaId: id,
+            });
+            if (ocupado) {
+              throw new BadRequestException(OCUPADO_MSG);
+            }
+
+            return tx.reserva.update({
+              where: { id },
+              data: {
+                espacio_id: espacio.id,
+                socio_id: socio.id,
+                inicio,
+                fin,
+                ...(dto.nota !== undefined && { nota: dto.nota }),
+              },
+              include: {
+                socio: { include: personInclude },
+                espacio: { select: { id: true, nombre: true } },
+              },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+        return { ...updated, socio: flattenPerson(updated.socio) };
+      } catch (err) {
+        if (
+          isSerializationFailure(err) &&
+          attempt < MAX_SERIALIZATION_RETRIES
+        ) {
+          continue;
+        }
+        if (err instanceof HttpException) {
+          throw err;
+        }
+        throw new BadRequestException(OCUPADO_MSG);
+      }
+    }
     throw new BadRequestException(OCUPADO_MSG);
   }
 
@@ -220,4 +460,3 @@ export class ReservasService {
     });
   }
 }
-

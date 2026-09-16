@@ -4,7 +4,9 @@ import { apiFetch, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
 import { DataTable, FloatingActionButton, type Column } from '@/components/common';
+import { formatDias } from '@/lib/dias-semana';
 
 type Horario = {
   id: number;
@@ -13,6 +15,8 @@ type Horario = {
   hora_inicio: string;
   hora_fin: string;
   profe_id: number | null;
+  espacio_id: number | null;
+  espacio: { id: number; nombre: string } | null;
   activo: boolean;
 };
 
@@ -29,6 +33,7 @@ type Tab = 'horarios' | 'actividades';
 
 export function ActividadesHorariosContent({ initialTab }: { initialTab: Tab }) {
   const { t } = useTranslation();
+  const { formatHmRange } = useDateTimeFormat();
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(initialTab);
 
@@ -98,11 +103,20 @@ export function ActividadesHorariosContent({ initialTab }: { initialTab: Tab }) 
 
   const horarioColumns: Column<Horario>[] = [
     { key: 'titulo', header: t('admin.horarios.titulo'), sortable: true },
-    { key: 'dias', header: t('admin.horarios.dias') },
+    {
+      key: 'dias',
+      header: t('admin.horarios.dias'),
+      render: (h) => formatDias(h.dias),
+    },
+    {
+      key: 'espacio',
+      header: t('admin.horarios.espacio'),
+      accessor: (h) => h.espacio?.nombre ?? t('admin.horarios.sinEspacio'),
+    },
     {
       key: 'horario',
       header: t('admin.espacios.horario'),
-      accessor: (h) => `${h.hora_inicio} – ${h.hora_fin}`,
+      accessor: (h) => formatHmRange(h.hora_inicio, h.hora_fin),
     },
     {
       key: 'activo',

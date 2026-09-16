@@ -27,6 +27,7 @@ type SocioMini = {
   dni: string;
   nombre: string;
   apellido: string;
+  es_socio: boolean;
   grupo_familiar_id?: number | null;
 };
 
@@ -227,7 +228,7 @@ function NuevaFamiliaForm() {
           clubSlug: session.club.slug,
         }),
       ]);
-      setSocios(soc);
+      setSocios(soc.filter((persona) => persona.es_socio));
       setCategorias(cats);
       const def = cats.find((c) => c.es_default) ?? cats[0];
       const catId = def ? String(def.id) : '';

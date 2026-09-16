@@ -1,5 +1,7 @@
 export const STAFF_ROLES = ['admin', 'entrada'] as const;
 export const MEMBER_ROLES = ['socio', 'profe'] as const;
+/** Filtro para operaciones exclusivas del padrón que paga cuota. */
+export const SOCIO_MEMBERSHIP = { es_socio: true } as const;
 
 export function isStaffRole(rol: string) {
   return rol === 'admin' || rol === 'entrada';
@@ -108,6 +110,7 @@ type CategoriaPublic = {
 export function flattenPerson(m: {
   id: number;
   rol: string;
+  es_socio?: boolean;
   estado?: string;
   grupo_familiar_id?: number | null;
   categoria_id?: number | null;
@@ -123,6 +126,7 @@ export function flattenPerson(m: {
     telefono: m.usuario.telefono,
     estado: m.estado ?? 'activo',
     rol: m.rol,
+    es_socio: m.rol === 'socio' ? true : (m.es_socio ?? true),
     fecha_nacimiento: m.usuario.fecha_nacimiento ?? null,
     grupo_familiar_id: m.grupo_familiar_id ?? null,
     categoria_id: m.categoria_id ?? m.categoria?.id ?? null,

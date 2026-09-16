@@ -94,7 +94,12 @@ export class LiquidacionesService {
 
   async cerrarMes(clubId: number, dto: CerrarMesDto) {
     const profe = await this.prisma.membresia.findFirst({
-      where: { id: dto.profe_id, club_id: clubId, ...NOT_DELETED },
+      where: {
+        id: dto.profe_id,
+        club_id: clubId,
+        rol: 'profe',
+        ...NOT_DELETED,
+      },
     });
     if (!profe) throw new BadRequestException('Profesor no encontrado');
 

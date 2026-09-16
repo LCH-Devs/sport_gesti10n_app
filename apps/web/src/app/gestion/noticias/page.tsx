@@ -4,6 +4,7 @@ import { apiFetch, mediaUrl, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
 import { DataTable, FloatingActionButton, Badge, type Column } from '@/components/common';
 
 type Noticia = {
@@ -18,6 +19,7 @@ type Noticia = {
 
 export default function NoticiasPage() {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateTimeFormat();
   const router = useRouter();
   const [items, setItems] = useState<Noticia[]>([]);
   const [error, setError] = useState('');
@@ -83,7 +85,7 @@ export default function NoticiasPage() {
       key: 'fecha',
       header: t('admin.torneos.fecha'),
       sortable: true,
-      render: (n) => new Date(n.fecha).toLocaleString('es-AR'),
+      render: (n) => formatDateTime(n.fecha),
     },
     {
       key: 'es_evento',

@@ -218,7 +218,11 @@ flowchart TD
 
 Si Juan después se anota en otro club, se crea `Membresia` id=99 con `usuario_id=25` y `club_id=otro`. Sigue siendo el mismo `Usuario` 25.
 
-Un **profe** es exactamente lo mismo: `Membresia.rol = "profe"`. No hay tabla `Profe`.
+Un **profe** usa `Membresia.rol = "profe"`; no hay tabla `Profe`.
+`Membresia.es_socio` indica si además pertenece al padrón (`true`) o si es
+un profesor contratado (`false`). El contratado necesita igualmente la
+membresía para login, tenant y asignación a horarios, pero no genera cuota ni
+cuenta en el límite SaaS.
 
 ---
 
@@ -275,8 +279,9 @@ flowchart TB
   M99 --> club9
 ```
 
-Roles en `Membresia.rol`: `admin` | `entrada` | `socio` | `profe`.  
-Staff = admin + entrada. Miembros = socio + profe.
+Roles en `Membresia.rol`: `admin` | `entrada` | `socio` | `profe`.
+Staff = admin + entrada. El acceso de miembro depende de `es_socio`; el acceso
+de profesor depende de `rol=profe`.
 
 Estados en `Membresia.estado`: `activo` | `moroso` | `suspendido`.  
 Eso **no** es `Club.activo` (interruptor de plataforma: el club puede operar o está suspendido).
@@ -398,6 +403,7 @@ Persona que se loguea. Email único en toda la DB.
 | usuario_id | Int | FK → `Usuario.id` (Cascade al borrar usuario) |
 | club_id | Int | FK → `Club.id` |
 | rol | String | `admin` \| `entrada` \| `socio` \| `profe` |
+| es_socio | Boolean | `true` salvo profesor contratado; controla cuota/portal socio/tope |
 | estado | String | `activo` \| `moroso` \| `suspendido` |
 | eliminado | Boolean | baja lógica en **este** club |
 | must_change_password | Boolean | |
@@ -546,6 +552,8 @@ Unique: `(socio_id, mes)`.
 | precio_opcional | Float? | |
 | hora_apertura, hora_cierre | String | `"08:00"` / `"23:00"` |
 
+Ventana útil para ocupación y último turno: apertura → cierre − 1 h (p. ej. 08:00–23:00 → 08:00–22:00).
+
 #### `Reserva`
 
 | columna | tipo | |
@@ -559,6 +567,28 @@ Unique: `(socio_id, mes)`.
 | nota | String? | |
 | created_at | DateTime | |
 
+#### `Evento`
+
+Seminario, torneo o social del club. Si tiene `fin` y canchas (`todos_espacios` o filas en `EventoEspacio`), ocupa agenda como una reserva.
+
+| columna | tipo | |
+|---------|------|--|
+| id | Int | PK |
+| club_id | Int | FK → Club |
+| titulo | String | |
+| tipo | EventoTipo | seminario \| torneo \| social |
+| visibilidad | EventoVisibilidad | publico \| privado |
+| fecha, fin | DateTime / DateTime? | `fin` obligatorio para ocupar canchas |
+| lugar, descripcion, imagen_url | String? | |
+| publicado | Boolean | |
+| todos_espacios | Boolean | ocupa todas las canchas del club |
+| torneo_id | Int? | unique, opcional |
+| eliminado | Boolean | |
+
+#### `EventoEspacio`
+
+Join evento ↔ espacio. PK `(evento_id, espacio_id)`.
+
 ---
 
 ### Horarios, asistencia, noticias
@@ -570,9 +600,10 @@ Unique: `(socio_id, mes)`.
 | id | Int | PK |
 | club_id | Int | FK → Club |
 | titulo | String | |
-| dias | String | ej. `lun,mie,vie` |
+| dias | String | nombres completos, ej. `Lunes,Miércoles,Viernes` (también `lun,mie,vie`) |
 | hora_inicio, hora_fin | String | |
 | profe_id | Int? | **sin FK Prisma** — se guarda el id de membresía a mano |
+| espacio_id | Int? | FK → Espacio; si hay, el entrenamiento ocupa esa cancha |
 | activo, eliminado | Boolean | |
 
 #### `Asistencia`

@@ -82,16 +82,21 @@ export class SociosService {
   }
 
   async create(clubId: number, dto: CreateSocioDto) {
-    await this.planes.assertCanAddMembers(
-      this.prisma,
-      clubId,
-      1,
-      dto.acepta_upgrade,
-    );
+    const esSocio = dto.rol !== 'profe' || dto.es_socio !== false;
+    if (esSocio) {
+      await this.planes.assertCanAddMembers(
+        this.prisma,
+        clubId,
+        1,
+        dto.acepta_upgrade,
+      );
+    }
     const person = await this.prisma.$transaction((tx) =>
       this.createWithClient(tx, clubId, dto, { skipPlanCheck: true }),
     );
-    await this.pagos.generarLinksDeAlta(clubId, [person.id]);
+    if (esSocio) {
+      await this.pagos.generarLinksDeAlta(clubId, [person.id]);
+    }
     return person;
   }
 
@@ -101,7 +106,9 @@ export class SociosService {
     dto: CreateSocioDto,
     opts: { skipPlanCheck?: boolean } = {},
   ) {
-    if (!opts.skipPlanCheck) {
+    const rol = dto.rol === 'profe' ? 'profe' : 'socio';
+    const es_socio = rol === 'socio' || dto.es_socio !== false;
+    if (!opts.skipPlanCheck && es_socio) {
       await this.planes.assertCanAddMembers(
         this.prisma,
         clubId,
@@ -112,12 +119,9 @@ export class SociosService {
 
     const email = dto.email.toLowerCase().trim();
     const dni = normalizeDni(dto.dni);
-    const rol = dto.rol === 'profe' ? 'profe' : 'socio';
-    const categoria_id = await this.resolveCategoriaId(
-      db,
-      clubId,
-      dto.categoria_id,
-    );
+    const categoria_id = es_socio
+      ? await this.resolveCategoriaId(db, clubId, dto.categoria_id)
+      : null;
     await this.assertDniFree(db, clubId, dni);
 
     const existingUser = await db.usuario.findUnique({
@@ -155,10 +159,18 @@ export class SociosService {
         }
         const restored = await db.membresia.update({
           where: { id: already.id },
-          data: { eliminado: false, rol, estado: 'activo', categoria_id },
+          data: {
+            eliminado: false,
+            rol,
+            es_socio,
+            estado: 'activo',
+            categoria_id,
+          },
           include: personInclude,
         });
-        await this.pagos.persistirAlta(db, clubId, restored.id, dto);
+        if (es_socio) {
+          await this.pagos.persistirAlta(db, clubId, restored.id, dto);
+        }
         return flattenPerson(restored);
       }
     }
@@ -209,6 +221,7 @@ export class SociosService {
         usuario_id: usuario.id,
         club_id: clubId,
         rol,
+        es_socio,
         estado: 'activo',
         categoria_id,
         must_change_password: usaPasswordPorDefecto,
@@ -216,16 +229,33 @@ export class SociosService {
       include: personInclude,
     });
 
-    await this.pagos.persistirAlta(db, clubId, created.id, dto);
+    if (es_socio) {
+      await this.pagos.persistirAlta(db, clubId, created.id, dto);
+    }
     return flattenPerson(created);
   }
 
   async update(clubId: number, id: number, dto: UpdateSocioDto) {
     const membresia = await this.ensureInClub(clubId, id);
-    const categoria_id =
-      dto.categoria_id !== undefined
+    const nextRol = dto.rol === undefined
+      ? membresia.rol
+      : dto.rol === 'profe' ? 'profe' : 'socio';
+    const currentEsSocio =
+      membresia.rol === 'socio' || membresia.es_socio !== false;
+    const nextEsSocio =
+      nextRol === 'socio'
+        ? true
+        : dto.es_socio ?? currentEsSocio;
+    if (!currentEsSocio && nextEsSocio) {
+      await this.planes.assertCanAddMembers(this.prisma, clubId, 1);
+    }
+    const categoria_id = !nextEsSocio
+      ? null
+      : dto.categoria_id !== undefined
         ? await this.resolveCategoriaId(this.prisma, clubId, dto.categoria_id)
-        : undefined;
+        : currentEsSocio
+          ? membresia.categoria_id
+          : await this.resolveCategoriaId(this.prisma, clubId);
 
     const usuario = await this.prisma.usuario.findUnique({
       where: { id: membresia.usuario_id },
@@ -292,9 +322,11 @@ export class SociosService {
         data: {
           ...(dto.estado !== undefined && { estado: dto.estado }),
           ...(dto.rol !== undefined && {
-            rol: dto.rol === 'profe' ? 'profe' : 'socio',
+            rol: nextRol,
           }),
+          es_socio: nextEsSocio,
           ...(categoria_id !== undefined && { categoria_id }),
+          ...(!nextEsSocio && { grupo_familiar_id: null }),
         },
         include: personInclude,
       });
@@ -437,7 +469,7 @@ export class SociosService {
 
   async updateSelf(clubId: number, socioId: number, dto: UpdateSelfSocioDto) {
     const membresia = await this.prisma.membresia.findFirst({
-      where: { id: socioId, club_id: clubId, ...NOT_DELETED },
+      where: { id: socioId, club_id: clubId, es_socio: true, ...NOT_DELETED },
     });
     if (!membresia) {
       throw new NotFoundException('Socio no encontrado en este club');
@@ -545,6 +577,58 @@ export class SociosService {
       pagos,
       noticias,
       actividades: inscripciones.map((row) => row.actividad),
+    };
+  }
+
+  async portalProfe(clubId: number, profeId: number) {
+    const membresia = await this.prisma.membresia.findFirst({
+      where: {
+        id: profeId,
+        club_id: clubId,
+        rol: 'profe',
+        ...NOT_DELETED,
+      },
+      include: personInclude,
+    });
+    if (!membresia) {
+      throw new NotFoundException('Profesor no encontrado en este club');
+    }
+
+    const [club, horarios, liquidaciones] = await Promise.all([
+      this.prisma.club.findUnique({
+        where: { id: clubId },
+        select: { id: true, nombre: true },
+      }),
+      this.prisma.horario.findMany({
+        where: {
+          club_id: clubId,
+          profe_id: profeId,
+          ...NOT_DELETED,
+        },
+        include: {
+          espacio: { select: { id: true, nombre: true } },
+        },
+        orderBy: [{ activo: 'desc' }, { titulo: 'asc' }],
+      }),
+      this.prisma.liquidacionProfe.findMany({
+        where: { club_id: clubId, profe_id: profeId },
+        select: {
+          id: true,
+          mes: true,
+          total_club: true,
+          estado: true,
+          fecha_pago: true,
+        },
+        orderBy: [{ mes: 'desc' }, { id: 'desc' }],
+        take: 12,
+      }),
+    ]);
+
+    return {
+      profe: flattenPerson(membresia),
+      club,
+      horarios,
+      liquidaciones,
     };
   }
 

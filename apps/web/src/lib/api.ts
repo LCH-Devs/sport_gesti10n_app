@@ -59,6 +59,7 @@ export type ClubColors = {
 export type CuentaOption = {
   membresia_id: number;
   rol: string;
+  es_socio: boolean;
   club: {
     id: number;
     slug: string;
@@ -116,6 +117,7 @@ export type SocioSession = {
   expires_in?: number;
   expires_at?: number;
   role?: string;
+  es_socio: boolean;
   cuentas?: CuentaOption[];
   must_change_password?: boolean;
   socio: {
@@ -126,6 +128,7 @@ export type SocioSession = {
     dni: string;
     estado: string;
     rol: string;
+    es_socio: boolean;
   };
   club: {
     id: number;
@@ -143,6 +146,7 @@ export type LoginResult = {
   access_token: string;
   expires_in?: number;
   role: string;
+  es_socio: boolean;
   cuentas?: CuentaOption[];
   must_complete_onboarding?: boolean;
   must_change_password?: boolean;

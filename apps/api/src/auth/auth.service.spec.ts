@@ -23,6 +23,7 @@ const club = {
 const membresiaSocio = {
   id: 9,
   rol: 'socio',
+  es_socio: true,
   estado: 'activo',
   must_change_password: false,
   club,
@@ -109,8 +110,37 @@ describe('AuthService.login', () => {
     expect(result).toHaveProperty('access_token', 'token-socio');
     expect(result).toHaveProperty('expires_in', JWT_EXPIRES_SECONDS);
     expect(result).toHaveProperty('role', 'socio');
+    expect(result).toHaveProperty('es_socio', true);
     expect(result.socio?.email).toBe('juan@test.com');
     expect(loginAttempts.recordSuccess).toHaveBeenCalledWith('juan@test.com');
+  });
+
+  it('un profesor contratado recibe acceso de profe pero no de socio', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({
+      id: 4,
+      email: 'profe@test.com',
+      nombre: 'Pablo',
+      apellido: 'Profe',
+      dni: '30333444',
+      password_hash: 'hash',
+      membresias: [
+        { ...membresiaSocio, id: 12, rol: 'profe', es_socio: false },
+      ],
+    });
+    const bcrypt = await import('bcrypt');
+    jest.spyOn(bcrypt, 'compare').mockResolvedValue(true as never);
+
+    const result = await auth.login({
+      email: 'profe@test.com',
+      password: 'profe123',
+    });
+
+    expect(result.role).toBe('profe');
+    expect(result.es_socio).toBe(false);
+    expect(result.socio?.es_socio).toBe(false);
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'profe', es_socio: false }),
+    );
   });
 
   it('sin slug, si hay varios clubes entra a uno y arma el switcher', async () => {

@@ -56,6 +56,7 @@ export function persistLogin(
     access_token: data.access_token,
     expires_in: data.expires_in,
     role: data.role,
+    es_socio: data.es_socio,
     cuentas: data.cuentas,
     must_change_password: data.must_change_password,
     socio: data.socio,
@@ -67,7 +68,9 @@ export function persistLogin(
   applyClubTheme(data.club);
   const next = data.must_change_password
     ? paths?.changePassword || '/socio/cambiar-clave'
-    : memberHome;
+    : data.role === 'profe' && !data.es_socio
+      ? '/profe'
+      : memberHome;
   return { kind: 'socio' as const, session, next };
 }
 

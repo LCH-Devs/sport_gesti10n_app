@@ -572,6 +572,7 @@ export class PlatformService {
     membresias: Array<{
       id: number;
       rol: string;
+      es_socio: boolean;
       usuario: { email: string; nombre: string };
     }>;
     _count?: { pagos?: number };
@@ -581,7 +582,7 @@ export class PlatformService {
       (m) => m.rol === 'admin' || m.rol === 'entrada',
     );
     const socios = club.membresias.filter(
-      (m) => m.rol === 'socio' || m.rol === 'profe',
+      (m) => m.rol === 'socio' || (m.rol === 'profe' && m.es_socio),
     );
     const { membresias: _membresias, _count, ...rest } = club;
     return {

@@ -5,6 +5,7 @@ import { notFound, useRouter } from "next/navigation";
 import { Header, Badge, Button, DataTable, type Column } from "@/components/common";
 import { apiFetch, getPlatformSession } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
+import { useDateTimeFormat } from "@/lib/DateTimeFormatContext";
 
 type TabId =  "" | "pendiente" | "trial" | "aprobada" | "cancelada";
 
@@ -42,7 +43,10 @@ const ESTADOS: EstadoSolicitud[] = [
 const TABS: TabId[] = ["", "pendiente", "trial", "aprobada", "cancelada"];
 const TRIAL_MS = 30 * 24 * 60 * 60 * 1000;
 
-function fechaDeEstado(row: Solicitud): string {
+function fechaDeEstado(
+  row: Solicitud,
+  formatDateTime: (value: string | Date) => string,
+): string {
   const iso =
     row.estado === "trial"
       ? row.fecha_trial
@@ -52,10 +56,7 @@ function fechaDeEstado(row: Solicitud): string {
           ? row.fecha_cancelada
             : row.fecha_solicitud;
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-AR", {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
+  return formatDateTime(iso);
 }
 
 function trialRestanteLabel(
@@ -82,6 +83,7 @@ function badgeVariant(
 
 export default function SolicitudesPage() {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateTimeFormat();
   const router = useRouter();
   const [rows, setRows] = useState<Solicitud[]>([]);
   const [tab, setTab] = useState<TabId>("");
@@ -195,7 +197,7 @@ export default function SolicitudesPage() {
     {
       key: "fecha",
       header: t("solicitudes.fechaEstado"),
-      render: (r) => fechaDeEstado(r),
+      render: (r) => fechaDeEstado(r, formatDateTime),
     },
     {
       key: "trial",

@@ -286,6 +286,7 @@ describe('SociosService createWithClient — password inicial predecible', () =>
       jest.fn().mockImplementation(({ data }) => ({
         id: 50,
         rol: data.rol,
+        es_socio: data.es_socio,
         estado: data.estado,
         must_change_password: data.must_change_password,
         categoria: null,
@@ -367,5 +368,34 @@ describe('SociosService createWithClient — password inicial predecible', () =>
         data: expect.objectContaining({ must_change_password: false }),
       }),
     );
+  });
+
+  it('crea al profesor contratado con membresía pero sin alta de cobros', async () => {
+    const { db, membresiaCreate } = makeDb();
+    const pagos = stubPagos();
+    const service = new SociosService(
+      {} as PrismaService,
+      stubPlanes(),
+      pagos,
+    );
+
+    const result = await service.createWithClient(
+      db,
+      1,
+      { ...baseDto, rol: 'profe', es_socio: false, categoria_id: undefined } as any,
+      { skipPlanCheck: true },
+    );
+
+    expect(result.es_socio).toBe(false);
+    expect(membresiaCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          rol: 'profe',
+          es_socio: false,
+          categoria_id: null,
+        }),
+      }),
+    );
+    expect(pagos.persistirAlta).not.toHaveBeenCalled();
   });
 });

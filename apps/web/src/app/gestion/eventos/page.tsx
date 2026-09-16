@@ -4,6 +4,7 @@ import { apiFetch, mediaUrl, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { interpolate, useTranslation } from '@/lib/useTranslation';
+import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
 import { FloatingActionButton, StatusMessage, Badge } from '@/components/common';
 import { LockClosedIcon, GlobeAltIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 
@@ -26,6 +27,7 @@ type Filtro = 'todos' | EventoTipo;
 
 export default function EventosPage() {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateTimeFormat();
   const TIPO_LABEL: Record<Evento['tipo'], string> = {
     seminario: t('admin.eventos.tipoSeminario'),
     torneo: t('admin.eventos.tipoTorneo'),
@@ -145,7 +147,7 @@ export default function EventosPage() {
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-slate-500">
-                    {new Date(ev.fecha).toLocaleString('es-AR')}
+                    {formatDateTime(ev.fecha)}
                     {ev.lugar ? ` · ${ev.lugar}` : ''}
                   </p>
                   </div>

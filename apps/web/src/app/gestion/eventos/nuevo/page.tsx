@@ -17,11 +17,16 @@ type Evento = {
   tipo: EventoTipo;
   visibilidad: EventoVisibilidad;
   fecha: string;
+  fin: string | null;
   lugar: string | null;
   descripcion: string | null;
   imagen_url: string | null;
   publicado: boolean;
+  todos_espacios: boolean;
+  espacio_ids: number[];
 };
+
+type EspacioOpt = { id: number; nombre: string };
 
 function toDatetimeLocal(iso: string): string {
   const d = new Date(iso);
@@ -53,16 +58,31 @@ function NuevoEventoForm() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(Boolean(editingId));
   const [saving, setSaving] = useState(false);
+  const [espacios, setEspacios] = useState<EspacioOpt[]>([]);
   const [form, setForm] = useState({
     titulo: '',
     tipo: 'seminario' as EventoTipo,
     visibilidad: 'privado' as EventoVisibilidad,
     fecha: '',
+    fin: '',
     lugar: '',
     descripcion: '',
     imagen_url: '',
     publicado: false,
+    todos_espacios: false,
+    espacio_ids: [] as number[],
   });
+
+  useEffect(() => {
+    const session = requireSession();
+    if (!session) return;
+    apiFetch<EspacioOpt[]>('/espacios', {
+      token: session.access_token,
+      clubSlug: session.club.slug,
+    })
+      .then(setEspacios)
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!editingId) return;
@@ -79,10 +99,13 @@ function NuevoEventoForm() {
           tipo: ev.tipo,
           visibilidad: ev.visibilidad,
           fecha: toDatetimeLocal(ev.fecha),
+          fin: ev.fin ? toDatetimeLocal(ev.fin) : '',
           lugar: ev.lugar || '',
           descripcion: ev.descripcion || '',
           imagen_url: ev.imagen_url || '',
           publicado: ev.publicado,
+          todos_espacios: ev.todos_espacios,
+          espacio_ids: ev.espacio_ids ?? [],
         }),
       )
       .catch((err) => setError(err instanceof Error ? err.message : t('messages.errorLoading')))
@@ -101,10 +124,13 @@ function NuevoEventoForm() {
         tipo: form.tipo,
         visibilidad: form.visibilidad,
         fecha: new Date(form.fecha).toISOString(),
+        fin: form.fin ? new Date(form.fin).toISOString() : null,
         lugar: form.lugar || undefined,
         descripcion: form.descripcion || undefined,
         imagen_url: form.imagen_url || undefined,
         publicado: form.publicado,
+        todos_espacios: form.todos_espacios,
+        espacio_ids: form.todos_espacios ? [] : form.espacio_ids,
       });
       if (editingId) {
         await apiFetch(`/eventos/${editingId}`, {
@@ -213,10 +239,64 @@ function NuevoEventoForm() {
           required
         />
         <FormField
+          type="datetime-local"
+          label={t('admin.eventos.fechaFin')}
+          value={form.fin}
+          onChange={(fin) => setForm((f) => ({ ...f, fin }))}
+        />
+        <FormField
           label={t('admin.eventos.lugar')}
           value={form.lugar}
           onChange={(lugar) => setForm((f) => ({ ...f, lugar }))}
         />
+
+        <div className="sm:col-span-2">
+          <p className="text-sm">{t('admin.eventos.espaciosLabel')}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{t('admin.eventos.espaciosHint')}</p>
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.todos_espacios}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, todos_espacios: e.target.checked }))
+              }
+            />
+            {t('admin.eventos.todosEspacios')}
+          </label>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {espacios.map((esp) => {
+              const checked = form.todos_espacios || form.espacio_ids.includes(esp.id);
+              return (
+                <label
+                  key={esp.id}
+                  className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm ${
+                    checked
+                      ? 'border-[var(--primary)] bg-[var(--primary)]/10'
+                      : 'border-slate-300'
+                  } ${form.todos_espacios ? 'opacity-60' : ''}`}
+                >
+                  <input
+                    type="checkbox"
+                    disabled={form.todos_espacios}
+                    checked={checked}
+                    onChange={() =>
+                      setForm((f) => ({
+                        ...f,
+                        espacio_ids: f.espacio_ids.includes(esp.id)
+                          ? f.espacio_ids.filter((id) => id !== esp.id)
+                          : [...f.espacio_ids, esp.id],
+                      }))
+                    }
+                  />
+                  {esp.nombre}
+                </label>
+              );
+            })}
+            {espacios.length === 0 && (
+              <p className="text-xs text-slate-500">{t('admin.eventos.sinEspacios')}</p>
+            )}
+          </div>
+        </div>
 
         <FormField
           as="textarea"

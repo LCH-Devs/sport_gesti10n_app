@@ -139,7 +139,7 @@ apps/api/
 | `admins/` | `GET\|POST /admins`, `PATCH\|DELETE /admins/:id` |
 | `pagos/` | `GET /pagos/resumen`, `GET /pagos/estado-mes`, `GET /pagos/cuenta`, `POST /pagos/cobrar-mes`, `PATCH /pagos/:id/marcar-manual`, `POST /api/webhook/mp` |
 | `reportes/` | `GET /reportes/hoy`, `GET /reportes/alerta-fuga`, cumpleaños |
-| `espacios/` | CRUD `/espacios`, `GET /espacios/:id/disponibilidad` |
+| `espacios/` | CRUD `/espacios`, `GET /espacios/ocupacion`, `GET /espacios/:id/disponibilidad` |
 | `reservas/` | `GET\|POST /reservas`, `PATCH /reservas/:id/cancelar` |
 | `horarios/` | CRUD `/horarios` |
 | `noticias/` | CRUD `/noticias` |
@@ -152,7 +152,7 @@ Detalle de bodies y auth: [`API.md`](./API.md).
 
 ### Tablas Prisma (schema)
 
-`Club`, `PlatformAdmin`, `Usuario`, `Membresia`, `Pago`, `GrupoFamiliar`, `Actividad`, `SocioActividad`, `CobroProfe`, `LiquidacionProfe`, `Espacio`, `Reserva`, `Horario`, `Noticia`, `Asistencia`, `Torneo`, `Partido`.
+`Club`, `PlatformAdmin`, `Usuario`, `Membresia`, `Pago`, `GrupoFamiliar`, `Actividad`, `SocioActividad`, `CobroProfe`, `LiquidacionProfe`, `Espacio`, `Reserva`, `Horario`, `Evento`, `EventoEspacio`, `Noticia`, `Asistencia`, `Torneo`, `Partido`.
 
 Se crean/actualizan con `pnpm db:sync` (Docker solo levanta Postgres vacío).
 
@@ -224,6 +224,8 @@ apps/web/
 | `/admin/actividades` | `admin/actividades/page.tsx` | `/actividades` |
 | `/admin/torneos` | `admin/torneos/page.tsx` | `/torneos`, partidos, tabla |
 | `/admin/liquidaciones` | `admin/liquidaciones/page.tsx` | `/liquidaciones-profe`, cerrar-mes |
+| `/socio` | Portal personal | Perfil, cuotas y reservas; requiere `es_socio=true` |
+| `/profe` | Portal profesor | Horarios y liquidaciones; requiere `role=profe` |
 
 ### Archivos clave para el front
 

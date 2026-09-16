@@ -287,6 +287,7 @@ No mandar `passwordConfirm` ni `club_id`. Los espacios del step de deportes van 
 | `telefono` | no | máx. 30 (string libre, no el regex de solicitudes) |
 | `password` | no | si falta o vacío → **`socio` + DNI** (ej. `socio30111222`). Si viene, password fuerte |
 | `rol` | sí | `socio` \| `profe` |
+| `es_socio` | no | Para `profe`: default `true`. `false` = contratado, solo portal profesor y sin cuota/familia/reservas/tope SaaS. Para rol `socio` siempre se fuerza `true` |
 | `fecha_nacimiento` | sí | ISO date (`YYYY-MM-DD`) |
 | `categoria_id` | no | id de `GET /categorias-cuota`. Si falta → **Socio pleno** |
 | `inscripcion` | no | si es `true` y hay `inscripcion_monto` > 0, crea pagos `tipo=inscripcion` (desde el mes actual) |
@@ -439,7 +440,13 @@ Solo admin.
 | `fin` | sí | ISO datetime |
 | `nota` | no | máx. 300 |
 
-El back valida solape, moroso y tope de reservas activas.
+El back valida que `inicio`/`fin` estén en el horario útil del espacio (apertura → cierre − 1 h), duración mínima = 1 turno de `duracion_slot_min`, inicio en la grilla **o** cuando se libera el espacio (entrenamiento hasta 19:30 → 19:30–20:30), solape, moroso y tope de reservas activas.
+
+---
+
+### `PATCH /reservas/:id`
+
+Solo admin. Reserva `confirmada`. Mismos campos que el alta, todos opcionales. No se pisa a sí misma al chequear solape.
 
 ---
 
@@ -450,7 +457,7 @@ Solo admin.
 ```json
 {
   "titulo": "Fútbol infantiles",
-  "dias": "Lun y Mié",
+  "dias": "Lunes,Miércoles",
   "hora_inicio": "18:00",
   "hora_fin": "19:30",
   "profe_id": 55,
@@ -461,7 +468,7 @@ Solo admin.
 | Campo | Req | Notas |
 |-------|-----|--------|
 | `titulo` | sí | máx. 120 |
-| `dias` | sí | máx. 80, texto libre |
+| `dias` | sí | máx. 80. Nombres completos separados por coma: `Lunes,Miércoles,Viernes`. El alta rápida del panel manda esos nombres. Siguen valiendo abreviaturas viejas (`lun,mie,vie`). |
 | `hora_inicio` | sí | `HH:mm` |
 | `hora_fin` | sí | `HH:mm` |
 | `profe_id` | no | membresía rol `profe` |

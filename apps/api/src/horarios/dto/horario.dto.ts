@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsHoraHm, IsOptionalHoraHm } from '../../common/dto-constraints';
@@ -27,6 +28,10 @@ export class CreateHorarioDto {
   @Type(() => Number)
   @IsInt()
   profe_id?: number;
+
+  @IsOptional()
+  @IsInt()
+  espacio_id?: number;
 
   @IsOptional()
   @IsBoolean()
@@ -54,6 +59,11 @@ export class UpdateHorarioDto {
   @Type(() => Number)
   @IsInt()
   profe_id?: number | null;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsInt()
+  espacio_id?: number | null;
 
   @IsOptional()
   @IsBoolean()

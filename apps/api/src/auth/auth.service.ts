@@ -51,6 +51,7 @@ type ClubRow = {
 type MembresiaRow = {
   id: number;
   rol: string;
+  es_socio: boolean;
   estado: string;
   must_change_password: boolean;
   club: ClubRow;
@@ -150,6 +151,7 @@ export class AuthService {
       {
         id: chosen.id,
         rol: chosen.rol,
+        es_socio: chosen.es_socio,
         estado: chosen.estado,
         must_change_password: chosen.must_change_password,
         club: chosen.club,
@@ -165,6 +167,7 @@ export class AuthService {
       usable.map((row) => ({
         membresia_id: row.id,
         rol: row.rol,
+        es_socio: row.es_socio,
         club: {
           id: row.club.id,
           slug: row.club.slug,
@@ -235,6 +238,7 @@ export class AuthService {
       {
         id: row.id,
         rol: row.rol,
+        es_socio: row.es_socio,
         estado: row.estado,
         must_change_password: row.must_change_password,
         club: row.club,
@@ -250,6 +254,7 @@ export class AuthService {
       usable.map((m) => ({
         membresia_id: m.id,
         rol: m.rol,
+        es_socio: m.es_socio,
         club: {
           id: m.club.id,
           slug: m.club.slug,
@@ -312,6 +317,7 @@ export class AuthService {
     cuentas: Array<{
       membresia_id: number;
       rol: string;
+      es_socio: boolean;
       club: {
         id: number;
         slug: string;
@@ -331,6 +337,7 @@ export class AuthService {
       sub: membresia.id,
       user_id: membresia.usuario.id,
       role: membresia.rol,
+      es_socio: membresia.rol === 'socio' || membresia.es_socio,
       club_id: membresia.club.id,
       club_slug: membresia.club.slug,
       impersonated_by_platform: impersonated,
@@ -355,6 +362,7 @@ export class AuthService {
       access_token,
       expires_in: JWT_EXPIRES_SECONDS,
       role: membresia.rol,
+      es_socio: membresia.rol === 'socio' || membresia.es_socio,
       cuentas,
       must_complete_onboarding: staff ? !membresia.club.onboarding_completo : false,
       // Aplica a staff y a socios/profe: la password inicial "socio+DNI"
@@ -378,6 +386,7 @@ export class AuthService {
             dni: membresia.usuario.dni,
             estado: membresia.estado,
             rol: membresia.rol,
+            es_socio: membresia.rol === 'socio' || membresia.es_socio,
           }
         : undefined,
       club,

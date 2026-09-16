@@ -9,6 +9,7 @@ import { resolveJwtSecret } from './auth-security';
 export type JwtPayload = {
   sub: number;
   role: string;
+  es_socio?: boolean;
   club_id?: number;
   club_slug?: string;
   user_id?: number;

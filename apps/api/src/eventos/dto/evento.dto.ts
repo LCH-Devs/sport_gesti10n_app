@@ -1,4 +1,5 @@
 import {
+  IsArray,
   IsBoolean,
   IsDateString,
   IsIn,
@@ -6,6 +7,7 @@ import {
   IsOptional,
   IsString,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 
 const TIPOS = ['seminario', 'torneo', 'social'] as const;
@@ -25,6 +27,19 @@ export class CreateEventoDto {
 
   @IsDateString()
   fecha: string;
+
+  @IsOptional()
+  @IsDateString()
+  fin?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  todos_espacios?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  espacio_ids?: number[];
 
   @IsOptional()
   @IsString()
@@ -67,6 +82,20 @@ export class UpdateEventoDto {
   @IsOptional()
   @IsDateString()
   fecha?: string;
+
+  @IsOptional()
+  @ValidateIf((_, v) => v !== null)
+  @IsDateString()
+  fin?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  todos_espacios?: boolean;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  espacio_ids?: number[];
 
   @IsOptional()
   @IsString()

@@ -13,6 +13,7 @@ import {
 import { Header, Card, Badge, Button } from "@/components/common";
 import { apiFetch, getPlatformSession } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
+import { useDateTimeFormat } from "@/lib/DateTimeFormatContext";
 
 type ClubRow = {
   id: number;
@@ -50,6 +51,7 @@ type Pendiente = {
 export default function DashboardPage() {
   const router = useRouter();
   const { t } = useTranslation();
+  const { formatDate } = useDateTimeFormat();
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [pendientes, setPendientes] = useState<Pendiente[]>([]);
   const [clubs, setClubs] = useState<ClubRow[]>([]);
@@ -280,7 +282,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="py-2 pr-4 text-slate-600">
                         {row.pendiente_en_at
-                          ? new Date(row.pendiente_en_at).toLocaleDateString("es-AR")
+                          ? formatDate(row.pendiente_en_at)
                           : "—"}
                       </td>
                       <td className="py-2 pr-4 flex flex-wrap gap-2">
