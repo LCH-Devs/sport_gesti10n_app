@@ -76,8 +76,15 @@ describe('ReservasService — concurrencia real contra Postgres', () => {
   }, 30_000);
 
   it('dos altas simultáneas para el mismo horario: exactamente una gana', async () => {
-    const inicio = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-    const fin = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
+    // Turno alineado a la grilla del espacio (08:00 + 60 min). "ahora + 24 h"
+    // cae a las 16:49, etc., y create() lo rechaza antes de mirar el solape.
+    const inicioDate = new Date();
+    inicioDate.setDate(inicioDate.getDate() + 1);
+    inicioDate.setHours(18, 0, 0, 0);
+    const finDate = new Date(inicioDate);
+    finDate.setHours(19, 0, 0, 0);
+    const inicio = inicioDate.toISOString();
+    const fin = finDate.toISOString();
 
     const [resA, resB] = await Promise.allSettled([
       service.create(clubId, {
