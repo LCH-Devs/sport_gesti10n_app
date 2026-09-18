@@ -34,6 +34,11 @@ export class CreateHorarioDto {
   espacio_id?: number;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  actividad_id?: number;
+
+  @IsOptional()
   @IsBoolean()
   activo?: boolean;
 }
@@ -64,6 +69,12 @@ export class UpdateHorarioDto {
   @ValidateIf((_, v) => v !== null)
   @IsInt()
   espacio_id?: number | null;
+
+  @IsOptional()
+  @Type(() => Number)
+  @ValidateIf((_, v) => v !== null)
+  @IsInt()
+  actividad_id?: number | null;
 
   @IsOptional()
   @IsBoolean()

@@ -1,5 +1,9 @@
 # Plan frontend habilitado por B01
 
+> Documento de apoyo histórico. El estado vigente se consulta en
+> [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md) y las prioridades en
+> [`PLAN_FRONTEND_LANZAMIENTO.md`](PLAN_FRONTEND_LANZAMIENTO.md).
+
 Fecha: 09/09/2026. B01 de backend está implementado. Este lote concreta el trabajo web que ya puede ejecutarse sin inventar endpoints nuevos.
 
 ## Objetivo

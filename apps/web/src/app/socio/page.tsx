@@ -205,6 +205,7 @@ export default function SocioPage() {
   if (!session) return <main className="p-6">{t('socioPortal.cargandoCuenta')}</main>;
 
   const profile = portal?.socio;
+  const isPendiente = profile?.estado === 'pendiente';
   const pagos = portal?.pagos ?? [];
   const ahora = Date.now();
   const reservasFuturas = reservas.filter(
@@ -238,12 +239,28 @@ export default function SocioPage() {
         <p className="text-sm text-slate-500">{session.club.nombre}</p>
         <h1 className="mt-1 text-2xl font-bold text-slate-900">{t('socioPortal.miCuenta')}</h1>
         {error && <p className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {isPendiente && (
+          <p className="mt-4 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">
+            {t('socioPortal.cuentaPendienteAviso')}
+          </p>
+        )}
         {profile && (
           <dl className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div><dt className="text-xs uppercase text-slate-500">{t('socioPortal.nombre')}</dt><dd className="font-medium">{profile.nombre} {profile.apellido}</dd></div>
             <div><dt className="text-xs uppercase text-slate-500">{t('socioPortal.dni')}</dt><dd className="font-medium">{profile.dni}</dd></div>
             <div><dt className="text-xs uppercase text-slate-500">{t('socioPortal.email')}</dt><dd className="font-medium">{profile.email}</dd></div>
-            <div><dt className="text-xs uppercase text-slate-500">{t('socioPortal.estado')}</dt><dd className="font-medium">{profile.estado}</dd></div>
+            <div>
+              <dt className="text-xs uppercase text-slate-500">{t('socioPortal.estado')}</dt>
+              <dd className="font-medium">
+                {isPendiente ? (
+                  <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                    {t('socioPortal.cuentaEstadoPendienteLabel')}
+                  </span>
+                ) : (
+                  profile.estado
+                )}
+              </dd>
+            </div>
           </dl>
         )}
       </div>
@@ -321,7 +338,7 @@ export default function SocioPage() {
               <button
                 type="button"
                 onClick={() => void onBuscarDisponibilidad()}
-                disabled={!espacioId || !fecha || loadingSlots}
+                disabled={!espacioId || !fecha || loadingSlots || isPendiente}
                 className="rounded-lg bg-[var(--primary,#003ec7)] px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {loadingSlots ? t('socioPortal.buscando') : t('socioPortal.verHorariosLibres')}
@@ -334,7 +351,7 @@ export default function SocioPage() {
                   <button
                     key={s.inicio}
                     type="button"
-                    disabled={creando}
+                    disabled={creando || isPendiente}
                     onClick={() => void onReservar(s)}
                     className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-800 hover:bg-emerald-100 disabled:opacity-60"
                   >
@@ -368,7 +385,8 @@ export default function SocioPage() {
                     <button
                       type="button"
                       onClick={() => void onCancelar(r)}
-                      className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50"
+                      disabled={isPendiente}
+                      className="rounded-lg border border-red-200 px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-60"
                     >
                       {t('socioPortal.cancelar')}
                     </button>

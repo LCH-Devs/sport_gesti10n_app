@@ -75,6 +75,15 @@ export function login(email: string, password: string, clubSlug?: string) {
   });
 }
 
+export function registerSocio(input: { club_slug: string; dni: string; nombre: string; apellido: string; email: string; fecha_nacimiento: string; password: string }) {
+  return apiFetch<{ ok: boolean; estado: string }>('/auth/register-socio', { method: 'POST', body: JSON.stringify(input) });
+}
+
+export type ClubSearchResult = { id: number; slug: string; nombre: string; logo_url?: string | null };
+export function searchClubs(query: string) {
+  return apiFetch<ClubSearchResult[]>(`/clubs/buscar?q=${encodeURIComponent(query.trim())}`);
+}
+
 export function switchCuenta(token: string, membresiaId: number) {
   return apiFetch<LoginResponse>('/auth/switch', {
     method: 'POST',
@@ -209,6 +218,27 @@ export function completeOnboarding(token: string, input: CompleteOnboardingInput
     method: 'PATCH',
     body: JSON.stringify(input),
   }, token);
+}
+
+export type NotificacionItem = {
+  id: number;
+  tipo: string;
+  titulo: string;
+  mensaje: string;
+  leido: boolean;
+  created_at: string;
+};
+
+export function listNotificaciones(token: string) {
+  return apiFetch<NotificacionItem[]>('/notificaciones', {}, token);
+}
+
+export function marcarNotificacionLeida(token: string, id: number) {
+  return apiFetch<{ ok: boolean }>(`/notificaciones/${id}/leido`, { method: 'PATCH' }, token);
+}
+
+export function marcarTodasNotificacionesLeidas(token: string) {
+  return apiFetch<{ ok: boolean }>('/notificaciones/marcar-todas-leidas', { method: 'PATCH' }, token);
 }
 
 export { API_URL };

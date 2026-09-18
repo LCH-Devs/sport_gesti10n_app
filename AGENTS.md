@@ -4,7 +4,7 @@ Instrucciones para cualquier agente (Cursor, Claude Code, etc.) que trabaje en e
 
 Leer este archivo **antes** de tocar código. No improvisar arquitectura, modelos ni contratos.
 
-Fuente de producto y detalle: `TECNICO_EQUIPO.md`, `PLAN.md`, `docs/API.md`, `docs/FRONT.md`.
+Fuente de producto y detalle: `docs/TECNICO_EQUIPO.md`, `docs/PLAN.md`, `docs/API.md`, `docs/FRONT.md`.
 Si este archivo y un doc viejo se contradicen, **gana el código actual** (`apps/api/prisma/schema.prisma` + servicios). Varios docs aún hablan de `Admin`/`Socio` como tablas: eso ya no existe.
 
 ---
@@ -215,7 +215,7 @@ No implementar salvo pedido explícito:
 - Roles granulares de comisión (tesorero vs presidente)
 - Nuevos módulos de dominio “por las dudas”
 
-Si un doc (`PLAN.md`, `TECNICO_EQUIPO.md`) describe Fase 2+, es roadmap, no trabajo actual.
+Si un doc (`docs/PLAN.md`, `docs/TECNICO_EQUIPO.md`) describe Fase 2+, es roadmap, no trabajo actual.
 
 ---
 

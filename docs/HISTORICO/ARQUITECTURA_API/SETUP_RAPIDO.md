@@ -1,5 +1,8 @@
 # 🚀 Setup Rápido — ClubApp Arg + Diseño Nuevo
 
+> Guía alternativa de instalación. El arranque canónico está en
+> [`README.md`](README.md).
+
 **¡Integración completada!** Backend + Web nuevo + Mobile + Shared
 
 ---
@@ -167,4 +170,4 @@ rm -rf apps/web.backup/
 
 ## 🆘 ¿Necesitas ayuda?
 
-Ver `INTEGRACION_STATUS.md` para detalles técnicos de la integración.
+El registro histórico de integración está en [`HISTORICO/INTEGRACION_STATUS.md`](HISTORICO/INTEGRACION_STATUS.md).

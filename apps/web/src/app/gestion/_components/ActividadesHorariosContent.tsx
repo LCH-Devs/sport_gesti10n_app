@@ -3,9 +3,10 @@
 import { apiFetch, requireSession } from '@/lib/api';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslation } from '@/lib/useTranslation';
+import { interpolate, useTranslation } from '@/lib/useTranslation';
 import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
 import { DataTable, FloatingActionButton, type Column } from '@/components/common';
+import { PencilIcon, PlusCircleIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { formatDias } from '@/lib/dias-semana';
 
 type Horario = {
@@ -27,17 +28,14 @@ type Actividad = {
   monto_adicional: number;
   profe_id: number | null;
   activo: boolean;
+  horarios: Horario[];
 };
 
-type Tab = 'horarios' | 'actividades';
-
-export function ActividadesHorariosContent({ initialTab }: { initialTab: Tab }) {
+export function ActividadesHorariosContent() {
   const { t } = useTranslation();
   const { formatHmRange } = useDateTimeFormat();
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>(initialTab);
 
-  const [horarios, setHorarios] = useState<Horario[]>([]);
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -48,17 +46,10 @@ export function ActividadesHorariosContent({ initialTab }: { initialTab: Tab }) 
     setLoading(true);
     setError('');
     try {
-      const [h, a] = await Promise.all([
-        apiFetch<Horario[]>('/horarios', {
-          token: session.access_token,
-          clubSlug: session.club.slug,
-        }),
-        apiFetch<Actividad[]>('/actividades', {
-          token: session.access_token,
-          clubSlug: session.club.slug,
-        }),
-      ]);
-      setHorarios(h);
+      const a = await apiFetch<Actividad[]>('/actividades', {
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
       setActividades(a);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorLoading'));
@@ -70,21 +61,6 @@ export function ActividadesHorariosContent({ initialTab }: { initialTab: Tab }) 
   useEffect(() => {
     void load();
   }, [load]);
-
-  async function onDeleteHorario(h: Horario) {
-    const session = requireSession();
-    if (!session) return;
-    try {
-      await apiFetch(`/horarios/${h.id}`, {
-        method: 'DELETE',
-        token: session.access_token,
-        clubSlug: session.club.slug,
-      });
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('messages.errorDeleting'));
-    }
-  }
 
   async function onDeleteActividad(a: Actividad) {
     const session = requireSession();
@@ -101,29 +77,20 @@ export function ActividadesHorariosContent({ initialTab }: { initialTab: Tab }) 
     }
   }
 
-  const horarioColumns: Column<Horario>[] = [
-    { key: 'titulo', header: t('admin.horarios.titulo'), sortable: true },
-    {
-      key: 'dias',
-      header: t('admin.horarios.dias'),
-      render: (h) => formatDias(h.dias),
-    },
-    {
-      key: 'espacio',
-      header: t('admin.horarios.espacio'),
-      accessor: (h) => h.espacio?.nombre ?? t('admin.horarios.sinEspacio'),
-    },
-    {
-      key: 'horario',
-      header: t('admin.espacios.horario'),
-      accessor: (h) => formatHmRange(h.hora_inicio, h.hora_fin),
-    },
-    {
-      key: 'activo',
-      header: t('admin.espacios.activo'),
-      render: (h) => (h.activo ? t('common.yes') : t('common.no')),
-    },
-  ];
+  async function onDeleteHorario(h: Horario) {
+    const session = requireSession();
+    if (!session) return;
+    try {
+      await apiFetch(`/horarios/${h.id}`, {
+        method: 'DELETE',
+        token: session.access_token,
+        clubSlug: session.club.slug,
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('messages.errorDeleting'));
+    }
+  }
 
   const actividadColumns: Column<Actividad>[] = [
     { key: 'nombre', header: t('admin.actividades.nombre'), sortable: true },
@@ -135,77 +102,110 @@ export function ActividadesHorariosContent({ initialTab }: { initialTab: Tab }) 
       render: (a) => `$${a.monto_adicional}`,
     },
     {
+      key: 'horarios',
+      header: t('admin.horarios.title'),
+      accessor: (a) => a.horarios.length,
+      render: (a) =>
+        a.horarios.length > 0
+          ? interpolate(t('admin.actividades.horariosCount'), { count: a.horarios.length })
+          : t('admin.actividades.sinHorarios'),
+    },
+    {
       key: 'activo',
       header: t('admin.espacios.activo'),
       render: (a) => (a.activo ? t('common.yes') : t('common.no')),
     },
   ];
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'horarios', label: t('admin.horarios.title') },
-    { key: 'actividades', label: t('admin.actividades.title') },
-  ];
-
   return (
     <div className="relative">
-      <h2 className="text-2xl font-bold">
-        {tab === 'horarios' ? t('admin.horarios.title') : t('admin.actividades.title')}
-      </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        {tab === 'horarios' ? t('admin.horarios.subtitle') : t('admin.actividades.subtitle')}
-      </p>
-
-      <div className="mt-6 flex flex-wrap gap-1">
-        {tabs.map((tb) => (
-          <button
-            key={tb.key}
-            type="button"
-            onClick={() => setTab(tb.key)}
-            className={`-mb-px whitespace-nowrap rounded-t-lg border-x border-t px-4 py-2 text-sm font-semibold transition-colors ${
-              tab === tb.key
-                ? 'border-slate-200 border-b-white bg-white text-slate-900'
-                : 'border-transparent bg-slate-100 text-slate-500 hover:bg-slate-200'
-            }`}
-          >
-            {tb.label}
-          </button>
-        ))}
-      </div>
+      <h2 className="text-2xl font-bold">{t('admin.actividades.title')}</h2>
+      <p className="mt-1 text-sm text-slate-600">{t('admin.actividades.subtitle')}</p>
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <div className="-mt-px">
-        {tab === 'horarios' ? (
-          <DataTable
-            columns={horarioColumns}
-            data={horarios}
-            getRowId={(h) => h.id}
-            loading={loading}
-            onEdit={(h) => router.push(`/horarios/nuevo?id=${h.id}`)}
-            onDelete={onDeleteHorario}
-            deleteConfirmMessage={t('admin.horarios.confirmDelete')}
-            className="rounded-t-none"
-          />
-        ) : (
-          <DataTable
-            columns={actividadColumns}
-            data={actividades}
-            getRowId={(a) => a.id}
-            loading={loading}
-            onEdit={(a) => router.push(`/actividades/nuevo?id=${a.id}`)}
-            onDelete={onDeleteActividad}
-            deleteConfirmMessage={t('admin.actividades.confirmDelete')}
-            className="rounded-t-none"
-          />
-        )}
+      <div className="mt-6">
+        <DataTable
+          columns={actividadColumns}
+          data={actividades}
+          getRowId={(a) => a.id}
+          loading={loading}
+          onEdit={(a) => router.push(`/actividades/nuevo?id=${a.id}`)}
+          onDelete={onDeleteActividad}
+          deleteConfirmMessage={t('admin.actividades.confirmDelete')}
+          actions={(a) => (
+            <button
+              type="button"
+              onClick={() => router.push(`/horarios/nuevo?actividad_id=${a.id}`)}
+              className="text-slate-500 hover:text-blue-600"
+              aria-label={t('admin.horarios.createHorario')}
+              title={t('admin.horarios.createHorario')}
+            >
+              <PlusCircleIcon className="h-4 w-4" />
+            </button>
+          )}
+          renderExpanded={(a) =>
+            a.horarios.length === 0 ? (
+              <p className="text-sm text-slate-500">{t('admin.actividades.sinHorarios')}</p>
+            ) : (
+              <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b bg-slate-50 text-slate-600">
+                    <tr>
+                      <th className="px-3 py-2 font-medium">{t('admin.horarios.titulo')}</th>
+                      <th className="px-3 py-2 font-medium">{t('admin.horarios.dias')}</th>
+                      <th className="px-3 py-2 font-medium">{t('admin.espacios.horario')}</th>
+                      <th className="px-3 py-2 font-medium">{t('admin.horarios.espacio')}</th>
+                      <th className="px-3 py-2 font-medium">{t('admin.espacios.activo')}</th>
+                      <th className="px-3 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {a.horarios.map((h) => (
+                      <tr key={h.id} className="border-b last:border-0">
+                        <td className="px-3 py-2">{h.titulo}</td>
+                        <td className="px-3 py-2">{formatDias(h.dias)}</td>
+                        <td className="px-3 py-2">{formatHmRange(h.hora_inicio, h.hora_fin)}</td>
+                        <td className="px-3 py-2">
+                          {h.espacio?.nombre ?? t('admin.horarios.sinEspacio')}
+                        </td>
+                        <td className="px-3 py-2">{h.activo ? t('common.yes') : t('common.no')}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center justify-end gap-3">
+                            <button
+                              type="button"
+                              onClick={() => router.push(`/horarios/nuevo?id=${h.id}`)}
+                              className="text-slate-500 hover:text-blue-600"
+                              aria-label={t('dataTable.edit', 'Editar')}
+                              title={t('dataTable.edit', 'Editar')}
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void onDeleteHorario(h)}
+                              className="text-slate-500 hover:text-red-600"
+                              aria-label={t('dataTable.delete', 'Eliminar')}
+                              title={t('dataTable.delete', 'Eliminar')}
+                            >
+                              <TrashIcon className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        />
       </div>
 
       <FloatingActionButton
-        onClick={() =>
-          router.push(tab === 'horarios' ? '/horarios/nuevo' : '/actividades/nuevo')
-        }
-        aria-label={tab === 'horarios' ? t('admin.horarios.createHorario') : t('admin.actividades.createActividad')}
-        title={tab === 'horarios' ? t('admin.horarios.createHorario') : t('admin.actividades.createActividad')}
+        onClick={() => router.push('/actividades/nuevo')}
+        aria-label={t('admin.actividades.createActividad')}
+        title={t('admin.actividades.createActividad')}
       />
     </div>
   );

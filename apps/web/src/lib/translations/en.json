@@ -311,7 +311,10 @@
       "calor": "Heat",
       "calorManana": "Morning",
       "calorTarde": "Afternoon",
-      "calorNoche": "Night"
+      "calorNoche": "Night",
+      "reservar": "Reserve",
+      "verReservas": "View reservations",
+      "reservasDe": "Reservations for {espacio}"
     },
     "actividades": {
       "title": "Activities",
@@ -323,7 +326,9 @@
       "confirmDelete": "Delete this activity?",
       "adicional": "Additional",
       "club": "Club",
-      "profe": "Coach"
+      "profe": "Coach",
+      "horariosCount": "{count} schedule(s)",
+      "sinHorarios": "No schedules"
     },
     "reservas": {
       "title": "Reservations",
@@ -372,6 +377,8 @@
       "activo": "Active",
       "espacio": "Space",
       "sinEspacio": "No court",
+      "actividad": "Activity",
+      "sinActividad": "No activity",
       "confirmDelete": "Delete schedule?"
     },
     "familias": {
@@ -540,6 +547,7 @@
       "espaciosLabel": "Courts it occupies",
       "espaciosHint": "If you pick none, the event does not block bookings. With courts, an end time is required.",
       "todosEspacios": "All club courts",
+      "sinEspacioAsignado": "No space assigned",
       "sinEspacios": "No spaces loaded yet.",
       "descripcion": "Description (optional)",
       "publicadoCheck": "Published (visible now)",
@@ -680,6 +688,8 @@
     "dni": "ID",
     "email": "Email",
     "estado": "Status",
+    "cuentaEstadoPendienteLabel": "Suspended",
+    "cuentaPendienteAviso": "Your account is pending approval from the club. For now you can view your information, but you can't make reservations or other actions until the club activates it.",
     "errorPerfil": "Could not load your profile",
     "misCuotas": "My dues",
     "sinCuotas": "No dues registered yet.",

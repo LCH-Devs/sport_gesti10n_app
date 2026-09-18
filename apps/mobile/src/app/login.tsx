@@ -40,6 +40,7 @@ export default function LoginScreen() {
         </TouchableOpacity>
       </View>
       <Text style={styles.help}>¿Necesitás ayuda? Contactá a la administración de tu club.</Text>
+      <TouchableOpacity onPress={() => router.push('/registro' as never)}><Text style={styles.register}>¿No tenés cuenta? Registrate como socio</Text></TouchableOpacity>
     </KeyboardAvoidingView>
   );
 }
@@ -58,4 +59,5 @@ const styles = StyleSheet.create({
   button: { height: 48, borderRadius: 8, backgroundColor: Brand.primary, alignItems: 'center', justifyContent: 'center', marginTop: 20 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   help: { color: Brand.muted, fontSize: 12, textAlign: 'center', marginTop: 20 },
+  register: { color: Brand.primary, fontSize: 13, fontWeight: '700', textAlign: 'center', marginTop: 16 },
 });

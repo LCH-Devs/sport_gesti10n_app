@@ -79,5 +79,6 @@ export async function assertSesionViva(
     role: row.rol,
     es_socio: row.rol === 'socio' || row.es_socio,
     club_id: row.club_id,
+    estado: row.estado,
   };
 }

@@ -311,7 +311,10 @@
       "calor": "Calor",
       "calorManana": "Mañana",
       "calorTarde": "Tarde",
-      "calorNoche": "Noche"
+      "calorNoche": "Noche",
+      "reservar": "Reservar",
+      "verReservas": "Ver reservas",
+      "reservasDe": "Reservas de {espacio}"
     },
     "actividades": {
       "title": "Actividades",
@@ -323,7 +326,9 @@
       "confirmDelete": "¿Eliminar esta actividad?",
       "adicional": "Adicional",
       "club": "Club",
-      "profe": "Profesor"
+      "profe": "Profesor",
+      "horariosCount": "{count} horario(s)",
+      "sinHorarios": "Sin horarios"
     },
     "reservas": {
       "title": "Reservas",
@@ -372,6 +377,8 @@
       "activo": "Activo",
       "espacio": "Espacio",
       "sinEspacio": "Sin cancha",
+      "actividad": "Actividad",
+      "sinActividad": "Sin actividad",
       "confirmDelete": "¿Eliminar horario?"
     },
     "familias": {
@@ -540,6 +547,7 @@
       "espaciosLabel": "Canchas que ocupa",
       "espaciosHint": "Si no elegís ninguna, el evento no bloquea reservas. Con canchas, hace falta hora de fin.",
       "todosEspacios": "Todas las canchas del club",
+      "sinEspacioAsignado": "Sin espacio asignado",
       "sinEspacios": "Todavía no hay espacios cargados.",
       "descripcion": "Descripción (opcional)",
       "publicadoCheck": "Publicado (visible ya)",
@@ -680,6 +688,8 @@
     "dni": "DNI",
     "email": "Email",
     "estado": "Estado",
+    "cuentaEstadoPendienteLabel": "Suspendido",
+    "cuentaPendienteAviso": "Tu cuenta está pendiente de aprobación del club. Por ahora podés ver tu información, pero no podés hacer reservas ni otras acciones hasta que el club la active.",
     "errorPerfil": "No se pudo cargar tu perfil",
     "misCuotas": "Mis cuotas",
     "sinCuotas": "Todavía no hay cuotas registradas.",

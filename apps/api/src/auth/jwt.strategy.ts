@@ -15,6 +15,7 @@ export type JwtPayload = {
   user_id?: number;
   impersonated_by_platform?: boolean;
   socio_rol?: string;
+  estado?: string;
   /** Puesto por passport-jwt al decodificar; segundos epoch de emisión. */
   iat?: number;
 };

@@ -59,6 +59,12 @@ export class TenantGuard implements CanActivate {
       );
     }
 
+    if (user.estado === 'pendiente' && req.method !== 'GET') {
+      throw new ForbiddenException(
+        'Tu cuenta está pendiente de aprobación del club. Por ahora solo podés ver información.',
+      );
+    }
+
     req.clubId = user.club_id;
     req.clubSlug = user.club_slug;
     return true;

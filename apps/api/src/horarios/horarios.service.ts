@@ -27,6 +27,7 @@ export class HorariosService {
   async create(clubId: number, dto: CreateHorarioDto) {
     const espacioId = await this.resolveEspacio(clubId, dto.espacio_id);
     const profeId = await this.resolveProfe(clubId, dto.profe_id);
+    const actividadId = await this.resolveActividad(clubId, dto.actividad_id);
     if (espacioId) {
       await assertHorarioLibre(this.prisma, {
         clubId,
@@ -45,6 +46,7 @@ export class HorariosService {
         hora_fin: dto.hora_fin,
         profe_id: profeId,
         espacio_id: espacioId,
+        actividad_id: actividadId,
         activo: dto.activo ?? true,
       },
       include: horarioInclude,
@@ -61,6 +63,10 @@ export class HorariosService {
       dto.espacio_id !== undefined
         ? await this.resolveEspacio(clubId, dto.espacio_id)
         : current.espacio_id;
+    const actividadId =
+      dto.actividad_id !== undefined
+        ? await this.resolveActividad(clubId, dto.actividad_id)
+        : current.actividad_id;
     const dias = dto.dias ?? current.dias;
     const horaInicio = dto.hora_inicio ?? current.hora_inicio;
     const horaFin = dto.hora_fin ?? current.hora_fin;
@@ -83,6 +89,7 @@ export class HorariosService {
         ...(dto.hora_fin !== undefined && { hora_fin: dto.hora_fin }),
         ...(dto.profe_id !== undefined && { profe_id: profeId }),
         ...(dto.espacio_id !== undefined && { espacio_id: espacioId }),
+        ...(dto.actividad_id !== undefined && { actividad_id: actividadId }),
         ...(dto.activo !== undefined && { activo: dto.activo }),
       },
       include: horarioInclude,
@@ -109,6 +116,19 @@ export class HorariosService {
     });
     if (!espacio) throw new BadRequestException('Espacio no encontrado');
     return espacio.id;
+  }
+
+  private async resolveActividad(
+    clubId: number,
+    actividadId: number | null | undefined,
+  ): Promise<number | null> {
+    if (actividadId === undefined || actividadId === null) return null;
+    const actividad = await this.prisma.actividad.findFirst({
+      where: { id: actividadId, club_id: clubId, ...NOT_DELETED },
+      select: { id: true },
+    });
+    if (!actividad) throw new BadRequestException('Actividad no encontrada');
+    return actividad.id;
   }
 
   private async resolveProfe(

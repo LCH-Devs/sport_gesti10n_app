@@ -25,6 +25,14 @@ export type Trial10dMail = {
 
 export type PasswordResetMail = { to: string; resetUrl: string };
 
+export type NuevoSocioMail = {
+  to: string;
+  adminNombre: string;
+  clubNombre: string;
+  socioNombre: string;
+  socioEmail: string;
+};
+
 export type PlanUpgradeMail = {
   to: string;
   adminNombre: string;
@@ -274,6 +282,38 @@ export function buildPlanUpgradeHtml(p: PlanUpgradeMail) {
   );
 }
 
+export function buildNuevoSocioText(p: NuevoSocioMail) {
+  return [
+    `Hola ${p.adminNombre},`,
+    ``,
+    `Se registró un nuevo socio en ${p.clubNombre}:`,
+    ``,
+    `Nombre: ${p.socioNombre}`,
+    `Email: ${p.socioEmail}`,
+    ``,
+    `La cuenta queda pendiente de aprobación: el socio ya puede ingresar y ver su información, pero no puede hacer reservas ni operar hasta que actives su membresía desde el panel.`,
+    ``,
+    `— Equipo ClubApp`,
+  ].join('\n');
+}
+
+export function buildNuevoSocioHtml(p: NuevoSocioMail) {
+  const nombre = escapeHtml(p.adminNombre);
+  const club = escapeHtml(p.clubNombre);
+  const socioNombre = escapeHtml(p.socioNombre);
+  const socioEmail = escapeHtml(p.socioEmail);
+  return wrapHtml(
+    `Nuevo socio en ${p.clubNombre}`,
+    `
+      <p style="margin:0 0 12px;font-size:16px;">Hola ${nombre},</p>
+      <p style="margin:0 0 16px;line-height:1.55;">Se registró un nuevo socio en <strong>${club}</strong>.</p>
+      <p style="margin:0 0 4px;">Nombre: <strong>${socioNombre}</strong></p>
+      <p style="margin:0 0 16px;">Email: <strong>${socioEmail}</strong></p>
+      <p style="margin:0;line-height:1.55;">La cuenta queda <strong>pendiente de aprobación</strong>: el socio ya puede ingresar y ver su información, pero no puede hacer reservas ni operar hasta que actives su membresía desde el panel.</p>
+    `,
+  );
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
@@ -333,6 +373,15 @@ export class MailService {
       subject: 'Restablecer contraseña — ClubApp',
       text: `Solicitaste restablecer tu contraseña de ClubApp.\n\nUsá este enlace (vence en 60 minutos y solo funciona una vez):\n${payload.resetUrl}\n\nSi no lo pediste, ignorá este correo.`,
       html: wrapHtml('Restablecer contraseña', `<p>Solicitaste restablecer tu contraseña.</p><p><a href="${escapeHtml(payload.resetUrl)}">Restablecer contraseña</a></p><p>El enlace vence en 60 minutos y solo funciona una vez.</p>`),
+    });
+  }
+
+  sendNuevoSocio(payload: NuevoSocioMail) {
+    return this.deliver({
+      to: payload.to,
+      subject: `Nuevo socio en ${payload.clubNombre} — pendiente de aprobación`,
+      text: buildNuevoSocioText(payload),
+      html: buildNuevoSocioHtml(payload),
     });
   }
 

@@ -86,6 +86,7 @@ describe('Ninguna respuesta expone hashes/tokens/secretos (Postgres real)', () =
     new JwtService({ secret: 'test-secret-no-usar-en-prod' }),
     configStub,
     new LoginAttemptService(),
+    { avisarAdmins: async () => undefined } as any,
     undefined,
   );
 

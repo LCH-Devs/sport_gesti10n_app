@@ -302,7 +302,7 @@ La prueba `apps/api/test/app.e2e-spec.ts` aún espera `Hello World!` en `/`; no 
 - [Pagos](../apps/api/src/pagos/pagos.service.ts), [MercadoPago](../apps/api/src/pagos/mercadopago.service.ts), [reservas](../apps/api/src/reservas/reservas.service.ts).
 - [Recursos de plataforma](../apps/api/src/platform/platform.service.ts), [socios](../apps/api/src/socios/socios.service.ts).
 - [Middleware web](../apps/web/src/middleware.ts), [login y redirección](../apps/web/src/lib/apply-login.ts), [onboarding](../apps/web/src/app/gestion/onboarding/page.tsx).
-- [Plan histórico](../PLAN.md), [documento técnico histórico](../TECNICO_EQUIPO.md), [riesgos de pagos previos](../security_issues.md).
+- [Plan histórico](PLAN.md), [documento técnico histórico](TECNICO_EQUIPO.md), [riesgos de pagos previos](SECURITY_ISSUES.md).
 
 ### Referencias externas consultadas el 09/09/2026
 

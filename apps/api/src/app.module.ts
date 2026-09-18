@@ -21,6 +21,7 @@ import { PlatformModule } from './platform/platform.module';
 import { SocialModule } from './social/social.module';
 import { SolicitudesModule } from './solicitudes/solicitudes.module';
 import { PlanSaaSModule } from './plan-saas/plan-saas.module';
+import { NotificacionesModule } from './notificaciones/notificaciones.module';
 import { HealthController } from './health.controller';
 import { TenantMiddleware } from './common/tenant.middleware';
 import { RequestIdMiddleware } from './common/request-id.middleware';
@@ -50,6 +51,7 @@ import { RequestLoggerMiddleware } from './common/request-logger.middleware';
     SocialModule,
     SolicitudesModule,
     PlanSaaSModule,
+    NotificacionesModule,
   ],
   controllers: [HealthController],
   providers: [TenantMiddleware, RequestIdMiddleware, RequestLoggerMiddleware],

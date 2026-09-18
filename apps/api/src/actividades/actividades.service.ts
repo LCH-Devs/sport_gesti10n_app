@@ -21,6 +21,11 @@ export class ActividadesService {
       include: {
         profe: { include: personInclude },
         _count: { select: { socios: true } },
+        horarios: {
+          where: { eliminado: false },
+          include: { espacio: { select: { id: true, nombre: true } } },
+          orderBy: { hora_inicio: 'asc' },
+        },
       },
       orderBy: { nombre: 'asc' },
     });
@@ -120,6 +125,13 @@ export class ActividadesService {
   private async ensureInClub(clubId: number, id: number) {
     const a = await this.prisma.actividad.findFirst({
       where: { id, club_id: clubId, ...NOT_DELETED },
+      include: {
+        horarios: {
+          where: { eliminado: false },
+          include: { espacio: { select: { id: true, nombre: true } } },
+          orderBy: { hora_inicio: 'asc' },
+        },
+      },
     });
     if (!a) throw new NotFoundException('Actividad no encontrada');
     return a;

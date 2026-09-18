@@ -21,6 +21,8 @@ type Evento = {
   imagen_url: string | null;
   publicado: boolean;
   torneo_id: number | null;
+  todos_espacios: boolean;
+  espacios: { id: number; nombre: string }[];
 };
 
 type Filtro = 'todos' | EventoTipo;
@@ -149,6 +151,13 @@ export default function EventosPage() {
                   <p className="mt-1 text-xs text-slate-500">
                     {formatDateTime(ev.fecha)}
                     {ev.lugar ? ` · ${ev.lugar}` : ''}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {ev.todos_espacios
+                      ? t('admin.eventos.todosEspacios')
+                      : ev.espacios.length > 0
+                        ? `${t('admin.eventos.espaciosLabel')}: ${ev.espacios.map((e) => e.nombre).join(', ')}`
+                        : t('admin.eventos.sinEspacioAsignado', 'Sin espacio asignado')}
                   </p>
                   </div>
                 </div>

@@ -25,6 +25,7 @@ Body con campos que el DTO no declara → **400**. Login público (`/auth/login`
 
 - `GET /health`
 - `POST /auth/login` — unificado (comisión / socio / profe). `{ club_slug?, email, password }`  
+- `POST /auth/register-socio` — registro público de socio pendiente de aprobación. Body: `{ club_slug, dni, nombre, apellido, email, fecha_nacimiento, password }`. Crea la membresía con estado `suspendido` hasta que un admin la active.
   Respuesta: `access_token`, **`expires_in`** (28800), `role`, `cuentas`, `must_complete_onboarding`, `must_change_password`, `impersonated_by_platform`, `admin` o `socio`, `club`  
   **401** credenciales inválidas · **429** demasiados intentos
 - `POST /auth/admin/login` · `POST /auth/socio/login` — aliases del anterior  

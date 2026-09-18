@@ -17,8 +17,12 @@ import {
   getPlatformSession,
   getSession,
   getSocioSession,
+  listNotificaciones,
+  marcarNotificacionLeida,
+  marcarTodasNotificacionesLeidas,
   mediaUrl,
   type CuentaOption,
+  type NotificacionItem,
 } from "@/lib/api";
 import { useTranslation } from "@/lib/useTranslation";
 import ClubAccountSwitcher from "@/components/ClubAccountSwitcher";
@@ -28,19 +32,25 @@ interface NavbarProps {
   gradient?: boolean;
 }
 
-interface NotificationItem {
-  id: string;
-  title: string;
-  description: string;
-  timeAgo: string;
-  read: boolean;
+const NOTIFICACIONES_POLL_MS = 30000;
+
+function timeAgo(iso: string, locale: string) {
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffMin = Math.round(diffMs / 60000);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+  if (diffMin < 1) return rtf.format(0, "minute");
+  if (diffMin < 60) return rtf.format(-diffMin, "minute");
+  const diffH = Math.round(diffMin / 60);
+  if (diffH < 24) return rtf.format(-diffH, "hour");
+  const diffD = Math.round(diffH / 24);
+  return rtf.format(-diffD, "day");
 }
 
 export function Navbar({ onMenuClick, gradient }: NavbarProps) {
   const [showUserMenu, setShowUserMenu] = React.useState(false);
   const [showNotifications, setShowNotifications] = React.useState(false);
   const [notifications, setNotifications] =
-    React.useState<NotificationItem[]>([]);
+    React.useState<NotificacionItem[]>([]);
   const notificationsRef = React.useRef<HTMLDivElement>(null);
   const [clubName, setClubName] = React.useState("Kanri");
   const [clubLogoUrl, setClubLogoUrl] = React.useState<string | null>(null);
@@ -51,9 +61,13 @@ export function Navbar({ onMenuClick, gradient }: NavbarProps) {
     cuentas?: CuentaOption[];
     currentMembresiaId?: number;
   } | null>(null);
+  const [notifAuth, setNotifAuth] = React.useState<{
+    token: string;
+    clubSlug: string;
+  } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
 
   React.useEffect(() => {
     function syncSession() {
@@ -70,6 +84,7 @@ export function Navbar({ onMenuClick, gradient }: NavbarProps) {
         setUserName(platformSession?.platform_admin.nombre || "SuperAdmin");
         setConfigHref("/supercalifragilisticoespiralidoso/panel/perfil");
         setSwitcher(null);
+        setNotifAuth(null);
       } else {
         setClubName(session?.club.nombre || "Kanri");
         setClubLogoUrl(session?.club.logo_url || null);
@@ -81,14 +96,17 @@ export function Navbar({ onMenuClick, gradient }: NavbarProps) {
             cuentas: session.cuentas,
             currentMembresiaId: session.admin.id,
           });
+          setNotifAuth({ token: session.access_token, clubSlug: session.club.slug });
         } else if (socioSession) {
           setSwitcher({
             token: socioSession.access_token,
             cuentas: socioSession.cuentas,
             currentMembresiaId: socioSession.socio.id,
           });
+          setNotifAuth({ token: socioSession.access_token, clubSlug: socioSession.club.slug });
         } else {
           setSwitcher(null);
+          setNotifAuth(null);
         }
       }
     }
@@ -112,10 +130,41 @@ export function Navbar({ onMenuClick, gradient }: NavbarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  React.useEffect(() => {
+    if (!notifAuth) {
+      setNotifications([]);
+      return;
+    }
+    let cancelled = false;
+    function fetchNotifications() {
+      listNotificaciones(notifAuth!.token, notifAuth!.clubSlug)
+        .then((data) => {
+          if (!cancelled) setNotifications(data);
+        })
+        .catch(() => {});
+    }
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, NOTIFICACIONES_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [notifAuth]);
+
+  const unreadCount = notifications.filter((n) => !n.leido).length;
 
   function markAllRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    if (!notifAuth) return;
+    setNotifications((prev) => prev.map((n) => ({ ...n, leido: true })));
+    marcarTodasNotificacionesLeidas(notifAuth.token, notifAuth.clubSlug).catch(() => {});
+  }
+
+  function markOneRead(id: number) {
+    if (!notifAuth) return;
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, leido: true } : n)),
+    );
+    marcarNotificacionLeida(id, notifAuth.token, notifAuth.clubSlug).catch(() => {});
   }
 
   const userInitial = userName.charAt(0).toUpperCase() || "U";
@@ -248,27 +297,29 @@ export function Navbar({ onMenuClick, gradient }: NavbarProps) {
                     </p>
                   ) : (
                     notifications.map((notification) => (
-                      <div
+                      <button
+                        type="button"
                         key={notification.id}
-                        className="flex gap-3 px-4 py-3 border-b border-slate-700/60 last:border-b-0 hover:bg-slate-700/40 transition-colors"
+                        onClick={() => !notification.leido && markOneRead(notification.id)}
+                        className="flex w-full gap-3 px-4 py-3 border-b border-slate-700/60 last:border-b-0 hover:bg-slate-700/40 transition-colors text-left"
                       >
                         <span
                           className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
-                            notification.read ? "bg-transparent" : "bg-blue-400"
+                            notification.leido ? "bg-transparent" : "bg-blue-400"
                           }`}
                         ></span>
                         <div className="min-w-0">
                           <p className="text-sm font-semibold text-white truncate">
-                            {notification.title}
+                            {notification.titulo}
                           </p>
                           <p className="text-sm text-slate-300 mt-0.5 line-clamp-2">
-                            {notification.description}
+                            {notification.mensaje}
                           </p>
                           <p className="text-xs text-slate-500 mt-1">
-                            {notification.timeAgo}
+                            {timeAgo(notification.created_at, lang)}
                           </p>
                         </div>
-                      </div>
+                      </button>
                     ))
                   )}
                 </div>

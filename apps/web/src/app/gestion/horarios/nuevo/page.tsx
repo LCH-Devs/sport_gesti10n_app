@@ -22,22 +22,26 @@ type Horario = {
   hora_fin: string;
   profe_id: number | null;
   espacio_id: number | null;
+  actividad_id: number | null;
   activo: boolean;
 };
 
 type EspacioOpt = { id: number; nombre: string };
+type ActividadOpt = { id: number; nombre: string };
 
 function NuevoHorarioForm() {
   const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const editingId = searchParams.get('id');
+  const actividadIdParam = searchParams.get('actividad_id');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(Boolean(editingId));
   const [saving, setSaving] = useState(false);
   const [profes, setProfes] = useState<Profe[]>([]);
   const [espacios, setEspacios] = useState<EspacioOpt[]>([]);
+  const [actividades, setActividades] = useState<ActividadOpt[]>([]);
   const [form, setForm] = useState({
     titulo: '',
     dias: [] as DiaKey[],
@@ -45,13 +49,14 @@ function NuevoHorarioForm() {
     hora_fin: '19:30',
     profe_id: '',
     espacio_id: '',
+    actividad_id: actividadIdParam ?? '',
   });
 
   const load = useCallback(async () => {
     const session = requireSession();
     if (!session) return;
     try {
-      const [socios, canchas] = await Promise.all([
+      const [socios, canchas, activs] = await Promise.all([
         apiFetch<Profe[]>('/socios', {
           token: session.access_token,
           clubSlug: session.club.slug,
@@ -60,9 +65,14 @@ function NuevoHorarioForm() {
           token: session.access_token,
           clubSlug: session.club.slug,
         }),
+        apiFetch<ActividadOpt[]>('/actividades', {
+          token: session.access_token,
+          clubSlug: session.club.slug,
+        }),
       ]);
       setProfes(socios.filter((s) => s.rol === 'profe'));
       setEspacios(canchas);
+      setActividades(activs);
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorLoading'));
     }
@@ -89,6 +99,7 @@ function NuevoHorarioForm() {
           hora_fin: h.hora_fin,
           profe_id: h.profe_id ? String(h.profe_id) : '',
           espacio_id: h.espacio_id ? String(h.espacio_id) : '',
+          actividad_id: h.actividad_id ? String(h.actividad_id) : '',
         }),
       )
       .catch((err) => setError(err instanceof Error ? err.message : t('messages.errorLoading')))
@@ -113,6 +124,7 @@ function NuevoHorarioForm() {
         hora_fin: form.hora_fin,
         profe_id: form.profe_id ? Number(form.profe_id) : undefined,
         espacio_id: form.espacio_id ? Number(form.espacio_id) : null,
+        actividad_id: form.actividad_id ? Number(form.actividad_id) : null,
       });
       if (editingId) {
         await apiFetch(`/horarios/${editingId}`, {
@@ -129,7 +141,7 @@ function NuevoHorarioForm() {
           body,
         });
       }
-      router.push('/horarios');
+      router.push('/actividades');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorSaving'));
     } finally {
@@ -220,6 +232,20 @@ function NuevoHorarioForm() {
         <FormField
           as="select"
           colSpan
+          label={t('admin.horarios.actividad', 'Actividad')}
+          value={form.actividad_id}
+          onChange={(actividad_id) => setForm((f) => ({ ...f, actividad_id }))}
+        >
+          <option value="">{t('admin.horarios.sinActividad', 'Sin actividad')}</option>
+          {actividades.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.nombre}
+            </option>
+          ))}
+        </FormField>
+        <FormField
+          as="select"
+          colSpan
           label={t('admin.horarios.espacio')}
           value={form.espacio_id}
           onChange={(espacio_id) => setForm((f) => ({ ...f, espacio_id }))}
@@ -255,7 +281,7 @@ function NuevoHorarioForm() {
           </button>
           <button
             type="button"
-            onClick={() => router.push('/horarios')}
+            onClick={() => router.push('/actividades')}
             className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700"
           >
             {t('newClub.cancel', 'Cancelar')}

@@ -5,8 +5,9 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { useDateTimeFormat } from '@/lib/DateTimeFormatContext';
-import { EspaciosReservasTabs } from '../_components/EspaciosReservasTabs';
 import { DataTable, FloatingActionButton, type Column } from '@/components/common';
+import { CalendarDaysIcon, ListBulletIcon } from '@heroicons/react/24/outline';
+import { EspacioReservasModal } from '../_components/EspacioReservasModal';
 
 type Espacio = {
   id: number;
@@ -79,6 +80,7 @@ export default function EspaciosPage() {
   const [ocupacion, setOcupacion] = useState<Record<number, Ocupacion>>({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [viewingReservas, setViewingReservas] = useState<Espacio | null>(null);
 
   const load = useCallback(async () => {
     const session = requireSession();
@@ -185,13 +187,9 @@ export default function EspaciosPage() {
         {t('admin.espacios.subtitle')}
       </p>
 
-      <div className="mt-6">
-        <EspaciosReservasTabs />
-      </div>
-
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
-      <div className="-mt-px">
+      <div className="mt-6">
         <DataTable
           columns={columns}
           data={items}
@@ -200,7 +198,28 @@ export default function EspaciosPage() {
           onEdit={(e) => router.push(`/espacios/nuevo?id=${e.id}`)}
           onDelete={onDelete}
           deleteConfirmMessage={t('admin.espacios.confirmDelete', '¿Eliminar este espacio?')}
-          className="rounded-t-none"
+          actions={(e) => (
+            <>
+              <button
+                type="button"
+                onClick={() => router.push(`/reservas/nuevo?espacio_id=${e.id}`)}
+                className="text-slate-500 hover:text-blue-600"
+                aria-label={t('admin.espacios.reservar', 'Reservar')}
+                title={t('admin.espacios.reservar', 'Reservar')}
+              >
+                <CalendarDaysIcon className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewingReservas(e)}
+                className="text-slate-500 hover:text-blue-600"
+                aria-label={t('admin.espacios.verReservas', 'Ver reservas')}
+                title={t('admin.espacios.verReservas', 'Ver reservas')}
+              >
+                <ListBulletIcon className="h-4 w-4" />
+              </button>
+            </>
+          )}
         />
       </div>
 
@@ -209,6 +228,13 @@ export default function EspaciosPage() {
         aria-label={t('admin.espacios.createEspacio')}
         title={t('admin.espacios.createEspacio')}
       />
+
+      {viewingReservas && (
+        <EspacioReservasModal
+          espacio={viewingReservas}
+          onClose={() => setViewingReservas(null)}
+        />
+      )}
     </div>
   );
 }

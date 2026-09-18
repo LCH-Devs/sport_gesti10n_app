@@ -251,7 +251,7 @@ Usar seed o un club creado desde plataforma. Anotar bugs con: URL, pasos, espera
 | UX pulida del admin | En curso | Pantallas base; front mejora UI |
 | WhatsApp Business / SMS cobro | **Fuera de alcance** | Cobranza = push (cuando exista) |
 
-Producto completo deseado: [`../CARACTERISTICAS.md`](../CARACTERISTICAS.md) · plan: [`../PLAN.md`](../PLAN.md).
+Producto completo deseado: [`CARACTERISTICAS.md`](CARACTERISTICAS.md) · plan: [`PLAN.md`](PLAN.md).
 
 ---
 
@@ -313,9 +313,9 @@ Si la API no levanta: un solo `npm run start:dev`; si `EADDRINUSE :3001`, hay ot
 | [MANUAL_USUARIO.md](./MANUAL_USUARIO.md) | Este archivo |
 | [FRONT.md](./FRONT.md) | Setup front + mapa de carpetas |
 | [API.md](./API.md) | Contratos HTTP |
-| [../README.md](../README.md) | Arranque monorepo |
-| [../CARACTERISTICAS.md](../CARACTERISTICAS.md) | Visión de producto |
-| [../PLAN.md](../PLAN.md) | Fases y arquitectura |
+| [README.md](README.md) | Arranque monorepo |
+| [CARACTERISTICAS.md](CARACTERISTICAS.md) | Visión de producto |
+| [PLAN.md](PLAN.md) | Fases y arquitectura |
 
 ---
 

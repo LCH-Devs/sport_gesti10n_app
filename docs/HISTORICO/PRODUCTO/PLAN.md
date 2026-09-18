@@ -28,6 +28,10 @@ isProject: false
 
 # ClubApp Arg — MVP Multi-tenant (alcance completo)
 
+> Documento de producto amplio e histórico. Para estado y prioridades vigentes
+> consultar [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md) y
+> [`ROADMAP_LANZAMIENTO.md`](ROADMAP_LANZAMIENTO.md).
+
 ## Por qué Web + App
 
 | Canal | Quién | Para qué |

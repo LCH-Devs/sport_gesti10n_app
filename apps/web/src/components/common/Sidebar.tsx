@@ -34,7 +34,7 @@ export function Sidebar({ isOpen = true, variant = "club", gradient }: SidebarPr
     { icon: CurrencyDollarIcon, label: t("nav.cobros"), href: "/cobros" },
     { icon: UserCircleIcon, label: t("nav.usuarios"), href: "/usuarios" },
     { icon: BuildingLibraryIcon, label: t("nav.espacios"), href: "/espacios" },
-    { icon: ClockIcon, label: t("nav.horarios"), href: "/horarios" },
+    { icon: ClockIcon, label: t("nav.actividades"), href: "/actividades" },
     { icon: NewspaperIcon, label: t("nav.noticias"), href: "/noticias" },
     { icon: CalendarDaysIcon, label: t("nav.eventos", "Eventos"), href: "/eventos" },
     { icon: BanknotesIcon, label: t("nav.liquidaciones"), href: "/liquidaciones" },

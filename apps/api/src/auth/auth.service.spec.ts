@@ -55,6 +55,7 @@ describe('AuthService.login', () => {
       jwt as unknown as JwtService,
       config as unknown as ConfigService,
       loginAttempts as unknown as LoginAttemptService,
+      { avisarAdmins: jest.fn().mockResolvedValue(undefined) } as any,
     );
   });
 

@@ -12,6 +12,7 @@ import { LoginResponseDto } from './dto/login-response.dto';
 import { LOGIN_IP_LIMIT, LOGIN_IP_TTL_MS } from './auth-security';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RegisterSocioDto } from './dto/register-socio.dto';
 
 @Controller('auth')
 @UseGuards(ThrottlerGuard)
@@ -32,6 +33,11 @@ export class AuthController {
   @Post('socio/login')
   loginSocio(@Body() dto: SocioLoginDto): Promise<LoginResponseDto> {
     return this.auth.loginSocio(dto);
+  }
+
+  @Post('register-socio')
+  registerSocio(@Body() dto: RegisterSocioDto) {
+    return this.auth.registerSocio(dto);
   }
 
   @SkipThrottle()

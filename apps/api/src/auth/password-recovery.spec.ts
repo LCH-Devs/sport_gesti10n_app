@@ -5,7 +5,8 @@ describe('AuthService password recovery', () => {
   const prisma = { usuario: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() } };
   const config = { get: jest.fn((key: string) => key === 'WEB_APP_URL' ? 'http://localhost:3000' : '') };
   const mail = { sendPasswordReset: jest.fn().mockResolvedValue({ sent: false, stub: true }) };
-  const auth = new AuthService(prisma as any, {} as any, config as any, {} as any, mail as any);
+  const notificaciones = { avisarAdmins: jest.fn().mockResolvedValue(undefined) };
+  const auth = new AuthService(prisma as any, {} as any, config as any, {} as any, notificaciones as any, mail as any);
 
   beforeEach(() => jest.clearAllMocks());
 

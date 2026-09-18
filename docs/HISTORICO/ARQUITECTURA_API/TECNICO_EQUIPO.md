@@ -1,5 +1,9 @@
 # ClubApp Arg — Documento técnico para el equipo
 
+> Documento técnico de referencia. Las reglas vigentes del repositorio están en
+> `AGENTS.md`; el estado de implementación está en
+> [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md).
+
 Documento interno: arquitectura, features, responsabilidades por canal y decisiones de implementación.  
 Para pitch a clubes usar [`VENTA_PUBLICO.md`](VENTA_PUBLICO.md).
 
@@ -159,7 +163,7 @@ App Expo **fuera** de Docker en desarrollo.
 
 Reglas duras:
 - ClubApp **no cobra** ni custodia fondos: solo genera preferences/links con el token MP **del club**.
-- **Prod:** sin fallback a `MP_ACCESS_TOKEN` de plataforma; club “activo para cobrar” solo con OAuth/cuenta propia conectada (ver `security_issues.md` #2).
+- **Prod:** sin fallback a `MP_ACCESS_TOKEN` de plataforma; club “activo para cobrar” solo con OAuth/cuenta propia conectada (ver `SECURITY_ISSUES.md` #2).
 - Cobranza masiva: **solo push FCM** (gratis). Prohibido WhatsApp/SMS pagos como canal de cuotas.
 - Webhook marca estado en DB (no mueve plata). Siempre existe **marcar pagado manual**.
 - Job de reconciliación si el webhook no llega.

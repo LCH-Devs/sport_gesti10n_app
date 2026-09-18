@@ -74,6 +74,7 @@ model Club {
   partidos          Partido[]
   asistencias       Asistencia[]
   eventos           Evento[]
+  notificaciones    Notificacion[]
 
   @@index([eliminado])
   @@index([plan_pendiente_confirmado_at])
@@ -131,7 +132,7 @@ model Membresia {
   club                 Club     @relation(fields: [club_id], references: [id])
   rol                  String   @default("socio") // admin | entrada | socio | profe
   es_socio             Boolean  @default(true) // false solo para profe contratado
-  estado               String   @default("activo") // activo | moroso | suspendido
+  estado               String   @default("activo") // activo | moroso | suspendido | pendiente (recien registrado, solo lectura hasta que el club lo apruebe)
   eliminado            Boolean  @default(false)
   must_change_password Boolean  @default(false)
   grupo_familiar_id    Int?
@@ -149,6 +150,7 @@ model Membresia {
   cobros_como_profe CobroProfe[]     @relation("ProfeCobro")
   liquidaciones     LiquidacionProfe[]
   actividades_profe Actividad[]
+  notificaciones    Notificacion[]
 
   @@unique([usuario_id, club_id])
   @@index([club_id])
@@ -158,6 +160,23 @@ model Membresia {
   @@index([club_id, eliminado])
   @@index([grupo_familiar_id])
   @@index([categoria_id])
+}
+
+/// Notificación in-app dirigida a una Membresia puntual (admin, socio, etc).
+model Notificacion {
+  id           Int       @id @default(autoincrement())
+  club_id      Int
+  club         Club      @relation(fields: [club_id], references: [id])
+  membresia_id Int
+  membresia    Membresia @relation(fields: [membresia_id], references: [id], onDelete: Cascade)
+  tipo         String    // socio_nuevo | ...
+  titulo       String
+  mensaje      String
+  leido        Boolean   @default(false)
+  created_at   DateTime  @default(now())
+
+  @@index([membresia_id, leido])
+  @@index([club_id])
 }
 
 /// Tipo de cuota del club (pleno, deportivo, menor…). El default es “Socio pleno”.
@@ -207,6 +226,7 @@ model Actividad {
   eliminado       Boolean @default(false)
   socios          SocioActividad[]
   cobros_profe    CobroProfe[]
+  horarios        Horario[]
 
   @@index([club_id])
   @@index([club_id, eliminado])
@@ -346,9 +366,11 @@ model Horario {
   dias        String
   hora_inicio String
   hora_fin    String
-  profe_id    Int?
-  espacio_id  Int?
-  espacio     Espacio? @relation(fields: [espacio_id], references: [id])
+  profe_id     Int?
+  espacio_id   Int?
+  espacio      Espacio? @relation(fields: [espacio_id], references: [id])
+  actividad_id Int?
+  actividad    Actividad? @relation(fields: [actividad_id], references: [id])
   activo      Boolean @default(true)
   eliminado   Boolean @default(false)
   asistencias Asistencia[]
@@ -356,6 +378,7 @@ model Horario {
   @@index([club_id])
   @@index([club_id, eliminado])
   @@index([espacio_id])
+  @@index([actividad_id])
 }
 
 model Noticia {

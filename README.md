@@ -4,17 +4,19 @@ SaaS multi-tenant para clubes de barrio.
 **Este milestone:** API NestJS + panel web Next.js + PostgreSQL en Docker.  
 **Después:** app móvil Expo.
 
-**Plan de salida al mercado:** [Roadmap de lanzamiento](docs/ROADMAP_LANZAMIENTO.md) — diagnóstico del código, alcance propuesto, prioridades y criterios de aceptación (09/09/2026).
+**Estado unificado:** [Estado del proyecto](ESTADO_PROYECTO.md) · [índice de documentación](INDICE_DOCUMENTACION.md).
 
-**Plan del equipo frontend:** [Frontend de lanzamiento](docs/PLAN_FRONTEND_LANZAMIENTO.md) — tareas web por fase, dependencias de API y pruebas de aceptación.
+**Plan de salida al mercado:** [Roadmap de lanzamiento](ROADMAP_LANZAMIENTO.md) — diagnóstico del código, alcance propuesto, prioridades y criterios de aceptación.
 
-**Pendientes de backend:** [Contratos para frontend](docs/BACKEND_PENDIENTES_FRONTEND.md).
+**Plan del equipo frontend:** [Frontend de lanzamiento](PLAN_FRONTEND_LANZAMIENTO.md) — tareas web por fase, dependencias de API y pruebas de aceptación.
 
-**Lote frontend B01:** [Plan frontend habilitado por B01](docs/PLAN_FRONTEND_B01.md).
+**Pendientes de backend:** [Contratos para frontend](BACKEND_PENDIENTES_FRONTEND.md).
 
-**Frontend independiente:** [Trabajo sin dependencia de backend](docs/PLAN_FRONTEND_INDEPENDIENTE.md).
+**Lote frontend B01:** [Plan frontend habilitado por B01](PLAN_FRONTEND_B01.md).
 
-**Tareas manuales:** [Checklist frontend antes del lanzamiento](docs/TAREAS_MANUALES_FRONTEND.md).
+**Frontend independiente:** [Trabajo sin dependencia de backend](PLAN_FRONTEND_INDEPENDIENTE.md).
+
+**Tareas manuales:** [Checklist frontend antes del lanzamiento](TAREAS_MANUALES_FRONTEND.md).
 
 ## Equipo
 
@@ -88,4 +90,4 @@ docker compose --profile full up --build
 - [TECNICO_EQUIPO.md](TECNICO_EQUIPO.md) — arquitectura
 - [docs/API.md](docs/API.md) — endpoints para QA
 - [docs/FRONT.md](docs/FRONT.md) — onboarding front (DB local, API, pantallas)
-- [security_issues.md](security_issues.md) — seguridad MP
+- [SECURITY_ISSUES.md](SECURITY_ISSUES.md) — seguridad MP

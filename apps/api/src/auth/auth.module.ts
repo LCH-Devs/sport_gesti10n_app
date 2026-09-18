@@ -8,6 +8,7 @@ import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
 import { LoginAttemptService } from './login-attempt.service';
 import { MailModule } from '../mail/mail.module';
+import { NotificacionesModule } from '../notificaciones/notificaciones.module';
 import {
   JWT_EXPIRES_IN,
   LOGIN_IP_LIMIT,
@@ -20,6 +21,7 @@ import {
   imports: [
     PassportModule,
     MailModule,
+    NotificacionesModule,
     ThrottlerModule.forRoot({
       errorMessage: LOGIN_RATE_LIMIT_MESSAGE,
       throttlers: [{ ttl: LOGIN_IP_TTL_MS, limit: LOGIN_IP_LIMIT }],

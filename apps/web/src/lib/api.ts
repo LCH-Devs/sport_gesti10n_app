@@ -495,4 +495,33 @@ export async function apiDownload(
   URL.revokeObjectURL(url);
 }
 
+export type NotificacionItem = {
+  id: number;
+  tipo: string;
+  titulo: string;
+  mensaje: string;
+  leido: boolean;
+  created_at: string;
+};
+
+export function listNotificaciones(token: string, clubSlug?: string) {
+  return apiFetch<NotificacionItem[]>('/notificaciones', { token, clubSlug });
+}
+
+export function marcarNotificacionLeida(id: number, token: string, clubSlug?: string) {
+  return apiFetch<{ ok: boolean }>(`/notificaciones/${id}/leido`, {
+    method: 'PATCH',
+    token,
+    clubSlug,
+  });
+}
+
+export function marcarTodasNotificacionesLeidas(token: string, clubSlug?: string) {
+  return apiFetch<{ ok: boolean }>('/notificaciones/marcar-todas-leidas', {
+    method: 'PATCH',
+    token,
+    clubSlug,
+  });
+}
+
 export { API_URL };

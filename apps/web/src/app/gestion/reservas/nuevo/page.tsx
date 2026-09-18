@@ -1,8 +1,8 @@
 'use client';
 
 import { apiFetch, requireSession } from '@/lib/api';
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { FormEvent, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/lib/useTranslation';
 import { FormField } from '../../_components/FormField';
 import { ReservaHorarioPicker } from '../../_components/ReservaHorarioPicker';
@@ -33,16 +33,18 @@ function startKey(iso: string): string {
   return m ? m[1] : '';
 }
 
-export default function NuevaReservaPage() {
+function NuevaReservaForm() {
   const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const espacioIdParam = searchParams.get('espacio_id');
   const [espacios, setEspacios] = useState<Espacio[]>([]);
   const [socios, setSocios] = useState<Socio[]>([]);
   const [error, setError] = useState('');
   const [ocupados, setOcupados] = useState<Set<string>>(new Set());
   const [extraInicios, setExtraInicios] = useState<string[]>([]);
   const [form, setForm] = useState({
-    espacio_id: '',
+    espacio_id: espacioIdParam ?? '',
     socio_id: '',
     fecha: '',
     hora_inicio: '',
@@ -144,7 +146,7 @@ export default function NuevaReservaPage() {
           nota: form.nota || undefined,
         }),
       });
-      router.push('/reservas');
+      router.push('/espacios');
     } catch (err) {
       setError(err instanceof Error ? err.message : t('messages.errorCreating'));
     }
@@ -227,7 +229,7 @@ export default function NuevaReservaPage() {
           </button>
           <button
             type="button"
-            onClick={() => router.push('/reservas')}
+            onClick={() => router.push('/espacios')}
             className="rounded-lg border border-slate-300 px-4 py-2 font-semibold text-slate-700"
           >
             {t('newClub.cancel', 'Cancelar')}
@@ -235,5 +237,13 @@ export default function NuevaReservaPage() {
         </div>
       </form>
     </div>
+  );
+}
+
+export default function NuevaReservaPage() {
+  return (
+    <Suspense fallback={null}>
+      <NuevaReservaForm />
+    </Suspense>
   );
 }

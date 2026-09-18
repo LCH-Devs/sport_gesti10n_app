@@ -19,6 +19,8 @@ import { LoginAttemptService } from './login-attempt.service';
 import { MailService } from '../mail/mail.service';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RegisterSocioDto } from './dto/register-socio.dto';
+import { NotificacionesService } from '../notificaciones/notificaciones.service';
 
 const clubSelect = {
   id: true,
@@ -74,8 +76,61 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService,
     private readonly loginAttempts: LoginAttemptService,
+    private readonly notificaciones: NotificacionesService,
     private readonly mail?: MailService,
   ) {}
+
+  async registerSocio(dto: RegisterSocioDto) {
+    const email = dto.email.trim().toLowerCase();
+    const dni = dto.dni.trim();
+    const club = await this.prisma.club.findFirst({ where: { slug: dto.club_slug.trim().toLowerCase(), activo: true, eliminado: false }, select: { id: true } });
+    if (!club) throw new UnauthorizedException('No encontramos ese club');
+
+    // El email es único por Usuario (identidad compartida entre clubes vía Membresia):
+    // si ya existe una cuenta con ese email, usuario.create() rompería el constraint
+    // unique y tiraría 500, así que se rechaza acá con un mensaje claro.
+    const emailEnUso = await this.prisma.usuario.findUnique({ where: { email }, select: { id: true } });
+    if (emailEnUso) throw new UnauthorizedException('Ese email ya está registrado');
+
+    const dniEnUso = await this.prisma.membresia.findFirst({ where: { club_id: club.id, eliminado: false, usuario: { dni } }, select: { id: true } });
+    if (dniEnUso) throw new UnauthorizedException('Ese DNI ya está registrado en este club');
+
+    const password_hash = await bcrypt.hash(dto.password, 10);
+    const usuario = await this.prisma.usuario.create({ data: { email, password_hash, nombre: dto.nombre.trim(), apellido: dto.apellido.trim(), dni, fecha_nacimiento: new Date(dto.fecha_nacimiento), membresias: { create: { club_id: club.id, rol: 'socio', es_socio: true, estado: 'pendiente', must_change_password: false } } } });
+
+    const socioNombreCompleto = `${dto.nombre.trim()} ${dto.apellido.trim()}`;
+
+    await this.notificaciones
+      .avisarAdmins(club.id, {
+        tipo: 'socio_nuevo',
+        titulo: 'Nuevo socio registrado',
+        mensaje: `${socioNombreCompleto} se registró y está pendiente de aprobación.`,
+      })
+      .catch((err) => this.logger.warn(`No se pudo crear la notificación de alta de socio: ${err}`));
+
+    const admins = await this.prisma.membresia.findMany({
+      where: { club_id: club.id, rol: 'admin', eliminado: false },
+      select: { usuario: { select: { email: true, nombre: true } } },
+    });
+    const clubNombre = await this.prisma.club.findUnique({ where: { id: club.id }, select: { nombre: true } });
+    await Promise.all(
+      admins.map((a) =>
+        this.mail
+          ?.sendNuevoSocio({
+            to: a.usuario.email,
+            adminNombre: a.usuario.nombre,
+            clubNombre: clubNombre?.nombre || '',
+            socioNombre: socioNombreCompleto,
+            socioEmail: email,
+          })
+          .catch((err) =>
+            this.logger.warn(`No se pudo avisar al admin ${a.usuario.email} del alta de socio: ${err}`),
+          ),
+      ),
+    );
+
+    return { ok: true, estado: 'pendiente', usuario_id: usuario.id };
+  }
 
   async forgotPassword(dto: ForgotPasswordDto) {
     const email = dto.email.toLowerCase().trim();

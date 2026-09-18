@@ -1,5 +1,8 @@
 # Plan frontend independiente del backend
 
+> Documento de apoyo. No redefine el roadmap ni marca tareas como realizadas;
+> consultar [`ESTADO_PROYECTO.md`](ESTADO_PROYECTO.md).
+
 Checklist de ejecución manual: [Tareas manuales frontend](TAREAS_MANUALES_FRONTEND.md).
 
 Trabajo que puede ejecutarse ahora usando datos tipados de desarrollo, sin crear endpoints ni cambiar contratos de API. Cuando una pantalla pase a integración, los mocks deben retirarse y conectarse al contrato aprobado.
